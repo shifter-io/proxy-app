@@ -11,13 +11,14 @@ import 'models.dart';
 /// with at least 25 live IPs), never counts. States, cities and ISPs come
 /// ordered by live IPs, most first; countries are A–Z.
 class GeoCatalog {
-  GeoCatalog._(this.countries, this._regions, this._cities, this._isps, this._index);
+  GeoCatalog._(this.countries, this._regions, this._cities, this._isps, this._index, this._asnNames);
 
   final List<GeoCountry> countries;
   final Map<String, List<GeoRegion>> _regions; // cc
   final Map<String, List<GeoCity>> _cities; // cc → all cities (regionSlug set)
   final Map<String, List<GeoAsn>> _isps; // "cc", "cc/region", "cc/region/city"
   final List<_Entry> _index;
+  final Map<int, String> _asnNames;
 
   static GeoCatalog? _instance;
   static Future<GeoCatalog>? _loading;
@@ -70,8 +71,11 @@ class GeoCatalog {
         for (final pos in (c['cityRank'] as List).cast<List<dynamic>>()) byRegion[pos[0] as int][pos[1] as int],
       ];
     }
-    return GeoCatalog._(countries, regions, cities, ispMap, index);
+    return GeoCatalog._(countries, regions, cities, ispMap, index, names);
   }
+
+  /// Carrier name of an ASN the catalog knows ("Comcast"), else null.
+  String? asnName(int asn) => _asnNames[asn];
 
   List<GeoRegion> regions(String cc) => _regions[cc] ?? const [];
 

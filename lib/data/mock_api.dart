@@ -1,36 +1,16 @@
 import 'dart:async';
 
+import 'api.dart';
+import 'format.dart';
 import 'geo_catalog.dart';
 import 'models.dart';
 
-class ApiException implements Exception {
-  ApiException(this.message, {this.unauthorized = false});
-  final String message;
-  final bool unauthorized;
-}
-
-/// The contract the UI talks to. Today it is backed by [MockShifterApi];
-/// the API phase adds an HTTP implementation against shifter.io/api/v1.
-abstract class ShifterApi {
-  Future<Session> verifyApiKey(String apiKey);
-  Future<List<Membership>> memberships();
-  Future<List<GeoCountry>> countries();
-  Future<List<GeoRegion>> regions(String country);
-  Future<List<GeoCity>> cities(String country, {String? region});
-  /// ISPs at the most specific level given (country, state or city).
-  Future<List<GeoAsn>> asns(String country, {String? region, String? city});
-  Future<List<GeoSearchResult>> searchGeo(String query);
-  Future<List<IspIp>> ispIps(String membershipId);
-}
-
-/// In-memory backend with the same scenarios as the extension, chosen by the
+/// In-memory backend for the preview studio and tests, with the same scenarios as the extension, chosen by the
 /// API key's prefix: single / country / nongeo / isp / none / invalid.
 /// Any other key of 32+ letters/digits gets the full set of plans.
 class MockShifterApi implements ShifterApi {
   MockShifterApi({this.scenario = ''});
   String scenario;
-
-  static final keyPattern = RegExp(r'^[A-Za-z0-9]{32,128}$');
 
   Future<void> _delay([int ms = 350]) => Future.delayed(Duration(milliseconds: ms));
 
@@ -38,8 +18,8 @@ class MockShifterApi implements ShifterApi {
   Future<Session> verifyApiKey(String apiKey) async {
     await _delay(750);
     final key = apiKey.trim();
-    if (!keyPattern.hasMatch(key) || key.toLowerCase().startsWith('invalid')) {
-      throw ApiException('Invalid API key', unauthorized: true);
+    if (!apiKeyPattern.hasMatch(key) || key.toLowerCase().startsWith('invalid')) {
+      throw ApiException('Invalid API key', code: ApiErrorCode.unauthorized);
     }
     scenario = scenarioOf(key);
     return Session(user: _user(), apiKey: key, createdAt: DateTime.now());
@@ -51,6 +31,28 @@ class MockShifterApi implements ShifterApi {
       if (k.startsWith(p)) return p;
     }
     return '';
+  }
+
+  @override
+  void useSession(Session? session) {
+    if (session != null) scenario = scenarioOf(session.apiKey);
+  }
+
+  @override
+  Future<User> me() async => _user();
+
+  @override
+  Future<ProxyCredentials> credentials(String membershipId) async {
+    await _delay(200);
+    final m = Fixtures.memberships.firstWhere((m) => m.id == membershipId);
+    return ProxyCredentials(
+      type: m.type,
+      host: m is IspMembership ? 'isp.shifter.io' : 'p.shifter.io',
+      port: 443,
+      username: m is IspMembership ? '' : 'customer-mock',
+      password: 'mock',
+      stickySessions: m is ResidentialMembership,
+    );
   }
 
   User _user() => User(id: 'u_mock', email: scenario.isEmpty ? 'you@example.com' : '$scenario@example.com', name: 'Example User');
@@ -96,52 +98,52 @@ class MockShifterApi implements ShifterApi {
 }
 
 abstract final class Fixtures {
-  static const _gbBytes = 1024 * 1024 * 1024;
+  static const _gbBytes = 1000000000;
   static DateTime _days(int n) => DateTime.now().add(Duration(days: n, hours: 2));
 
   static final memberships = <Membership>[
     ResidentialMembership(
       id: 'm_res_1', planName: 'Pro', pool: ResidentialPool.full, status: MembershipStatus.active,
-      expiresAt: _days(23), autoRenew: true, trafficTotalBytes: 50 * _gbBytes, trafficUsedBytes: (17.6 * _gbBytes).round(),
+      expiresAt: _days(23), renewsAt: _days(23), traffic: Traffic(totalBytes: 50 * _gbBytes, usedBytes: (17.6 * _gbBytes).round()),
     ),
     IspMembership(
       id: 'm_isp_us', planName: '25 ISP Proxies', status: MembershipStatus.active,
-      expiresAt: _days(11), autoRenew: true, ipCount: 25, countries: const ['us'],
+      expiresAt: _days(11), renewsAt: _days(11), ipCount: 25, countries: const ['us'],
     ),
     IspMembership(
       id: 'm_isp_eu', planName: '50 ISP Proxies', status: MembershipStatus.expiring,
-      expiresAt: _days(2), autoRenew: false, ipCount: 50, countries: const ['de', 'gb', 'nl'],
+      expiresAt: _days(2), ipCount: 50, countries: const ['de', 'gb', 'nl'],
     ),
     ResidentialMembership(
       id: 'm_res_country', planName: 'Starter', pool: ResidentialPool.country, status: MembershipStatus.active,
-      expiresAt: _days(17), autoRenew: true, trafficTotalBytes: 10 * _gbBytes, trafficUsedBytes: (3.2 * _gbBytes).round(),
+      expiresAt: _days(17), renewsAt: _days(17), traffic: Traffic(totalBytes: 10 * _gbBytes, usedBytes: (3.2 * _gbBytes).round()),
     ),
     ResidentialMembership(
       id: 'm_res_nongeo', planName: 'Spark', pool: ResidentialPool.nonGeo, status: MembershipStatus.active,
-      expiresAt: _days(29), autoRenew: true, trafficTotalBytes: 5 * _gbBytes, trafficUsedBytes: (4.4 * _gbBytes).round(),
+      expiresAt: _days(29), renewsAt: _days(29), traffic: Traffic(totalBytes: 5 * _gbBytes, usedBytes: (4.4 * _gbBytes).round()),
     ),
     IspMembership(
       id: 'm_isp_expired', planName: '100 ISP Proxies', status: MembershipStatus.expired,
-      expiresAt: _days(-6), autoRenew: false, ipCount: 100, countries: const ['us'],
+      expiresAt: _days(-6), ipCount: 100, countries: const ['us'],
     ),
   ];
 
-  static List<IspIp> _ips(String prefix, String country, String city, String isp, int count, [int start = 10]) => [
+  static List<IspIp> _ips(String country, String city, int asn, String isp, int count) => [
         for (var i = 0; i < count; i++)
-          IspIp(id: '$country-$prefix-${start + i}', ip: '$prefix.${start + i}', country: country, city: city, isp: isp),
+          IspIp(id: '$country-${slugify(city)}-as$asn-${i.toRadixString(36).padLeft(5, 'x')}', country: country, city: city, asn: asn, isp: isp),
       ];
 
   static final ispIps = <String, List<IspIp>>{
-    'm_isp_us': [
-      ..._ips('104.28.41', 'us', 'New York', 'Comcast', 8),
-      ..._ips('172.58.12', 'us', 'Los Angeles', 'AT&T', 7, 40),
-      ..._ips('68.183.77', 'us', 'Dallas', 'Verizon', 6, 120),
-      ..._ips('73.162.9', 'us', 'Miami', 'Spectrum', 4, 200),
-    ],
-    'm_isp_eu': [
-      ..._ips('91.64.18', 'de', 'Frankfurt', 'Deutsche Telekom', 20, 30),
-      ..._ips('86.14.201', 'gb', 'London', 'Virgin Media', 20, 60),
-      ..._ips('145.53.8', 'nl', 'Amsterdam', 'KPN', 10, 90),
-    ],
+    'm_isp_us': numberIspIps([
+      ..._ips('us', 'New York', 7922, 'Comcast', 8),
+      ..._ips('us', 'Los Angeles', 7018, 'AT&T', 7),
+      ..._ips('us', 'Dallas', 701, 'Verizon', 6),
+      ..._ips('us', 'Miami', 20115, 'Spectrum', 4),
+    ]),
+    'm_isp_eu': numberIspIps([
+      ..._ips('de', 'Frankfurt', 3320, 'Deutsche Telekom', 20),
+      ..._ips('gb', 'London', 5089, 'Virgin Media', 20),
+      ..._ips('nl', 'Amsterdam', 1136, 'KPN', 10),
+    ]),
   };
 }

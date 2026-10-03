@@ -1,10 +1,13 @@
+import 'dart:math';
+
 import 'models.dart';
 
 /// Formatting + targeting helpers, ported from the extension
 /// (src/lib/format.ts, pools.ts, proxy/slug.ts, proxy/username.ts).
 
-const _gb = 1024 * 1024 * 1024;
-const _mb = 1024 * 1024;
+/// Decimal units, same as the panel and the API (1 GB = 1,000,000,000 bytes).
+const _gb = 1000000000;
+const _mb = 1000000;
 
 String _trim(double n, int digits) {
   final s = n.toStringAsFixed(digits);
@@ -13,6 +16,7 @@ String _trim(double n, int digits) {
 
 String formatBytes(num bytes, {int digits = 1}) {
   final gb = bytes / _gb;
+  if (gb >= 1000) return '${_trim(gb / 1000, digits)} TB';
   if (gb >= 1) return '${_trim(gb, digits)} GB';
   return '${_trim(bytes / _mb, 0)} MB';
 }
@@ -41,11 +45,20 @@ String formatUptime(Duration d) {
   return '${two(d.inHours)}:${two(d.inMinutes % 60)}:${two(d.inSeconds % 60)}';
 }
 
-({int left, double ratio}) trafficLeft(ResidentialMembership m) {
-  final left = (m.trafficTotalBytes - m.trafficUsedBytes).clamp(0, m.trafficTotalBytes);
-  final ratio = m.trafficTotalBytes > 0 ? left / m.trafficTotalBytes : 0.0;
-  return (left: left, ratio: ratio);
+/// Traffic left on a metered plan; null when the plan has no cap to show.
+({int left, double ratio, int total})? trafficLeft(ResidentialMembership m) {
+  final t = m.traffic;
+  if (t == null) return null;
+  final left = max(0, t.remainingBytes);
+  final ratio = t.totalBytes > 0 ? (left / t.totalBytes).clamp(0.0, 1.0) : 0.0;
+  return (left: left, ratio: ratio, total: t.totalBytes);
 }
+
+/// "Unlimited" for unmetered plans, "—" while usage isn't known yet.
+String noTrafficLabel(ResidentialMembership m) => m.unmetered ? 'Unlimited' : '—';
+
+/// "New York · AS7922"
+String ispIpPlace(IspIp ip) => [ip.city ?? ip.country.toUpperCase(), if (ip.asn != null) 'AS${ip.asn}'].join(' · ');
 
 String productLabel(ProductType t) => t == ProductType.residential ? 'Residential' : 'ISP';
 
@@ -91,7 +104,7 @@ ResidentialTarget clampTarget(ResidentialTarget t, ResidentialPool pool) {
     case null:
       return (title: 'Choose location', subtitle: 'No location selected');
     case IspTarget(:final ip):
-      return (title: ip.ip, subtitle: [ip.city, ip.isp].whereType<String>().join(' · '));
+      return (title: ip.label, subtitle: ispIpPlace(ip));
     case ResidentialTarget t:
       if (t.country == null) return (title: 'Random location', subtitle: 'Worldwide · best available');
       final title = t.city?.name ?? t.region?.name ?? t.country!.name;

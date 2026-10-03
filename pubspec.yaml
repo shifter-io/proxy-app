@@ -9,7 +9,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_secure_storage: ^11.2.0
   flutter_svg: ^2.0.17
+  shared_preferences: ^2.5.5
+  url_launcher: ^6.3.3
 
 dev_dependencies:
   flutter_test:
