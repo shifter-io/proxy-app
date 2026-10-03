@@ -269,11 +269,14 @@ class _PlanMiniCard extends StatelessWidget {
           ]),
         ),
         const SizedBox(height: 10),
-        if (mm is ResidentialMembership) ...[
-          SfProgressBar(key: ValueKey('bar${m.id}'), ratio: trafficLeft(mm).ratio, height: 4),
-          const SizedBox(height: 7),
-          Text('${formatBytes(trafficLeft(mm).left)} left of ${formatBytes(mm.trafficTotalBytes, digits: 0)}', style: SfText.micro.copyWith(fontSize: 12)),
-        ] else
+        if (mm is ResidentialMembership)
+          if (trafficLeft(mm) case final t?) ...[
+            SfProgressBar(key: ValueKey('bar${m.id}'), ratio: t.ratio, height: 4),
+            const SizedBox(height: 7),
+            Text('${formatBytes(t.left)} left of ${formatBytes(t.total, digits: 0)}', style: SfText.micro.copyWith(fontSize: 12)),
+          ] else
+            Text(mm.unmetered ? 'Unlimited traffic' : 'Traffic usage not available yet', style: SfText.micro.copyWith(fontSize: 12))
+        else
           Text('${(mm as IspMembership).ipCount} static IPs · unlimited', style: SfText.micro.copyWith(fontSize: 12)),
       ]),
     );

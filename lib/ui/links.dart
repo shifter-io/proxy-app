@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 abstract final class ShifterUrls {
   static const panel = 'https://shifter.io/panel';
@@ -9,10 +10,13 @@ abstract final class ShifterUrls {
   static String renew(String membershipId) => 'https://shifter.io/panel/membership/$membershipId';
 }
 
-/// UI phase: external links are not wired to the OS browser yet (that needs
-/// the url_launcher plugin), so show where the link would go.
-void openExternal(BuildContext context, String url) {
-  ScaffoldMessenger.maybeOf(context)
-    ?..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(content: Text('Opens $url'), duration: const Duration(seconds: 2)));
+/// Opens [url] in the default browser; says where it would go if that fails.
+Future<void> openExternal(BuildContext context, String url) async {
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  final ok = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication).catchError((_) => false);
+  if (!ok) {
+    messenger
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text("Couldn't open $url"), duration: const Duration(seconds: 3)));
+  }
 }

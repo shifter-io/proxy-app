@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../data/mock_api.dart';
+import '../../data/api.dart';
 import '../../state/app_controller.dart';
 import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
@@ -190,7 +190,7 @@ class _LoginFormState extends State<_LoginForm> with SingleTickerProviderStateMi
   Future<void> _verify(String raw) async {
     final value = raw.trim();
     if (value.isEmpty) return _fail('Paste your API key to continue.');
-    if (!MockShifterApi.keyPattern.hasMatch(value)) {
+    if (!apiKeyPattern.hasMatch(value)) {
       return _fail("That doesn't look like a Shifter API key. Copy it again from your dashboard.");
     }
     FocusScope.of(context).unfocus();
@@ -211,7 +211,7 @@ class _LoginFormState extends State<_LoginForm> with SingleTickerProviderStateMi
       setState(() => _phase = _Phase.idle);
       _fail(e.unauthorized
           ? 'This API key is not valid. It may have been regenerated. Copy the current one from your dashboard.'
-          : 'Network hiccup. Try again.');
+          : e.message);
     }
   }
 
@@ -280,7 +280,7 @@ class _LoginFormState extends State<_LoginForm> with SingleTickerProviderStateMi
                   onChanged: (v) {
                     if (_error != null) setState(() => _error = null);
                     // A whole key arriving at once = pasted: verify instantly.
-                    if (v.length >= 32 && MockShifterApi.keyPattern.hasMatch(v.trim()) && v.length - (_lastLen) > 20) _verify(v);
+                    if (v.length >= 32 && apiKeyPattern.hasMatch(v.trim()) && v.length - (_lastLen) > 20) _verify(v);
                     _lastLen = v.length;
                   },
                   style: SfText.mono.copyWith(fontSize: 14.5, letterSpacing: _reveal ? 0 : 1.5),

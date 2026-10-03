@@ -145,7 +145,7 @@ class Dashboard extends StatelessWidget {
           since: status == ConnectionStatus.connected ? c.since : null,
           error: c.status == ConnectionStatus.error ? c.message : null,
           needsTarget: target == null,
-          countryCode: targetCountryCode(target),
+          countryCode: (status == ConnectionStatus.connected ? c.exitCountry : null) ?? targetCountryCode(target),
           onToggle: toggle,
           onNewIp: m is ResidentialMembership && status == ConnectionStatus.connected ? app.newIp : null,
           size: heroSize,
@@ -262,7 +262,7 @@ class _Hero extends StatelessWidget {
                     offset: 8,
                     child: Wrap(alignment: WrapAlignment.center, spacing: 6, runSpacing: 6, children: const [
                       SfPill('DNS via Shifter', tone: SfTone.success, icon: SfIcons.shieldCheck),
-                      SfPill('UDP blocked', tone: SfTone.neutral, icon: SfIcons.lock),
+                      SfPill('System proxy', tone: SfTone.neutral, icon: SfIcons.lock),
                     ]),
                   ),
                 )
@@ -352,10 +352,7 @@ class LocationCard extends StatelessWidget {
                 key: ValueKey(d.title + d.subtitle),
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(d.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: t is IspTarget ? SfText.mono.copyWith(fontSize: 15, fontWeight: FontWeight.w600) : SfText.bodyStrong),
+                  Text(d.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: SfText.bodyStrong),
                   const SizedBox(height: 2),
                   Text(d.subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: SfText.small),
                 ],
@@ -390,19 +387,22 @@ class StatsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final mm = m;
-    final usage = mm is ResidentialMembership
+    final traffic = mm is ResidentialMembership ? trafficLeft(mm) : null;
+    final usage = mm is ResidentialMembership && traffic != null
         ? _Stat(
             label: 'Traffic left',
             value: Text.rich(TextSpan(children: [
-              TextSpan(text: formatBytes(trafficLeft(mm).left)),
+              TextSpan(text: formatBytes(traffic.left)),
               TextSpan(
-                text: ' / ${formatBytes(mm.trafficTotalBytes, digits: 0)}',
+                text: ' / ${formatBytes(traffic.total, digits: 0)}',
                 style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w400, color: Sf.textMuted),
               ),
             ])),
-            sub: Padding(padding: const EdgeInsets.only(top: 4), child: SfProgressBar(ratio: trafficLeft(mm).ratio, height: 4)),
+            sub: Padding(padding: const EdgeInsets.only(top: 4), child: SfProgressBar(ratio: traffic.ratio, height: 4)),
           )
-        : const _Stat(label: 'Bandwidth', value: Text('Unlimited'), sub: Text('No traffic cap'));
+        : mm is ResidentialMembership && !mm.unmetered
+            ? const _Stat(label: 'Traffic left', value: Text('—'), sub: Text('Usage not available yet'))
+            : const _Stat(label: 'Bandwidth', value: Text('Unlimited'), sub: Text('No traffic cap'));
     final session = mm is IspMembership
         ? const _Stat(label: 'IP', value: Text('Static'), sub: Text('Same IP every time'))
         : _Stat(

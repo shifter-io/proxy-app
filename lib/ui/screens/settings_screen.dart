@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../data/format.dart';
 import '../../data/models.dart';
+import '../../proxy/bypass.dart';
 import '../../state/app_controller.dart';
 import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
@@ -95,22 +96,22 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ])),
 
-              // ── Leak protection (always on) ───────────────────────────
+              // ── How traffic is routed (system proxy, not a tunnel) ────
               section(Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                const SectionLabel('Leak protection'),
+                const SectionLabel('How traffic is routed'),
                 SfCard(
                   padding: EdgeInsets.zero,
                   child: Column(children: const [
                     _InfoRow(
                       icon: SfIcons.dns,
                       title: 'DNS through Shifter',
-                      body: 'Every lookup is resolved at your exit location, never by your local network.',
+                      body: 'Apps that follow the system proxy (browsers and most apps) look sites up at your exit location, not on your local network.',
                     ),
                     _Divider(),
                     _InfoRow(
                       icon: SfIcons.shieldCheck,
-                      title: 'UDP blocked',
-                      body: 'QUIC and WebRTC fall back to TCP so your real IP never leaks. Games and some voice calls won’t work while connected.',
+                      title: 'What connects directly',
+                      body: 'UDP traffic (WebRTC calls, games) and apps that ignore the system proxy don’t go through Shifter. Turn off WebRTC in your browser if it must never show your real IP.',
                     ),
                   ]),
                 ),
@@ -154,7 +155,7 @@ class SettingsScreen extends StatelessWidget {
                   onPressed: () => _confirmSignOut(context, app),
                 ),
               ])),
-              Text('Shifter app v0.1.0 · UI preview', textAlign: TextAlign.center, style: SfText.micro.copyWith(color: Sf.textFaint)),
+              Text('Shifter app v0.1.0', textAlign: TextAlign.center, style: SfText.micro.copyWith(color: Sf.textFaint)),
             ]),
           ),
         ],
@@ -378,7 +379,6 @@ class _StepButton extends StatelessWidget {
   }
 }
 
-final _hostRe = RegExp(r'^(\*\.)?[a-z0-9-]+(\.[a-z0-9-]+)*$|^\d{1,3}(\.\d{1,3}){3}$', caseSensitive: false);
 
 class _BypassList extends StatefulWidget {
   const _BypassList({required this.list, required this.onChanged});
@@ -407,8 +407,8 @@ class _BypassListState extends State<_BypassList> {
   }
 
   void _add() {
-    final host = _ctl.text.trim().toLowerCase().replaceFirst(RegExp(r'^https?://'), '').replaceFirst(RegExp(r'/.*$'), '');
-    if (!_hostRe.hasMatch(host)) {
+    final host = normalizeBypassRule(_ctl.text);
+    if (host == null) {
       HapticFeedback.heavyImpact();
       setState(() => _error = true);
       return;

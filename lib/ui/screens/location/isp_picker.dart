@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../data/format.dart';
 import '../../../data/models.dart';
 import '../../../state/app_controller.dart';
 import '../../../theme/tokens.dart';
@@ -51,7 +52,7 @@ class _IspPickerState extends State<IspPicker> {
         Padding(
           padding: EdgeInsets.fromLTRB(pad, 4, pad, 10),
           child: Column(children: [
-            SfSearchField(value: query, onChanged: (v) => setState(() => query = v), hint: 'Search IP, city or carrier'),
+            SfSearchField(value: query, onChanged: (v) => setState(() => query = v), hint: 'Search city, carrier or ASN'),
             if (widget.m.countries.length > 1) ...[
               const SizedBox(height: 10),
               SfSegmented<String>(
@@ -75,13 +76,13 @@ class _IspPickerState extends State<IspPicker> {
           final q = query.trim().toLowerCase();
           final list = (data ?? const <IspIp>[]).where((ip) =>
               (country == 'all' || ip.country == country) &&
-              (q.isEmpty || ip.ip.contains(q) || (ip.city?.toLowerCase().contains(q) ?? false) || ip.isp.toLowerCase().contains(q)));
+              (q.isEmpty || ip.label.toLowerCase().contains(q) || (ip.city?.toLowerCase().contains(q) ?? false) || 'as${ip.asn}'.contains(q)));
           final groups = <String, List<IspIp>>{};
           for (final ip in list) {
             groups.putIfAbsent('${ip.country}|${ip.city ?? ''}', () => []).add(ip);
           }
           if (groups.isEmpty) {
-            return ListView(children: const [EmptyState(icon: SfIcons.search, title: 'No IPs match', body: 'Try a different IP, city or carrier.')]);
+            return ListView(children: const [EmptyState(icon: SfIcons.search, title: 'No IPs match', body: 'Try a different city, carrier or ASN.')]);
           }
           var i = 0;
           return ListView(
@@ -111,9 +112,8 @@ class _IspPickerState extends State<IspPicker> {
                           boxShadow: [BoxShadow(color: Color(0x263DBA78), spreadRadius: 3)],
                         ),
                       ),
-                      title: ip.ip,
-                      mono: true,
-                      subtitle: ip.isp,
+                      title: ip.label,
+                      subtitle: ispIpPlace(ip),
                       selected: ip.id == selectedId,
                       onTap: () => _pick(ip),
                     ),

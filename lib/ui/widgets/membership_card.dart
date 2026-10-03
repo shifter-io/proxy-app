@@ -43,8 +43,8 @@ class RenewalLine extends StatelessWidget {
       final tone = m.status == MembershipStatus.expiring ? Sf.warningLight : Sf.textTertiary;
       line = Text.rich(
         TextSpan(children: [
-          TextSpan(text: '${m.autoRenew ? 'Renews' : 'Expires'} ${relativeDays(m.expiresAt)}', style: TextStyle(color: tone)),
-          TextSpan(text: ' · ${formatDate(m.expiresAt)}', style: const TextStyle(color: Sf.textMuted)),
+          TextSpan(text: '${m.renewsAt != null ? 'Renews' : 'Expires'} ${relativeDays(m.renewsAt ?? m.expiresAt)}', style: TextStyle(color: tone)),
+          TextSpan(text: ' · ${formatDate(m.renewsAt ?? m.expiresAt)}', style: const TextStyle(color: Sf.textMuted)),
         ]),
         style: SfText.small,
         textAlign: center ? TextAlign.center : TextAlign.start,
@@ -76,13 +76,20 @@ class UsageLine extends StatelessWidget {
       ]);
     }
     final t = trafficLeft(mm);
+    if (t == null) {
+      return Row(children: [
+        Text(mm.unmetered ? 'Bandwidth' : 'Traffic left', style: SfText.small),
+        const Spacer(),
+        Text(noTrafficLabel(mm), style: SfText.mono.copyWith(fontSize: 12.5, color: Sf.textSecondary)),
+      ]);
+    }
     return Column(children: [
       Row(crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [
         Text('Traffic left', style: SfText.small),
         const Spacer(),
         Text.rich(TextSpan(children: [
           TextSpan(text: formatBytes(t.left), style: const TextStyle(color: Sf.textPrimary, fontWeight: FontWeight.w500)),
-          TextSpan(text: ' / ${formatBytes(mm.trafficTotalBytes, digits: 0)}', style: const TextStyle(color: Sf.textMuted)),
+          TextSpan(text: ' / ${formatBytes(t.total, digits: 0)}', style: const TextStyle(color: Sf.textMuted)),
         ]), style: SfText.mono.copyWith(fontSize: 12.5)),
       ]),
       const SizedBox(height: 8),
