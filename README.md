@@ -32,6 +32,36 @@ studio and the tests use mock data (`lib/data/mock_api.dart`).
 Point a build at another API or IP check:
 `--dart-define=SHIFTER_BASE_URL=http://127.0.0.1:18090 --dart-define=SHIFTER_IP_CHECK_URL=http://ip-check.test/json`
 
+## Performance
+
+The local proxy moves bytes with `RawSocket` on its own isolate: each write
+goes straight to the OS, and a side stops reading while the other can't take
+more, so a tunnel holds at most 64 KB per direction. No timers: idle costs no
+CPU. Benchmark (`tool/bench/`, M1 Max under heavy unrelated load), every test
+run straight to the gateway and through the proxy:
+
+| Test | Direct | Through local proxy |
+|---|---|---|
+| Idle | – | 0 ms CPU, 14 MB |
+| New HTTPS tunnel + request (median / p99) | 0.58 / 1.29 ms | 0.86 / 1.37 ms |
+| Plain HTTP, 100 at a time | 4404 req/s | 3749 req/s, 0 errors |
+| One download | 1954 MB/s | 1694 MB/s, 0.5 CPU-s per GB |
+| 200 tunnels × 20 MB at once | 2.4 s | 2.9 s, peak 66 MB |
+| 50 slow readers (2 MB/s each) | – | peak 66 MB |
+| 100 clients reset mid-download | – | proxy unaffected |
+| After all of the above | – | 0 CPU idle, no leaked sockets |
+
+A 100 Mbit/s connection costs under 1 % of one core.
+
+```bash
+dart compile exe tool/bench/servers.dart -o /tmp/bench_servers
+dart compile exe tool/bench/proxy_main.dart -o /tmp/bench_proxy
+python3 tool/bench/run.py
+```
+
+UI: decorative motion (background halo, button glow, connected rings) runs
+on one 30 fps clock and stops while the window isn't active or visible.
+
 ## Tests
 
 ```bash

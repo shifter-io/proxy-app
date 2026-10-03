@@ -21,15 +21,15 @@ class PowerButton extends StatefulWidget {
 }
 
 class _PowerButtonState extends State<PowerButton> with TickerProviderStateMixin {
-  late final _rings = AnimationController(vsync: this, duration: const Duration(milliseconds: 2400));
   late final _orbit = AnimationController(vsync: this, duration: const Duration(milliseconds: 1100));
-  late final _breath = AnimationController(vsync: this, duration: const Duration(milliseconds: 2600));
   bool _down = false;
+
+  /// Clock time the rings started, so they always start from the button.
+  double _ringsFrom = 0;
 
   @override
   void initState() {
     super.initState();
-    ambientMotion.addListener(_sync);
     _sync();
   }
 
@@ -43,18 +43,14 @@ class _PowerButtonState extends State<PowerButton> with TickerProviderStateMixin
   }
 
   void _sync() {
-    syncLoop(_breath, reverse: true);
-    syncLoop(_rings, on: widget.status == ConnectionStatus.connected);
-    // The connecting spinner is progress, not decoration: always runs.
+    if (widget.status == ConnectionStatus.connected) _ringsFrom = ambientClock.value;
+    // The connecting spinner is progress, not decoration: full frame rate.
     widget.status == ConnectionStatus.connecting ? _orbit.repeat() : _orbit.stop();
   }
 
   @override
   void dispose() {
-    ambientMotion.removeListener(_sync);
-    _rings.dispose();
     _orbit.dispose();
-    _breath.dispose();
     super.dispose();
   }
 
@@ -90,18 +86,26 @@ class _PowerButtonState extends State<PowerButton> with TickerProviderStateMixin
               alignment: Alignment.center,
               children: [
                 // Expanding rings while connected.
-                AnimatedBuilder(
-                  animation: _rings,
-                  builder: (_, _) => CustomPaint(
-                    size: Size.square(s * 1.7),
-                    painter: _RingsPainter(progress: connected ? _rings.value : -1, radius: s / 2, color: Sf.success),
-                  ),
+                RepaintBoundary(
+                  child: connected
+                      ? ListenableBuilder(
+                          listenable: ambientClock,
+                          builder: (_, _) => CustomPaint(
+                            size: Size.square(s * 1.7),
+                            painter: _RingsPainter(
+                              progress: ((ambientClock.value - _ringsFrom) / 2.4) % 1,
+                              radius: s / 2,
+                              color: Sf.success,
+                            ),
+                          ),
+                        )
+                      : SizedBox.square(dimension: s * 1.7),
                 ),
                 // Soft glow that breathes.
-                AnimatedBuilder(
-                  animation: _breath,
+                ListenableBuilder(
+                  listenable: ambientClock,
                   builder: (_, _) {
-                    final b = Curves.easeInOut.transform(_breath.value);
+                    final b = breathe(ambientClock.value, 2.6);
                     return TweenAnimationBuilder<Color?>(
                       tween: ColorTween(end: tone),
                       duration: const Duration(milliseconds: 600),
