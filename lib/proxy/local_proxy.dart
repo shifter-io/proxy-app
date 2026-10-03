@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'bypass.dart';
+import 'file_limit.dart';
 
 /// Everything needed to route traffic through one gateway login.
 class GatewayEndpoint {
@@ -75,6 +76,7 @@ class LocalProxy {
   /// Listens on 127.0.0.1 ([port] 0 = any free port).
   Future<int> start({int port = 0}) async {
     if (_server case final s?) return s.port;
+    raiseOpenFileLimit();
     // A page load opens dozens of connections at once; don't refuse any.
     final server = await RawServerSocket.bind(InternetAddress.loopbackIPv4, port, backlog: 1024);
     _server = server;

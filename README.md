@@ -49,9 +49,14 @@ run straight to the gateway and through the proxy:
 | 200 tunnels × 20 MB at once | 2.4 s | 2.9 s, peak 66 MB |
 | 50 slow readers (2 MB/s each) | – | peak 66 MB |
 | 100 clients reset mid-download | – | proxy unaffected |
+| 1,000 connections open at once (app's 256-file default) | – | 1000/1000 (124 before raising the limit) |
 | After all of the above | – | 0 CPU idle, no leaked sockets |
 
 A 100 Mbit/s connection costs under 1 % of one core.
+
+No connection cap on our side (Shifter has none either): apps launched from
+the Dock get a 256 open-files limit and each proxied connection needs two, so
+the proxy raises its own limit at start (`lib/proxy/file_limit.dart`).
 
 ```bash
 dart compile exe tool/bench/servers.dart -o /tmp/bench_servers
