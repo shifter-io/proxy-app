@@ -108,10 +108,10 @@ class FakeShifter {
         ],
       };
 
-  Future<void> start() async {
+  Future<void> start({int apiPort = 0}) async {
     origin = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     origin.listen(_onOrigin);
-    api = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    api = await HttpServer.bind(InternetAddress.loopbackIPv4, apiPort);
     api.listen(_onApi);
     gateway = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
     gateway.listen(_onGateway);

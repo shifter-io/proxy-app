@@ -1,8 +1,50 @@
 # Shifter app (Flutter)
 
 Desktop, tablet and mobile version of the Shifter proxy extension
-(shifter-io/proxy-extension). **UI phase:** every screen runs on mock data
-(`lib/data/mock_api.dart`); no traffic is routed yet.
+(shifter-io/proxy-extension). The app (`lib/main.dart`) talks to the live
+Shifter API and routes this computer through the Shifter gateway; the preview
+studio and the tests use mock data (`lib/data/mock_api.dart`).
+
+## How it works
+
+- **API** (`lib/data/http_api.dart`): same endpoints and mapping as the
+  extension (`/api/v1/user/me`, `memberships`, `usage`, `proxy-config`). The
+  customer signs in with their panel API key, kept in the OS keychain
+  (`lib/data/store.dart`). A 401 signs out.
+- **Routing** (`lib/proxy/`): a local HTTP proxy on 127.0.0.1 adds the gateway
+  login (targeting in the username, like the extension) to every request and
+  sends bypassed hosts direct. The OS proxy points at it:
+  macOS `networksetup` (tested), Windows WinINet registry, GNOME `gsettings`
+  (both written, not yet run on those systems). The user's own proxy settings
+  are saved first and put back on disconnect, sign-out, quit, and on the next
+  launch after a crash.
+- New location, New IP and settings swap the login in the local proxy and
+  close tunnels on the old exit, so they apply immediately (no login caching
+  workarounds as in the browsers).
+- Only apps that follow the system proxy go through Shifter; UDP (WebRTC,
+  games) connects directly. It is a system proxy, not a VPN tunnel.
+- **Phones and tablets:** connecting needs an OS VPN extension (Android
+  `VpnService`, iOS Network Extension) that isn't built yet; the app explains
+  this when you tap Connect. Everything else (sign-in, plans, locations) works.
+- macOS: the app runs outside the App Sandbox (networksetup is blocked inside
+  it), so ship it with Developer ID, not the Mac App Store.
+
+Point a build at another API or IP check:
+`--dart-define=SHIFTER_BASE_URL=http://127.0.0.1:18090 --dart-define=SHIFTER_IP_CHECK_URL=http://ip-check.test/json`
+
+## Tests
+
+```bash
+flutter test                                    # unit + widget + screen renders
+# The real app on this Mac against a stand-in Shifter (switches the macOS proxy
+# on, then checks it is restored exactly):
+flutter test integration_test/macos_connect_test.dart -d macos \
+  --dart-define=SHIFTER_BASE_URL=http://127.0.0.1:18090 \
+  --dart-define=SHIFTER_IP_CHECK_URL=http://ip-check.test/json
+```
+
+`test/support/fake_shifter.dart` is the stand-in API + login-checking gateway
+(Dart port of the extension's `e2e/fake-shifter.mjs`).
 
 ## See the UI on this Mac
 
@@ -48,4 +90,3 @@ from RIPE's public AS names list, since weights.json only has AS numbers.
 ## Notes
 - `build/` is a symlink to `~/Library/Caches/shifter_app_build`: macOS code
   signing fails on files inside the iCloud-synced Desktop folder.
-- External links show a snackbar for now (needs `url_launcher`).
