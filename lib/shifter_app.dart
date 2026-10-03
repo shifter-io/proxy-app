@@ -8,6 +8,7 @@ import 'proxy/proxy_engine.dart';
 import 'state/app_controller.dart';
 import 'theme/theme.dart';
 import 'ui/shell/app_root.dart';
+import 'ui/widgets/ambient_motion.dart';
 
 /// One complete app instance. The preview studio runs several of these side
 /// by side, each with its own state, inside simulated device screens.
@@ -67,7 +68,7 @@ class _ShifterAppState extends State<ShifterApp> {
         title: 'Shifter',
         debugShowCheckedModeBanner: false,
         theme: buildShifterTheme(),
-        home: const AppRoot(),
+        home: const AmbientMotionScope(child: AppRoot()),
       ),
     );
   }

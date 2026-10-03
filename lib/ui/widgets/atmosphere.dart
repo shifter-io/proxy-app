@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import '../../theme/tokens.dart';
+import 'ambient_motion.dart';
 
 /// The panel's `.sf-auth-atmosphere`: a drifting blue halo over a faint grid
 /// that fades out downwards. Turns green while connected.
@@ -17,10 +18,20 @@ class Atmosphere extends StatefulWidget {
 }
 
 class _AtmosphereState extends State<Atmosphere> with SingleTickerProviderStateMixin {
-  late final _c = AnimationController(vsync: this, duration: const Duration(seconds: 28))..repeat();
+  late final _c = AnimationController(vsync: this, duration: const Duration(seconds: 28));
+
+  void _sync() => syncLoop(_c);
+
+  @override
+  void initState() {
+    super.initState();
+    ambientMotion.addListener(_sync);
+    _sync();
+  }
 
   @override
   void dispose() {
+    ambientMotion.removeListener(_sync);
     _c.dispose();
     super.dispose();
   }

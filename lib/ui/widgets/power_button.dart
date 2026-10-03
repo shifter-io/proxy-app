@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../../data/models.dart';
 import '../../theme/tokens.dart';
 import 'icons.dart';
+import 'ambient_motion.dart';
 
 /// The big connect button. Blue at rest, an orbiting arc while connecting,
 /// green with expanding rings once connected (`sf-ring`).
@@ -22,12 +23,13 @@ class PowerButton extends StatefulWidget {
 class _PowerButtonState extends State<PowerButton> with TickerProviderStateMixin {
   late final _rings = AnimationController(vsync: this, duration: const Duration(milliseconds: 2400));
   late final _orbit = AnimationController(vsync: this, duration: const Duration(milliseconds: 1100));
-  late final _breath = AnimationController(vsync: this, duration: const Duration(milliseconds: 2600))..repeat(reverse: true);
+  late final _breath = AnimationController(vsync: this, duration: const Duration(milliseconds: 2600));
   bool _down = false;
 
   @override
   void initState() {
     super.initState();
+    ambientMotion.addListener(_sync);
     _sync();
   }
 
@@ -41,12 +43,15 @@ class _PowerButtonState extends State<PowerButton> with TickerProviderStateMixin
   }
 
   void _sync() {
-    widget.status == ConnectionStatus.connected ? _rings.repeat() : _rings.stop();
+    syncLoop(_breath, reverse: true);
+    syncLoop(_rings, on: widget.status == ConnectionStatus.connected);
+    // The connecting spinner is progress, not decoration: always runs.
     widget.status == ConnectionStatus.connecting ? _orbit.repeat() : _orbit.stop();
   }
 
   @override
   void dispose() {
+    ambientMotion.removeListener(_sync);
     _rings.dispose();
     _orbit.dispose();
     _breath.dispose();

@@ -146,6 +146,29 @@ void main() {
       expect(shifter.log, isEmpty);
     });
 
+    test('a client that half-closes after its request still gets the answer', () async {
+      final s = await Socket.connect('127.0.0.1', proxy.port!);
+      final out = StringBuffer();
+      final done = Completer<void>();
+      s.listen((d) => out.write(latin1.decode(d)), onDone: done.complete);
+      s.write('GET http://example.test/half HTTP/1.1\r\nHost: example.test\r\n\r\n');
+      await s.flush();
+      await s.close(); // shutdown(SHUT_WR)
+      await done.future.timeout(const Duration(seconds: 5));
+      expect(out.toString(), contains('origin GET /half'));
+    });
+
+    test('500 tunnels, 50 at a time, leave nothing open behind', () async {
+      for (var round = 0; round < 10; round++) {
+        final results = await Future.wait([for (var i = 0; i < 50; i++) tunnel('example.test:443')]);
+        expect(results.every((r) => r.contains('origin GET /inside')), isTrue);
+      }
+      for (var i = 0; i < 40 && proxy.openConnections > 0; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 25));
+      }
+      expect(proxy.openConnections, 0);
+    });
+
     test('a refused login reports rejected and answers 502, not 407', () async {
       shifter.rejectAll = true;
       expect(await get('http://example.test/x'), startsWith('502'));

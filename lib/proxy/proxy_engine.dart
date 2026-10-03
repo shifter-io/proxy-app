@@ -5,7 +5,8 @@ import 'dart:math';
 
 import '../data/store.dart';
 import 'bypass.dart';
-import 'local_proxy.dart';
+import 'local_proxy.dart' show GatewayEndpoint;
+import 'proxy_isolate.dart';
 import 'system_proxy.dart';
 
 export 'local_proxy.dart' show GatewayEndpoint;
@@ -40,8 +41,8 @@ abstract class ProxyEngine {
   Future<ExitInfo> checkExit();
 }
 
-/// Desktop: [LocalProxy] on 127.0.0.1 holds the login; the OS proxy points
-/// at it. Re-applying (new location, New IP, settings) only swaps the login
+/// Desktop: [LocalProxy] on 127.0.0.1 holds the login, on its own isolate
+/// ([ProxyIsolate]); the OS proxy points at it. Re-applying (new location, New IP, settings) only swaps the login
 /// in the local proxy; the OS settings are touched once per connection.
 class LocalProxyEngine implements ProxyEngine {
   LocalProxyEngine(Store store, {SystemProxy? system, this.applySystemProxy = true, this.checkUrl = ipCheckUrl})
@@ -57,7 +58,7 @@ class LocalProxyEngine implements ProxyEngine {
   /// IP service asked through the proxy ([ipCheckUrl]).
   final String checkUrl;
 
-  final _proxy = LocalProxy();
+  final _proxy = ProxyIsolate();
   final _rejected = StreamController<void>.broadcast();
   /// Bypass list the OS settings were last given; null = OS proxy not set.
   List<String>? _systemBypass;
@@ -78,7 +79,7 @@ class LocalProxyEngine implements ProxyEngine {
   Future<void> apply(GatewayEndpoint endpoint) async {
     if (!supported) await _system.enable('127.0.0.1', 0, const []); // throws the explanation
     final port = await _proxy.start();
-    _proxy.setEndpoint(endpoint);
+    await _proxy.setEndpoint(endpoint);
     final bypass = expandedBypassList(endpoint.bypassList);
     if (applySystemProxy && _systemBypass?.join('\n') != bypass.join('\n')) {
       try {

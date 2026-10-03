@@ -26,7 +26,11 @@ void main() {
     final shifter = FakeShifter();
     await tester.runAsync(() => shifter.start(apiPort: 18090));
     final before = await tester.runAsync(scutilProxy);
-    await tester.runAsync(() => PersistentStore().writeSession(null)); // start signed out
+    // Start signed out, and give back whatever sign-in this Mac had afterwards.
+    final store = PersistentStore();
+    final saved = await tester.runAsync(store.readSession);
+    addTearDown(() => store.writeSession(saved));
+    await tester.runAsync(() => store.writeSession(null));
 
     await tester.pumpWidget(const ShifterApp(live: true));
     final app = AppScope.read(tester.element(find.byType(Navigator).first));
