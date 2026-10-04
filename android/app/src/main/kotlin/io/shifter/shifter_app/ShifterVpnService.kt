@@ -11,6 +11,7 @@ import android.net.ProxyInfo
 import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
+import android.util.Log
 
 /**
  * Android's only way to give other apps a proxy: a VPN network whose link
@@ -127,8 +128,9 @@ class ShifterVpnService : VpnService() {
             } else {
                 startForeground(NOTIFICATION_ID, notification)
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
             // The system keeps a VPN service bound at high priority anyway.
+            Log.w("ShifterVpn", "no foreground notification", e)
         }
     }
 }

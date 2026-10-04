@@ -61,6 +61,9 @@ Future<void> main(List<String> args) async {
     if (!ok) failures.add(what);
   }
 
+  // A fresh install: an app left from an earlier run would look "started"
+  // before flutter test replaces it (and the replacement loses the VPN grant).
+  await adb(['uninstall', _package]);
   final test = await Process.start('flutter', [
     'test', 'integration_test/android_connect_test.dart', '-d', _serial,
     '--dart-define=SHIFTER_BASE_URL=${shifter.apiUrl}',
@@ -76,19 +79,23 @@ Future<void> main(List<String> args) async {
     // consent dialog (what tapping "OK" does once).
     await until(() async => (await adb(['shell', 'pidof', _package])).trim().isNotEmpty, 'app started', seconds: 600);
     await adb(['shell', 'appops', 'set', _package, 'ACTIVATE_VPN', 'allow']);
+    if (int.parse(sdk) >= 33) await adb(['shell', 'pm', 'grant', _package, 'android.permission.POST_NOTIFICATIONS']);
     check(await vpnProxy() == null, 'no Shifter proxy before connecting');
     shifter.step = 1;
 
     // Connected once the app's exit-IP check went through the gateway.
-    await until(() async => shifter.log.any((e) => e.target.contains('ip-check.test')), 'app connected');
+    await until(() async => shifter.log.any((e) => e.target.contains('ip-check.test')), 'app connected', seconds: 300);
     final user = shifter.log.firstWhere((e) => e.target.contains('ip-check.test')).user;
     check(RegExp(r'^customer-test-country-de-sid-[a-z0-9]{12}-ttl-600$').hasMatch(user), 'gateway login targets Germany with a sticky session ($user)');
 
     String? proxy;
     await until(() async => (proxy = await vpnProxy()) != null, 'VPN network with proxy', seconds: 15).catchError((_) {});
     check(proxy != null && proxy!.startsWith('127.0.0.1:'), 'Android gives other apps the local proxy ($proxy)');
-    final notification = await adb(['shell', 'dumpsys', 'notification', '--noredact']);
-    check(notification.contains('Connected through Shifter'), 'connection notification shown');
+    // Foreground service with the "Connected" notification keeps the
+    // process, and so the Dart local proxy, alive in the background.
+    final services = await adb(['shell', 'dumpsys', 'activity', 'services', _package]);
+    check(services.contains('isForeground=true') && services.contains('foregroundNoti=Notification(channel=connection'),
+        'runs in the foreground with the connection notification');
 
     // Another app: open a page in the browser; it must reach the gateway.
     final browser = arg('--browser-package');

@@ -1,6 +1,8 @@
 package io.shifter.shifter_app
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.net.VpnService
 import android.os.Build
 import io.flutter.embedding.engine.FlutterEngine
@@ -15,6 +17,7 @@ data class ProxyTarget(val host: String, val port: Int, val bypass: List<String>
  */
 object VpnBridge {
     const val REQUEST_CONSENT = 0x5f1
+    private const val REQUEST_NOTIFICATIONS = 0x5f2
     private const val CHANNEL = "shifter/vpn"
 
     var activity: MainActivity? = null
@@ -82,7 +85,26 @@ object VpnBridge {
     fun started(error: String?) {
         val result = starting ?: return
         starting = null
-        if (error == null) result.success(null) else result.error("start", error, null)
+        if (error == null) {
+            result.success(null)
+            askForNotifications()
+        } else {
+            result.error("start", error, null)
+        }
+    }
+
+    /**
+     * Android 13+ hides the "Connected" notification until the user allows
+     * notifications; ask once, after the first successful connect.
+     */
+    private fun askForNotifications() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        val activity = activity ?: return
+        if (activity.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) return
+        val prefs = app.getSharedPreferences("shifter_vpn", Context.MODE_PRIVATE)
+        if (prefs.getBoolean("asked_notifications", false)) return
+        prefs.edit().putBoolean("asked_notifications", true).apply()
+        activity.requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), REQUEST_NOTIFICATIONS)
     }
 
     /** The VPN slot closed without the app asking. */
