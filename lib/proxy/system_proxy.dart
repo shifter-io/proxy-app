@@ -36,7 +36,7 @@ abstract class SystemProxy {
   Future<void> restoreIfNeeded() => disable();
 }
 
-/// iOS needs a Network Extension to route other apps; not built yet.
+/// Platforms with no way to route other apps (iOS uses TunnelProxyEngine instead).
 class UnsupportedSystemProxy implements SystemProxy {
   const UnsupportedSystemProxy();
   @override

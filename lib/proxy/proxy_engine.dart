@@ -8,6 +8,7 @@ import 'bypass.dart';
 import 'local_proxy.dart' show GatewayEndpoint;
 import 'proxy_isolate.dart';
 import 'system_proxy.dart';
+import 'tunnel_proxy_engine.dart';
 
 export 'local_proxy.dart' show GatewayEndpoint;
 
@@ -25,6 +26,10 @@ const _ipCheckTimeout = Duration(seconds: 12);
 /// Routes this device through one gateway login (the extension's
 /// ProxyController, src/lib/proxy/controller.ts).
 abstract class ProxyEngine {
+  /// The real engine for this device: the packet tunnel on iOS, the local
+  /// proxy plus the OS proxy (or Android's VPN slot) everywhere else.
+  static ProxyEngine forPlatform(Store store) => Platform.isIOS ? TunnelProxyEngine() : LocalProxyEngine(store);
+
   /// False where the app can't route other apps yet (phones, tablets).
   bool get supported;
 
@@ -109,25 +114,31 @@ class LocalProxyEngine implements ProxyEngine {
   }
 
   @override
-  Future<ExitInfo> checkExit() async {
+  Future<ExitInfo> checkExit() {
     final port = _proxy.port;
     if (port == null) throw StateError('Not connected');
-    final client = HttpClient()
-      ..findProxy = ((_) => 'PROXY 127.0.0.1:$port')
-      ..connectionTimeout = _ipCheckTimeout;
-    try {
-      final req = await client.getUrl(Uri.parse(checkUrl)).timeout(_ipCheckTimeout);
-      req.headers.set(HttpHeaders.cacheControlHeader, 'no-store');
-      final res = await req.close().timeout(_ipCheckTimeout);
-      final text = await res.transform(utf8.decoder).join().timeout(_ipCheckTimeout);
-      if (res.statusCode != 200) throw HttpException('IP check returned ${res.statusCode}');
-      final body = jsonDecode(text) as Map<String, dynamic>;
-      final ip = body['ip'] as String?;
-      if (ip == null || ip.isEmpty) throw const HttpException('IP check returned no address');
-      return ExitInfo(ip, country: (body['country'] as String?)?.toLowerCase());
-    } finally {
-      client.close(force: true);
-    }
+    return checkExitThrough(port, checkUrl);
+  }
+}
+
+/// Asks the IP service at [url] for the exit address, through the local
+/// proxy on 127.0.0.1:[port].
+Future<ExitInfo> checkExitThrough(int port, String url) async {
+  final client = HttpClient()
+    ..findProxy = ((_) => 'PROXY 127.0.0.1:$port')
+    ..connectionTimeout = _ipCheckTimeout;
+  try {
+    final req = await client.getUrl(Uri.parse(url)).timeout(_ipCheckTimeout);
+    req.headers.set(HttpHeaders.cacheControlHeader, 'no-store');
+    final res = await req.close().timeout(_ipCheckTimeout);
+    final text = await res.transform(utf8.decoder).join().timeout(_ipCheckTimeout);
+    if (res.statusCode != 200) throw HttpException('IP check returned ${res.statusCode}');
+    final body = jsonDecode(text) as Map<String, dynamic>;
+    final ip = body['ip'] as String?;
+    if (ip == null || ip.isEmpty) throw const HttpException('IP check returned no address');
+    return ExitInfo(ip, country: (body['country'] as String?)?.toLowerCase());
+  } finally {
+    client.close(force: true);
   }
 }
 

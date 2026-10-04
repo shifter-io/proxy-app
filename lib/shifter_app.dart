@@ -36,7 +36,7 @@ class _ShifterAppState extends State<ShifterApp> {
   AppController _create() {
     if (!widget.live) return AppController(demoKey: widget.demoKey, demoConnected: widget.demoConnected);
     final store = PersistentStore();
-    return AppController(api: HttpShifterApi(store: store), store: store, engine: LocalProxyEngine(store));
+    return AppController(api: HttpShifterApi(store: store), store: store, engine: ProxyEngine.forPlatform(store));
   }
 
   @override

@@ -175,6 +175,17 @@ class FakeShifter {
   }
 
   void _onOrigin(HttpRequest req) async {
+    // GET /bytes/<n>: n bytes, for transfer tests.
+    final size = req.uri.path.startsWith('/bytes/') ? int.tryParse(req.uri.pathSegments.last) : null;
+    if (size != null) {
+      req.response.contentLength = size;
+      final chunk = Uint8List(64 * 1024);
+      for (var left = size; left > 0; left -= chunk.length) {
+        req.response.add(left >= chunk.length ? chunk : Uint8List(left));
+        await req.response.flush();
+      }
+      return req.response.close();
+    }
     final body = await utf8.decoder.bind(req).join();
     req.response
       ..headers.contentType = ContentType.text
