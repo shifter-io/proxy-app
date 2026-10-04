@@ -7,11 +7,14 @@ import 'dart:io';
 /// simultaneous connections; past that, connections fail. Shifter itself
 /// has no connection limit, so lift ours: raise the soft limit as far as the
 /// system allows. Allowed for any process (it only raises its own limit up
-/// to the hard limit); no-op on Windows, which has no such limit.
+/// to the hard limit); no-op on Windows, which has no such limit. Android
+/// apps run with a similar limit, often already high.
 ///
 /// Returns the soft limit in effect afterwards, or null where it doesn't apply.
 int? raiseOpenFileLimit() {
-  if (!Platform.isMacOS && !Platform.isLinux) return null;
+  if (!Platform.isMacOS && !Platform.isLinux && !Platform.isAndroid) return null;
+  // rlim_t is 64-bit only on 64-bit systems (32-bit Android phones: skip).
+  if (sizeOf<IntPtr>() != 8) return null;
   try {
     final libc = DynamicLibrary.process();
     final getrlimit = libc.lookupFunction<Int32 Function(Int32, Pointer<Uint64>), int Function(int, Pointer<Uint64>)>('getrlimit');

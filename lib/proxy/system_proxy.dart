@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import '../data/store.dart';
+import 'android_system_proxy.dart';
 
 class SystemProxyException implements Exception {
   SystemProxyException(this.message);
@@ -18,6 +19,7 @@ abstract class SystemProxy {
     if (Platform.isMacOS) return MacSystemProxy(store);
     if (Platform.isWindows) return WindowsSystemProxy(store);
     if (Platform.isLinux) return LinuxSystemProxy(store);
+    if (Platform.isAndroid) return AndroidSystemProxy();
     return const UnsupportedSystemProxy();
   }
 
@@ -26,16 +28,21 @@ abstract class SystemProxy {
   Future<void> enable(String host, int port, List<String> bypass);
   Future<void> disable();
 
+  /// Fires when the OS drops the proxy without the app asking (mobile: the
+  /// user turned the VPN slot off, or another VPN took it).
+  Stream<String?> get stopped => const Stream.empty();
+
   /// Undo a proxy left behind by a run that didn't disconnect.
   Future<void> restoreIfNeeded() => disable();
 }
 
-/// Phones and tablets need an OS VPN / network extension to route other
-/// apps; not built yet.
+/// iOS needs a Network Extension to route other apps; not built yet.
 class UnsupportedSystemProxy implements SystemProxy {
   const UnsupportedSystemProxy();
   @override
   bool get supported => false;
+  @override
+  Stream<String?> get stopped => const Stream.empty();
   @override
   Future<void> enable(String host, int port, List<String> bypass) =>
       throw SystemProxyException("Connecting isn't available on this device yet. Use the Shifter app on your computer.");

@@ -17,6 +17,12 @@ const fakePassword = 'pw-secret';
 String _iso(int days) => DateTime.now().toUtc().add(Duration(days: days)).toIso8601String();
 
 class FakeShifter {
+  /// [host]: the address clients use to reach this machine (an Android
+  /// emulator sees the host Mac as 10.0.2.2); [bind]: where to listen.
+  FakeShifter({this.host = '127.0.0.1', InternetAddress? bind}) : bind = bind ?? InternetAddress.loopbackIPv4;
+  final String host;
+  final InternetAddress bind;
+
   late HttpServer api;
   late ServerSocket gateway;
   late HttpServer origin;
@@ -27,9 +33,13 @@ class FakeShifter {
 
   /// Refuse every login (plan out of traffic / suspended).
   bool rejectAll = false;
+
+  /// Device tests: the host side advances this to let the app go on
+  /// (GET /_test/step, no login needed).
+  int step = 0;
   int _rotation = 0;
 
-  String get apiUrl => 'http://127.0.0.1:${api.port}';
+  String get apiUrl => 'http://$host:${api.port}';
   int get gatewayPort => gateway.port;
 
   Map<String, dynamic> get memberships => {
@@ -87,9 +97,9 @@ class FakeShifter {
         'plans': [
           {
             'membership_id': 1, 'hash': 'pqqD', 'product': 'Spark', 'status': 'Active', 'protocol': 'http',
-            'type': 'residential', 'pool': 'full', 'pool_label': 'Full Geo', 'host': '127.0.0.1', 'port': gatewayPort,
+            'type': 'residential', 'pool': 'full', 'pool_label': 'Full Geo', 'host': host, 'port': gatewayPort,
             'entry_points': [
-              {'key': 'auto', 'host': '127.0.0.1', 'city': null, 'region': 'Automatic'},
+              {'key': 'auto', 'host': host, 'city': null, 'region': 'Automatic'},
               {'key': 'fra', 'host': 'fra.localhost', 'city': 'Frankfurt', 'region': 'Europe'},
             ],
             'username': 'customer-test', 'password': fakePassword,
@@ -98,7 +108,7 @@ class FakeShifter {
           },
           {
             'membership_id': 2, 'hash': 'zqJ4', 'product': '4 ISP Proxies', 'status': 'Active, Recurring',
-            'protocol': 'http', 'type': 'isp', 'host': '127.0.0.1', 'port': gatewayPort, 'password': fakePassword,
+            'protocol': 'http', 'type': 'isp', 'host': host, 'port': gatewayPort, 'password': fakePassword,
             'proxies': [
               {'username': 'us-new_york-new_york-as7922-AAAAA', 'country': 'US', 'city': 'New York', 'asn': 7922},
               {'username': 'us-new_york-new_york-as7922-BBBBB', 'country': 'US', 'city': 'New York', 'asn': 7922},
@@ -111,9 +121,9 @@ class FakeShifter {
   Future<void> start({int apiPort = 0}) async {
     origin = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     origin.listen(_onOrigin);
-    api = await HttpServer.bind(InternetAddress.loopbackIPv4, apiPort);
+    api = await HttpServer.bind(bind, apiPort);
     api.listen(_onApi);
-    gateway = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+    gateway = await ServerSocket.bind(bind, 0);
     gateway.listen(_onGateway);
   }
 
@@ -139,6 +149,7 @@ class FakeShifter {
         ..close();
     }
 
+    if (req.uri.path == '/_test/step') return send(200, {'step': step});
     final authed = req.headers.value('authorization') == 'Bearer $fakeKey' || req.headers.value('x-api-key') == fakeKey;
     if (!authed) return send(401, {'error': 'Unauthorized', 'code': 401});
     void ok(Object data) => send(200, {'error': null, 'code': 200, 'data': data});

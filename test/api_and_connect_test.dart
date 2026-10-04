@@ -1,6 +1,7 @@
 // HTTP API mapping and the full connect flow against the stand-in Shifter.
 // The OS proxy is left alone (applySystemProxy: false); everything else is real.
 //   flutter test test/api_and_connect_test.dart
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -9,7 +10,10 @@ import 'package:shifter_app/data/geo_catalog.dart';
 import 'package:shifter_app/data/http_api.dart';
 import 'package:shifter_app/data/models.dart';
 import 'package:shifter_app/data/store.dart';
+import 'package:shifter_app/proxy/android_system_proxy.dart';
+import 'package:shifter_app/proxy/bypass.dart';
 import 'package:shifter_app/proxy/proxy_engine.dart';
+import 'package:shifter_app/proxy/system_proxy.dart';
 import 'package:shifter_app/state/app_controller.dart';
 
 import 'support/fake_shifter.dart';
@@ -185,5 +189,48 @@ void main() {
       expect((again.targetFor('pqqD') as ResidentialTarget).country?.code, 'fr');
       again.dispose();
     });
+
+    test('the OS dropping the routing (VPN turned off in Settings) disconnects', () async {
+      final os = _FakeSystemProxy();
+      final routed = AppController(
+        api: HttpShifterApi(baseUrl: shifter.apiUrl, store: store),
+        store: store,
+        engine: LocalProxyEngine(store, system: os, checkUrl: 'http://ip-check.test/json'),
+      );
+      addTearDown(routed.dispose);
+      await until(() => routed.phase == AuthPhase.signedIn, 'boot');
+      await routed.selectMembership('pqqD');
+      await routed.setTarget('pqqD', const ResidentialTarget(country: GeoCountry('de', 'Germany')));
+      await routed.connect();
+      expect(routed.connection.status, ConnectionStatus.connected, reason: routed.connection.message);
+      expect(os.enabled, isTrue);
+
+      os.stop('revoked');
+      await until(() => routed.connection.status == ConnectionStatus.disconnected && !os.enabled, 'disconnected');
+      expect((routed.engine as LocalProxyEngine).port, isNull, reason: 'local proxy stopped');
+    });
   });
+
+  test('Android proxy exclusion list keeps only host names and wildcards', () {
+    expect(androidExclusionList(expandedBypassList(ProxySettings.defaultBypassList)),
+        containsAll(['localhost', '127.0.0.1', '*.local', 'local', '*.shifter.io', 'shifter.io']));
+    expect(androidExclusionList(['10.0.0.0/8', '[::1]', 'a b', '*.example.com']), ['*.example.com']);
+  });
+}
+
+class _FakeSystemProxy extends SystemProxy {
+  final _stopped = StreamController<String?>.broadcast();
+  bool enabled = false;
+
+  void stop(String reason) {
+    enabled = false;
+    _stopped.add(reason);
+  }
+
+  @override
+  Stream<String?> get stopped => _stopped.stream;
+  @override
+  Future<void> enable(String host, int port, List<String> bypass) async => enabled = true;
+  @override
+  Future<void> disable() async => enabled = false;
 }

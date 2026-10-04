@@ -31,6 +31,10 @@ abstract class ProxyEngine {
   /// Fires when the gateway refuses the login while connected.
   Stream<void> get rejected;
 
+  /// Fires when the OS drops the routing without the app asking (mobile:
+  /// the VPN slot was turned off in Settings or taken by another VPN app).
+  Stream<void> get stopped;
+
   /// Undo a system proxy left behind by a crash or force-quit.
   Future<void> recover();
 
@@ -71,6 +75,9 @@ class LocalProxyEngine implements ProxyEngine {
 
   @override
   Stream<void> get rejected => _rejected.stream;
+
+  @override
+  Stream<void> get stopped => _system.stopped;
 
   @override
   Future<void> recover() => applySystemProxy ? _system.restoreIfNeeded().catchError((_) {}) : Future.value();
@@ -136,6 +143,8 @@ class MockProxyEngine implements ProxyEngine {
   bool get supported => true;
   @override
   Stream<void> get rejected => const Stream.empty();
+  @override
+  Stream<void> get stopped => const Stream.empty();
   @override
   Future<void> recover() async {}
 

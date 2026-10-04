@@ -33,6 +33,7 @@ class AppController extends ChangeNotifier {
         store = store ?? MemoryStore(),
         engine = engine ?? MockProxyEngine(delay: demoConnected ? Duration.zero : const Duration(milliseconds: 1100)) {
     _rejectedSub = this.engine.rejected.listen((_) => _onRejected());
+    _stoppedSub = this.engine.stopped.listen((_) => disconnect());
     _boot();
   }
 
@@ -67,6 +68,7 @@ class AppController extends ChangeNotifier {
   Timer? _exitTimer;
   bool _checking = false;
   StreamSubscription<void>? _rejectedSub;
+  StreamSubscription<void>? _stoppedSub;
   bool _disposed = false;
 
   Future<void> _boot() async {
@@ -420,6 +422,7 @@ class AppController extends ChangeNotifier {
     _disposed = true;
     _exitTimer?.cancel();
     _rejectedSub?.cancel();
+    _stoppedSub?.cancel();
     unawaited(engine.clear().catchError((_) {}));
     super.dispose();
   }
