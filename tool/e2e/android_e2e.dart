@@ -2,8 +2,8 @@
 // that logs every login), runs integration_test/android_connect_test.dart on
 // an emulator or phone, and checks from outside the app that:
 //   1. connecting gives Android a VPN network carrying the local proxy,
-//   2. another app's request (the browser) goes through it to the gateway
-//      with the targeted login,
+//   2. with Shifter's window closed, another app's request (the browser)
+//      goes through it to the gateway with the targeted login,
 //   3. disconnecting removes it again.
 //
 //   dart run tool/e2e/android_e2e.dart [-d <adb serial>] [--browser-package <pkg>]
@@ -97,7 +97,13 @@ Future<void> main(List<String> args) async {
     check(services.contains('isForeground=true') && services.contains('foregroundNoti=Notification(channel=connection'),
         'runs in the foreground with the connection notification');
 
-    // Another app: open a page in the browser; it must reach the gateway.
+    // Close Shifter's window (Back), then another app: open a page in the
+    // browser. It must still reach the gateway: the proxy outlives the window.
+    await adb(['shell', 'input', 'keyevent', 'KEYCODE_BACK']);
+    await until(() async => !(await adb(['shell', 'dumpsys', 'activity', 'activities'])).contains('$_package/.MainActivity'), 'window closed',
+            seconds: 10)
+        .catchError((_) {});
+    check(!(await adb(['shell', 'dumpsys', 'activity', 'activities'])).contains('$_package/.MainActivity'), 'Shifter window closed');
     final browser = arg('--browser-package');
     final before = shifter.log.length;
     await adb([
@@ -107,7 +113,7 @@ Future<void> main(List<String> args) async {
     var reached = false;
     await until(() async => reached = shifter.log.skip(before).any((e) => e.target.contains('example.test')), 'browser request', seconds: 30)
         .catchError((_) {});
-    check(reached, 'a browser request went through the local proxy to the gateway');
+    check(reached, 'with the window closed, a browser request went through the local proxy to the gateway');
     if (reached) {
       final e = shifter.log.skip(before).firstWhere((e) => e.target.contains('example.test'));
       check(e.user == user, 'with the same login (${e.user})');

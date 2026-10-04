@@ -2,7 +2,7 @@
 
 Desktop, tablet and mobile version of the Shifter proxy extension
 (shifter-io/proxy-extension). The app (`lib/main.dart`) talks to the live
-Shifter API and routes this computer through the Shifter gateway; the preview
+Shifter API and routes this device through the Shifter gateway; the preview
 studio and the tests use mock data (`lib/data/mock_api.dart`).
 
 ## How it works
@@ -23,9 +23,21 @@ studio and the tests use mock data (`lib/data/mock_api.dart`).
   workarounds as in the browsers).
 - Only apps that follow the system proxy go through Shifter; UDP (WebRTC,
   games) connects directly. It is a system proxy, not a VPN tunnel.
-- **Phones and tablets:** connecting needs an OS VPN extension (Android
-  `VpnService`, iOS Network Extension) that isn't built yet; the app explains
-  this when you tap Connect. Everything else (sign-in, plans, locations) works.
+- **Android** (10+): apps can't set a system proxy, so the app opens a VPN
+  slot (`VpnService`, `android/app/src/main/kotlin/`) whose network carries
+  an HTTP proxy pointing at the same local proxy (`setHttpProxy`). It has no
+  routes: no packets go through it, traffic still speaks Shifter's proxy
+  protocol, and the rest goes direct, as on desktop. Android asks the user
+  once ("Connection request"); a "Connected" notification keeps the app
+  alive in the background; the proxy keeps working after the window closes.
+  Turning the VPN off in Settings disconnects the app.
+- **iOS** (15+): the same idea with a packet tunnel extension
+  (`ios/ShifterTunnel/`) whose `NEProxySettings` point apps at a local proxy.
+  iOS suspends the app in the background, so that proxy runs inside the
+  extension, in Swift (`TunnelProxy.swift`, a twin of `local_proxy.dart`);
+  `lib/proxy/tunnel_proxy_engine.dart` hands it the login. Builds; running it
+  needs a device and an Apple team with the Network Extension entitlement
+  (the simulator can't run tunnel extensions).
 - macOS: the app runs outside the App Sandbox (networksetup is blocked inside
   it), so ship it with Developer ID, not the Mac App Store.
 
@@ -54,6 +66,10 @@ run straight to the gateway and through the proxy:
 
 A 100 Mbit/s connection costs under 1 % of one core.
 
+iOS tunnel proxy (Swift, built as a Mac program): about 800 MB/s through a
+tunnel, 20 MB with 50 slow readers, 25 MB peak; iOS allows a tunnel
+extension 50 MB.
+
 No connection cap on our side (Shifter has none either): apps launched from
 the Dock get a 256 open-files limit and each proxied connection needs two, so
 the proxy raises its own limit at start (`lib/proxy/file_limit.dart`).
@@ -77,6 +93,21 @@ flutter test integration_test/macos_connect_test.dart -d macos \
   --dart-define=SHIFTER_BASE_URL=http://127.0.0.1:18090 \
   --dart-define=SHIFTER_IP_CHECK_URL=http://ip-check.test/json
 ```
+
+`test/proxy_test.dart` runs the same proxy tests against the Dart proxy and,
+on a Mac, the iOS tunnel's Swift proxy (compiled with `swiftc`).
+
+Android, on an emulator or a phone over adb (installs the app, connects,
+checks Android hands the proxy to other apps, opens a page in Chrome with
+Shifter's window closed, disconnects):
+
+```bash
+dart run tool/e2e/android_e2e.dart -d emulator-5554 --browser-package com.android.chrome
+```
+
+Passing on Android 10 (phone) and Android 16 (phone and tablet). This Mac's
+SDK: `/opt/homebrew/share/android-commandlinetools` (Homebrew
+`android-commandlinetools`, `openjdk@17`).
 
 `test/support/fake_shifter.dart` is the stand-in API + login-checking gateway
 (Dart port of the extension's `e2e/fake-shifter.mjs`).

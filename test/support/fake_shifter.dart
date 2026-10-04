@@ -124,7 +124,9 @@ class FakeShifter {
     api = await HttpServer.bind(bind, apiPort);
     api.listen(_onApi);
     gateway = await ServerSocket.bind(bind, 0);
-    gateway.listen(_onGateway);
+    // A reset from either side (an app closed mid-request) ends that
+    // connection only, as on a real gateway.
+    gateway.listen((sock) => _onGateway(sock).catchError((_) => sock.destroy()));
   }
 
   Future<void> stop() async {
@@ -257,6 +259,7 @@ class FakeShifter {
     }
 
     final up = await Socket.connect(InternetAddress.loopbackIPv4, origin.port);
+    up.done.catchError((_) => sock.destroy()).ignore();
     if (method == 'CONNECT') {
       sock.write('HTTP/1.1 200 Connection Established\r\n\r\n');
     } else {
