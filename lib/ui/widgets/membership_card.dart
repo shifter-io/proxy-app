@@ -56,7 +56,7 @@ class RenewalLine extends StatelessWidget {
       spacing: 12,
       children: [
         line,
-        if (!m.usable && m.status != MembershipStatus.unsupported) SfLinkButton(text: 'Renew', icon: SfIcons.external, onTap: onRenew, fontSize: 12.5),
+        if (!m.usable) SfLinkButton(text: 'Renew', icon: SfIcons.external, onTap: onRenew, fontSize: 12.5),
       ],
     );
   }

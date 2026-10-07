@@ -55,7 +55,7 @@ class FakeShifter {
           'is_recurring': true, 'is_trial': false, 'created_at': _iso(-5), 'expires_at': _iso(10),
           'renews_at': _iso(10), 'trial_ends_at': null, 'canceled_at': null,
         },
-        // Cancelled and ended: hidden.
+        // Cancelled and ended: listed as expired.
         'old1': {
           'name': 'test #old1 - Pro', 'status': 'Canceled', 'color': 'danger', 'service': 'backconnect',
           'uri': 'backconnect/old1/', 'membership_id': 3, 'product': 'Pro', 'category': 'Residential Proxies',
@@ -69,8 +69,8 @@ class FakeShifter {
           'is_recurring': true, 'is_trial': false, 'created_at': _iso(-1), 'expires_at': _iso(29),
           'renews_at': _iso(29), 'trial_ends_at': null, 'canceled_at': null, 'pool': 'country',
         },
-        // Active on the panel, but proxy-config leaves it out (older Static
-        // Residential service, as on the real account): ISP, not usable.
+        // Legacy pinned-IP ISP plan (as on the real account): active on the
+        // panel, not in proxy-config, hidden.
         'stRP': {
           'name': 'test #stRP - 4 ISP Proxies', 'status': 'Active, Recurring', 'color': 'success',
           'service': 'static-residential-proxies', 'uri': 'static-residential-proxies/stRP/', 'membership_id': 6,

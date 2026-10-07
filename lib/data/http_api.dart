@@ -276,12 +276,12 @@ EntryPoint _toEntryPoint(Map<String, dynamic> e) =>
 ProductType? _productType(Map<String, dynamic> m, Map<String, dynamic>? live) {
   if (live != null) return live['type'] == 'isp' ? ProductType.isp : ProductType.residential;
   final category = m['category'] as String? ?? '';
-  // Static Residential plans are fixed IPs, like ISP plans (the panel sells
-  // ISP plans under that category and service too), not the rotating pool.
-  if (m['service'] == 'static-residential-proxies' || RegExp('^(isp|static residential)', caseSensitive: false).hasMatch(category)) {
-    return ProductType.isp;
-  }
-  if (m['pool'] != null || RegExp('residential', caseSensitive: false).hasMatch(category)) return ProductType.residential;
+  // Only the current product lines. Legacy plans are left out: "Static
+  // Residential Proxies" (pinned-IP ISP, service static-residential-proxies)
+  // has no login in proxy-config, and Special Backconnect is another product.
+  if (m['service'] == 'static-residential-proxies') return null;
+  if (m['pool'] != null || RegExp('^residential', caseSensitive: false).hasMatch(category)) return ProductType.residential;
+  if (RegExp('^isp', caseSensitive: false).hasMatch(category)) return ProductType.isp;
   return null; // other product lines can't be used from the app
 }
 
@@ -293,8 +293,8 @@ ResidentialPool? _pool(Object? v) => switch (v) {
     };
 
 /// Joins one `/user/memberships` entry with its `/user/usage` row and its
-/// `/user/proxy-config` plan (by hash). Null for plans the app can't use or
-/// show (other products, and cancelled plans that have ended).
+/// `/user/proxy-config` plan (by hash). Null for other product lines; ended
+/// plans come back as expired (the plans screen folds them away).
 Membership? _toMembership(
   String hash,
   Map<String, dynamic> m,
@@ -306,7 +306,6 @@ Membership? _toMembership(
   if (type == null) return null;
   final expiresAt = _date(m['expires_at']) ?? DateTime.now();
   final ended = !expiresAt.isAfter(DateTime.now());
-  if (m['canceled_at'] != null && ended) return null;
 
   final planName = [m['product'], live?['product'], m['name']].whereType<String>().where((s) => s.isNotEmpty).firstOrNull ?? hash;
   final status = _statusOf(m, live != null, ended, expiresAt);
@@ -357,11 +356,10 @@ Membership? _toMembership(
 
 /// Usable = listed in proxy-config (live on the gateway) and not past
 /// `expires_at`. A cancelled plan keeps working until then, so it reads as
-/// "expiring"; unpaid / not-yet-active plans read as "suspended", and plans
-/// the panel shows as active but proxy-config leaves out as "unsupported".
+/// "expiring"; unpaid / not-yet-active plans read as "suspended".
 MembershipStatus _statusOf(Map<String, dynamic> m, bool live, bool ended, DateTime expiresAt) {
   if (ended) return MembershipStatus.expired;
-  if (!live) return m['color'] == 'success' && m['canceled_at'] == null ? MembershipStatus.unsupported : MembershipStatus.suspended;
+  if (!live) return MembershipStatus.suspended;
   final endsSoon = m['renews_at'] == null && expiresAt.difference(DateTime.now()) < _expiringWindow;
   if (m['canceled_at'] != null || m['color'] == 'warning' || endsSoon) return MembershipStatus.expiring;
   return MembershipStatus.active;

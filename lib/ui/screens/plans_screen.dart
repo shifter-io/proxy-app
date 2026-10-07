@@ -92,7 +92,9 @@ class PlansList extends StatelessWidget {
       ]);
     } else {
       final usable = list.where((m) => m.usable).toList();
-      final inactive = list.where((m) => !m.usable).toList();
+      final inactive = list.where((m) => !m.usable && m.status != MembershipStatus.expired).toList();
+      final expired = list.where((m) => m.status == MembershipStatus.expired).toList()
+        ..sort((a, b) => b.expiresAt.compareTo(a.expiresAt));
       var i = 0;
       Widget card(Membership m) => Padding(
             padding: const EdgeInsets.only(bottom: 12),
@@ -143,6 +145,10 @@ class PlansList extends StatelessWidget {
           const SectionLabel('Inactive'),
           for (final m in inactive) card(m),
         ],
+        if (expired.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          _ExpiredPlans(count: expired.length, children: [for (final m in expired) card(m)]),
+        ],
         const SizedBox(height: 10),
         SfButton(
           label: const Text('Add a plan'),
@@ -161,6 +167,53 @@ class PlansList extends StatelessWidget {
       padding: EdgeInsets.fromLTRB(pad, embedded ? 4 : 18, pad, 24 + bottom),
       children: [MaxWidth(maxWidth: embedded ? 760 : 560, child: content)],
     );
+  }
+}
+
+/// Ended plans, folded away under "Expired (n)" until tapped.
+class _ExpiredPlans extends StatefulWidget {
+  const _ExpiredPlans({required this.count, required this.children});
+  final int count;
+  final List<Widget> children;
+
+  @override
+  State<_ExpiredPlans> createState() => _ExpiredPlansState();
+}
+
+class _ExpiredPlansState extends State<_ExpiredPlans> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Semantics(
+        button: true,
+        expanded: _open,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => setState(() => _open = !_open),
+          child: SectionLabel(
+            'Expired',
+            trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+              CountText(widget.count),
+              const SizedBox(width: 6),
+              AnimatedRotation(
+                turns: _open ? 0.5 : 0,
+                duration: const Duration(milliseconds: 220),
+                curve: Sf.easeOutExpo,
+                child: const SfIcon(SfIcons.chevronDown, size: 14, color: Sf.textMuted),
+              ),
+            ]),
+          ),
+        ),
+      ),
+      AnimatedSize(
+        duration: const Duration(milliseconds: 260),
+        curve: Sf.easeOutExpo,
+        alignment: Alignment.topCenter,
+        child: _open ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: widget.children) : const SizedBox(width: double.infinity),
+      ),
+    ]);
   }
 }
 
