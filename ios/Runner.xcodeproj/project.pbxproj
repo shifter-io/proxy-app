@@ -503,6 +503,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				DEVELOPMENT_TEAM = "";
 				PRODUCT_BUNDLE_IDENTIFIER = io.shifter.shifterApp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
@@ -525,6 +526,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
+				DEVELOPMENT_TEAM = "";
 				PRODUCT_BUNDLE_IDENTIFIER = io.shifter.shifterApp.tunnel;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -596,6 +598,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
+				DEVELOPMENT_TEAM = "";
 				PRODUCT_BUNDLE_IDENTIFIER = io.shifter.shifterApp.tunnel;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -732,6 +735,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				DEVELOPMENT_TEAM = "";
 				PRODUCT_BUNDLE_IDENTIFIER = io.shifter.shifterApp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
@@ -755,6 +759,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				DEVELOPMENT_TEAM = "";
 				PRODUCT_BUNDLE_IDENTIFIER = io.shifter.shifterApp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
@@ -777,6 +782,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
+				DEVELOPMENT_TEAM = "";
 				PRODUCT_BUNDLE_IDENTIFIER = io.shifter.shifterApp.tunnel;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
