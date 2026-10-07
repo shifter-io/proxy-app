@@ -2,14 +2,13 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../../state/app_controller.dart';
-import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
 import '../screens/home_screen.dart';
 import '../screens/location/location_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/plans_screen.dart';
 import '../screens/settings_screen.dart';
-import '../widgets/atmosphere.dart';
+import '../widgets/ambient_motion.dart';
 import '../widgets/layout.dart';
 import '../widgets/primitives.dart';
 import 'wide_shell.dart';
@@ -49,9 +48,8 @@ class _AppRootState extends State<AppRoot> {
     _last = gate;
 
     final child = switch (gate) {
-      _Gate.splash => const _Splash(key: ValueKey('splash')),
+      _Gate.splash || _Gate.loadingPlans => const _Splash(key: ValueKey('splash')),
       _Gate.login => const LoginScreen(key: ValueKey('login')),
-      _Gate.loadingPlans => const _Splash(key: ValueKey('loading'), message: 'Loading your plans'),
       _Gate.choosePlan => const PlansScreen(key: ValueKey('plans')),
       _Gate.compact => const _CompactShell(key: ValueKey('compact')),
       _Gate.wide => const WideShell(key: ValueKey('wide')),
@@ -85,27 +83,44 @@ class _CompactShell extends StatelessWidget {
   }
 }
 
-class _Splash extends StatelessWidget {
-  const _Splash({super.key, this.message});
-  final String? message;
+class _Splash extends StatefulWidget {
+  const _Splash({super.key});
+
+  @override
+  State<_Splash> createState() => _SplashState();
+}
+
+class _SplashState extends State<_Splash> {
+  final _started = ambientClock.value;
+
   @override
   Widget build(BuildContext context) {
+    const logo = SizedBox.square(dimension: 72, child: Glyph(size: 72));
     return Material(
       color: Sf.bgDeepest,
-      child: Stack(children: [
-        const Positioned.fill(child: Atmosphere()),
-        Center(
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const PopIn(child: Glyph(size: 48)),
-            const SizedBox(height: 22),
-            const SfSpinner(size: 20),
-            if (message != null) ...[
-              const SizedBox(height: 16),
-              FadeSlideIn(offset: 6, child: Text(message!, style: SfText.small)),
-            ],
-          ]),
+      child: Center(
+        child: Semantics(
+          label: 'Shifter',
+          image: true,
+          child: ExcludeSemantics(
+            child: MediaQuery.disableAnimationsOf(context)
+                ? logo
+                : AnimatedBuilder(
+                    animation: ambientClock,
+                    child: logo,
+                    builder: (context, child) {
+                      // Start at the native logo's exact size and opacity,
+                      // then gently breathe on the shared, lifecycle-aware clock.
+                      final pulse = breathe(ambientClock.value - _started, 1.1);
+                      return Transform.scale(
+                        scale: 1 + 0.045 * pulse,
+                        child: Opacity(opacity: 1 - 0.14 * pulse, child: child),
+                      );
+                    },
+                  ),
+          ),
         ),
-      ]),
+      ),
     );
   }
 }

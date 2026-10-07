@@ -115,17 +115,14 @@ class ResidentialMembership extends Membership {
     super.manageUrl,
     required this.pool,
     this.traffic,
-    this.unmetered = false,
     this.entryPoints = const [],
     this.stickySessions = true,
   });
   final ResidentialPool pool;
 
-  /// Null when there's nothing to show: see [unmetered].
+  /// Residential plans always have a traffic allowance. Null means the API
+  /// has not supplied usable traffic figures, not unlimited bandwidth.
   final Traffic? traffic;
-
-  /// True only when usage says the plan has no traffic cap ("Unlimited").
-  final bool unmetered;
 
   /// Gateway regions the customer can pin; empty when the plan isn't live yet.
   final List<EntryPoint> entryPoints;

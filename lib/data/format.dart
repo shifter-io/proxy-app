@@ -45,7 +45,7 @@ String formatUptime(Duration d) {
   return '${two(d.inHours)}:${two(d.inMinutes % 60)}:${two(d.inSeconds % 60)}';
 }
 
-/// Traffic left on a metered plan; null when the plan has no cap to show.
+/// Traffic left on a residential plan; null when its usage is unavailable.
 ({int left, double ratio, int total})? trafficLeft(ResidentialMembership m) {
   final t = m.traffic;
   if (t == null) return null;
@@ -53,9 +53,6 @@ String formatUptime(Duration d) {
   final ratio = t.totalBytes > 0 ? (left / t.totalBytes).clamp(0.0, 1.0) : 0.0;
   return (left: left, ratio: ratio, total: t.totalBytes);
 }
-
-/// "Unlimited" for unmetered plans, "—" while usage isn't known yet.
-String noTrafficLabel(ResidentialMembership m) => m.unmetered ? 'Unlimited' : '—';
 
 /// "New York · AS7922"
 String ispIpPlace(IspIp ip) => [ip.city ?? ip.country.toUpperCase(), if (ip.asn != null) 'AS${ip.asn}'].join(' · ');

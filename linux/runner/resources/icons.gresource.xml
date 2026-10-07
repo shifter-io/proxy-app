@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <gresource prefix="/io/shifter/shifter_app">
+    <file>shifter.png</file>
+  </gresource>
+</gresources>

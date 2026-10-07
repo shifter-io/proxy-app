@@ -85,7 +85,10 @@ class FakeShifter {
         },
       };
 
-  Map<String, dynamic> get usage => {
+  /// Reproduce incomplete or inconsistent usage responses in API tests.
+  Map<String, dynamic>? usageResponse;
+
+  Map<String, dynamic> get usage => usageResponse ?? {
         'memberships': [
           {
             'id': 'pqqD', 'plan': 'Spark', 'service': 'backconnect', 'status': 'Active', 'metered': true,

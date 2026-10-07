@@ -1,12 +1,14 @@
 import 'dart:ui' show AppExitResponse;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'data/http_api.dart';
 import 'data/store.dart';
 import 'proxy/proxy_engine.dart';
 import 'state/app_controller.dart';
 import 'theme/theme.dart';
+import 'theme/tokens.dart';
 import 'ui/shell/app_root.dart';
 import 'ui/widgets/ambient_motion.dart';
 
@@ -68,6 +70,20 @@ class _ShifterAppState extends State<ShifterApp> {
         title: 'Shifter',
         debugShowCheckedModeBanner: false,
         theme: buildShifterTheme(),
+        // Paint behind route fades too, so the native surface never shows
+        // through while switching from startup to login or the account.
+        builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
+          value: const SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness: Brightness.light,
+            statusBarBrightness: Brightness.dark,
+            systemNavigationBarColor: Colors.transparent,
+            systemNavigationBarDividerColor: Colors.transparent,
+            systemNavigationBarIconBrightness: Brightness.light,
+            systemNavigationBarContrastEnforced: false,
+          ),
+          child: ColoredBox(color: Sf.bgDeepest, child: child!),
+        ),
         home: const AmbientMotionScope(child: AppRoot()),
       ),
     );

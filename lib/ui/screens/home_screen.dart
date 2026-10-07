@@ -400,7 +400,7 @@ class StatsCard extends StatelessWidget {
             ])),
             sub: Padding(padding: const EdgeInsets.only(top: 4), child: SfProgressBar(ratio: traffic.ratio, height: 4)),
           )
-        : mm is ResidentialMembership && !mm.unmetered
+        : mm is ResidentialMembership
             ? const _Stat(label: 'Traffic left', value: Text('—'), sub: Text('Usage not available yet'))
             : const _Stat(label: 'Bandwidth', value: Text('Unlimited'), sub: Text('No traffic cap'));
     final session = mm is IspMembership

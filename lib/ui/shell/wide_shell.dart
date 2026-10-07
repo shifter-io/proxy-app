@@ -275,7 +275,7 @@ class _PlanMiniCard extends StatelessWidget {
             const SizedBox(height: 7),
             Text('${formatBytes(t.left)} left of ${formatBytes(t.total, digits: 0)}', style: SfText.micro.copyWith(fontSize: 12)),
           ] else
-            Text(mm.unmetered ? 'Unlimited traffic' : 'Traffic usage not available yet', style: SfText.micro.copyWith(fontSize: 12))
+            Text('Traffic usage not available yet', style: SfText.micro.copyWith(fontSize: 12))
         else
           Text('${(mm as IspMembership).ipCount} static IPs · unlimited', style: SfText.micro.copyWith(fontSize: 12)),
       ]),

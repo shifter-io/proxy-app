@@ -3,7 +3,10 @@ import FlutterMacOS
 
 class MainFlutterWindow: NSWindow {
   override func awakeFromNib() {
+    let launchColor = NSColor(srgbRed: 11 / 255, green: 14 / 255, blue: 23 / 255, alpha: 1)
+    self.backgroundColor = launchColor
     let flutterViewController = FlutterViewController()
+    flutterViewController.backgroundColor = launchColor
     self.contentViewController = flutterViewController
 
     // Open large and centred (the device preview needs room); allow shrinking
@@ -14,7 +17,7 @@ class MainFlutterWindow: NSWindow {
     self.minSize = NSSize(width: 320, height: 560)
     self.title = "Shifter"
     self.titlebarAppearsTransparent = true
-    self.backgroundColor = NSColor(red: 0.043, green: 0.055, blue: 0.09, alpha: 1)
+    self.appearance = NSAppearance(named: .darkAqua)
 
     RegisterGeneratedPlugins(registry: flutterViewController)
 

@@ -78,9 +78,9 @@ class UsageLine extends StatelessWidget {
     final t = trafficLeft(mm);
     if (t == null) {
       return Row(children: [
-        Text(mm.unmetered ? 'Bandwidth' : 'Traffic left', style: SfText.small),
+        Text('Traffic left', style: SfText.small),
         const Spacer(),
-        Text(noTrafficLabel(mm), style: SfText.mono.copyWith(fontSize: 12.5, color: Sf.textSecondary)),
+        Text('—', style: SfText.mono.copyWith(fontSize: 12.5, color: Sf.textSecondary)),
       ]);
     }
     return Column(children: [

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Shifter
+Comment=Browse through your Shifter proxies
+Exec=shifter_app
+Icon=io.shifter.shifter_app
+Terminal=false
+Categories=Network;
+StartupWMClass=io.shifter.shifter_app

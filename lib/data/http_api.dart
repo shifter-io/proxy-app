@@ -330,7 +330,6 @@ Membership? _toMembership(
   }
 
   final res = live?['type'] == 'residential' ? live : null;
-  final metered = usage?['metered'] == true && usage?['quota_bytes'] != null;
   return ResidentialMembership(
     id: hash,
     planName: planName,
@@ -340,17 +339,25 @@ Membership? _toMembership(
     statusLabel: statusLabel,
     manageUrl: manageUrl,
     pool: _pool(m['pool']) ?? _pool(res?['pool']) ?? ResidentialPool.full,
-    traffic: metered
-        ? Traffic(
-            totalBytes: (usage!['quota_bytes'] as num).toInt(),
-            usedBytes: (usage['used_bytes'] as num?)?.toInt() ?? 0,
-            remainingBytes: (usage['remaining_bytes'] as num?)?.toInt(),
-            resetsAt: _date(usage['resets_at']),
-          )
-        : null,
-    unmetered: usage?['metered'] == false,
+    traffic: _residentialTraffic(usage),
     entryPoints: _list(res?['entry_points']).map(_toEntryPoint).toList(),
     stickySessions: (res?['targeting'] as Map?)?['sticky_session'] as bool? ?? true,
+  );
+}
+
+Traffic? _residentialTraffic(Map<String, dynamic>? usage) {
+  // Some residential usage rows incorrectly say metered:false. Use the
+  // actual per-plan byte figures; never interpret missing figures as a cap
+  // of infinity, or a missing balance as the full unused allowance.
+  final quota = usage?['quota_bytes'];
+  final used = usage?['used_bytes'];
+  final remaining = usage?['remaining_bytes'];
+  if (quota is! num || (used is! num && remaining is! num)) return null;
+  return Traffic(
+    totalBytes: quota.toInt(),
+    usedBytes: used is num ? used.toInt() : (quota - (remaining as num)).clamp(0, double.infinity).toInt(),
+    remainingBytes: remaining is num ? remaining.toInt() : null,
+    resetsAt: _date(usage?['resets_at']),
   );
 }
 

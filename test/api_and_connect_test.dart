@@ -4,8 +4,10 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shifter_app/data/api.dart';
+import 'package:shifter_app/data/format.dart';
 import 'package:shifter_app/data/geo_catalog.dart';
 import 'package:shifter_app/data/http_api.dart';
 import 'package:shifter_app/data/models.dart';
@@ -15,6 +17,9 @@ import 'package:shifter_app/proxy/bypass.dart';
 import 'package:shifter_app/proxy/proxy_engine.dart';
 import 'package:shifter_app/proxy/system_proxy.dart';
 import 'package:shifter_app/state/app_controller.dart';
+import 'package:shifter_app/theme/theme.dart';
+import 'package:shifter_app/ui/screens/home_screen.dart';
+import 'package:shifter_app/ui/widgets/membership_card.dart';
 
 import 'support/fake_shifter.dart';
 
@@ -34,6 +39,13 @@ void main() {
   group('HttpShifterApi', () {
     late HttpShifterApi api;
     setUp(() => api = HttpShifterApi(baseUrl: shifter.apiUrl, store: MemoryStore()));
+
+    void residentialUsage(Map<String, dynamic> fields) {
+      final response = shifter.usage;
+      final row = (response['memberships'] as List).first as Map<String, dynamic>;
+      row.addAll(fields);
+      shifter.usageResponse = response;
+    }
 
     test('rejects a wrong key as unauthorized', () async {
       await expectLater(
@@ -82,6 +94,82 @@ void main() {
       expect(ips.map((ip) => ip.label), ['$comcast #1', '$comcast #2', 'Test Carrier RO'],
           reason: 'AS7922 comes from the catalog, AS999999 from the geo endpoint');
       expect(ips.first.country, 'us');
+    });
+
+    testWidgets('missing residential traffic never appears as unlimited; ISP does', (tester) async {
+      // Reproduce the live residential response, including the misleading
+      // metered flag and wallet allowance (which is not the plan's balance).
+      residentialUsage({
+        'metered': false,
+        'quota_bytes': null,
+        'used_bytes': null,
+        'remaining_bytes': null,
+        'overage_billed': true,
+        'wallet_covers_gb': 219.7,
+      });
+      final plans = (await tester.runAsync(() async {
+        await api.verifyApiKey(fakeKey);
+        return api.memberships();
+      }))!;
+      final res = plans.first as ResidentialMembership;
+      expect(res.traffic, isNull);
+
+      Future<void> show(Membership m) => tester.pumpWidget(MaterialApp(
+        theme: buildShifterTheme(),
+        home: Scaffold(body: Column(children: [
+          StatsCard(m: m, settings: const ProxySettings(), onSession: () {}),
+          UsageLine(m),
+        ])),
+      ));
+
+      await show(res);
+      expect(find.text('Unlimited'), findsNothing);
+      expect(find.text('TRAFFIC LEFT'), findsOneWidget);
+      expect(find.text('Traffic left'), findsOneWidget);
+      expect(find.text('Usage not available yet'), findsOneWidget);
+      expect(find.text('—'), findsNWidgets(2));
+
+      await show(plans.whereType<IspMembership>().first);
+      expect(find.text('Unlimited'), findsNWidgets(2));
+      expect(find.text('Usage not available yet'), findsNothing);
+    });
+
+    test('residential byte figures take precedence over an incorrect metered flag', () async {
+      residentialUsage({'metered': false});
+      await api.verifyApiKey(fakeKey);
+      final res = (await api.memberships()).first as ResidentialMembership;
+      expect(res.traffic!.totalBytes, 5000000000);
+      expect(res.traffic!.usedBytes, 1250000000);
+      expect(trafficLeft(res)!.left, 3750000000);
+    });
+
+    test('a quota without usage or a remaining balance is unavailable, not unused', () async {
+      residentialUsage({'used_bytes': null, 'remaining_bytes': null});
+      await api.verifyApiKey(fakeKey);
+      final res = (await api.memberships()).first as ResidentialMembership;
+      expect(res.traffic, isNull);
+    });
+
+    test('a supplied remaining balance is preserved when used bytes are absent', () async {
+      residentialUsage({'used_bytes': null});
+      await api.verifyApiKey(fakeKey);
+      final res = (await api.memberships()).first as ResidentialMembership;
+      expect(res.traffic!.usedBytes, 1250000000);
+      expect(trafficLeft(res)!.left, 3750000000);
+    });
+
+    test('a zero residential balance stays zero', () async {
+      residentialUsage({'used_bytes': 5000000000, 'remaining_bytes': 0});
+      await api.verifyApiKey(fakeKey);
+      final res = (await api.memberships()).first as ResidentialMembership;
+      expect(trafficLeft(res), (left: 0, ratio: 0.0, total: 5000000000));
+    });
+
+    test('overage without a remaining field displays zero remaining traffic', () async {
+      residentialUsage({'used_bytes': 6250000000, 'remaining_bytes': null});
+      await api.verifyApiKey(fakeKey);
+      final res = (await api.memberships()).first as ResidentialMembership;
+      expect(trafficLeft(res), (left: 0, ratio: 0.0, total: 5000000000));
     });
 
     test('hands out gateway credentials', () async {
