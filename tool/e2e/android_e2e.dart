@@ -1,5 +1,5 @@
 // Android end to end, host half. Plays Shifter on this Mac (API + a gateway
-// that logs every login), runs integration_test/android_connect_test.dart on
+// that logs every login), runs integration_test/connect_test.dart on
 // an emulator or phone, and checks from outside the app that:
 //   1. connecting gives Android a VPN network carrying the local proxy,
 //   2. with Shifter's window closed, another app's request (the browser)
@@ -12,6 +12,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import '../../test/support/fake_shifter.dart';
+import 'e2e_support.dart';
 
 const _package = 'io.shifter.shifter_app';
 const _apiPort = 18090;
@@ -21,14 +22,6 @@ late String _serial;
 Future<String> adb(List<String> args) async {
   final r = await Process.run('adb', ['-s', _serial, ...args]);
   return '${r.stdout}${r.stderr}';
-}
-
-Future<void> until(Future<bool> Function() ok, String what, {int seconds = 120}) async {
-  final end = DateTime.now().add(Duration(seconds: seconds));
-  while (!await ok()) {
-    if (DateTime.now().isAfter(end)) throw StateError('timed out: $what');
-    await Future<void>.delayed(const Duration(milliseconds: 300));
-  }
 }
 
 /// The Shifter VPN network's proxy, as Android reports it ("127.0.0.1:port"), or null.
@@ -55,24 +48,22 @@ Future<void> main(List<String> args) async {
 
   final shifter = FakeShifter(host: '10.0.2.2', bind: InternetAddress.anyIPv4);
   await shifter.start(apiPort: _apiPort);
-  final failures = <String>[];
-  void check(bool ok, String what) {
-    stdout.writeln('${ok ? 'PASS' : 'FAIL'}  $what');
-    if (!ok) failures.add(what);
-  }
+  final checks = Checks();
+  final check = checks.check;
 
   // A fresh install: an app left from an earlier run would look "started"
   // before flutter test replaces it (and the replacement loses the VPN grant).
   await adb(['uninstall', _package]);
   final test = await Process.start('flutter', [
-    'test', 'integration_test/android_connect_test.dart', '-d', _serial,
+    'test', 'integration_test/connect_test.dart', '-d', _serial,
     '--dart-define=SHIFTER_BASE_URL=${shifter.apiUrl}',
     '--dart-define=SHIFTER_IP_CHECK_URL=http://ip-check.test/json',
   ]);
   final testOut = StringBuffer();
   test.stdout.transform(utf8.decoder).listen((s) => testOut.write(s));
   test.stderr.transform(utf8.decoder).listen((s) => testOut.write(s));
-  final testExit = test.exitCode;
+  int? exited;
+  final testExit = test.exitCode.then((c) => exited = c);
 
   try {
     // The app is installed and running: allow its VPN slot without the
@@ -84,7 +75,10 @@ Future<void> main(List<String> args) async {
     shifter.step = 1;
 
     // Connected once the app's exit-IP check went through the gateway.
-    await until(() async => shifter.log.any((e) => e.target.contains('ip-check.test')), 'app connected', seconds: 300);
+    await until(() async {
+      if (exited != null) throw StateError('the app half ended (exit $exited) before connecting');
+      return shifter.log.any((e) => e.target.contains('ip-check.test'));
+    }, 'app connected', seconds: 300);
     final user = shifter.log.firstWhere((e) => e.target.contains('ip-check.test')).user;
     check(RegExp(r'^customer-test-country-de-sid-[a-z0-9]{12}-ttl-600$').hasMatch(user), 'gateway login targets Germany with a sticky session ($user)');
 
@@ -127,7 +121,7 @@ Future<void> main(List<String> args) async {
     await until(() async => await vpnProxy() == null, 'VPN gone', seconds: 10).catchError((_) {});
     check(await vpnProxy() == null, 'disconnect removed the proxy');
   } catch (e) {
-    failures.add('$e');
+    checks.failures.add('$e');
     stdout
       ..writeln('ERROR $e')
       ..writeln(testOut);
@@ -135,6 +129,5 @@ Future<void> main(List<String> args) async {
   } finally {
     await shifter.stop();
   }
-  stdout.writeln(failures.isEmpty ? '\nAll checks passed on API $sdk.' : '\n${failures.length} check(s) failed on API $sdk.');
-  exit(failures.isEmpty ? 0 : 1);
+  checks.finish('API $sdk');
 }

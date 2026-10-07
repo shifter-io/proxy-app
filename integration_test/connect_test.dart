@@ -1,7 +1,7 @@
-// App half of the Android end to end test; the host half is
-// tool/e2e/android_e2e.dart, which runs this, plays Shifter (API + gateway)
-// on the Mac, and checks from outside that Android gives the proxy to other
-// apps. Run it through the host script, not on its own.
+// App half of the mobile end to end tests; the host halves are
+// tool/e2e/android_e2e.dart and tool/e2e/ios_e2e.dart, which run this, play
+// Shifter (API + gateway) on the Mac, and check from outside that the phone
+// gives the proxy to other apps. Run it through a host script, not on its own.
 import 'dart:convert';
 import 'dart:io';
 
@@ -19,7 +19,7 @@ const _api = String.fromEnvironment('SHIFTER_BASE_URL');
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('connect hands the local proxy to Android, disconnect takes it back', (tester) async {
+  testWidgets('connect hands the local proxy to the OS, disconnect takes it back', (tester) async {
     Future<int> hostStep() async {
       final client = HttpClient();
       try {
@@ -54,14 +54,14 @@ void main() {
     await tester.runAsync(() => app.selectMembership('pqqD'));
     await tester.runAsync(() => app.setTarget('pqqD', const ResidentialTarget(country: GeoCountry('de', 'Germany'))));
 
-    // Step 1: the host has allowed the VPN slot (no consent dialog in tests).
+    // Step 1: the host is ready (on Android it has also allowed the VPN slot).
     await until(() async => await hostStep() >= 1, 'host ready');
     await tester.runAsync(app.connect);
     await until(() async => !app.isConnecting, 'connect finished');
     expect(app.connection.status, ConnectionStatus.connected, reason: app.connection.message);
     expect(app.connection.exitIp, isNotNull, reason: 'exit IP checked through the local proxy');
 
-    // Step 2: the host checked Android's proxy and sent a request through it.
+    // Step 2: the host checked the OS proxy and sent a request through it.
     await until(() async => await hostStep() >= 2, 'host checks', seconds: 120);
 
     await tester.runAsync(app.disconnect);
