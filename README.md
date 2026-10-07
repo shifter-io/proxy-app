@@ -109,6 +109,22 @@ Passing on Android 10 (phone) and Android 16 (phone and tablet). This Mac's
 SDK: `/opt/homebrew/share/android-commandlinetools` (Homebrew
 `android-commandlinetools`, `openjdk@17`).
 
+iOS, on a real iPhone or iPad (signed with the local development team; the simulator
+can't run the tunnel extension). Against the real Shifter with a real API key,
+kept in this Mac's Keychain and never in the repo: signs in, connects with the
+first usable plan, checks the app's exit and a plain iOS request (as Safari
+makes it) both leave through Shifter, then that disconnecting goes direct:
+
+```bash
+security add-generic-password -U -a shifter-test -s shifter-api-key -w '<key>'   # once
+tool/e2e/live_test.sh -d <device id>     # also runs on Android
+```
+
+The first run asks on the phone to add the VPN configuration: tap Allow.
+Passing on an iPhone 17 Pro Max, iOS 26.6.2. `tool/e2e/ios_e2e.dart` is the
+stand-in Shifter version (the phone reaches this Mac over Wi-Fi, so iOS asks
+for Local Network access).
+
 `test/support/fake_shifter.dart` is the stand-in API + login-checking gateway
 (Dart port of the extension's `e2e/fake-shifter.mjs`).
 

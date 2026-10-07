@@ -31,6 +31,17 @@ final class TunnelBridge {
             result(nil)
         case "status":
             send([:]) { reply in result(reply) }
+        case "fetch":
+            // A plain iOS request, as any other app makes it (it follows the
+            // tunnel's proxy settings): the live end to end test checks the
+            // exit with it (integration_test/live_connect_test.dart).
+            guard let url = (call.arguments as? String).flatMap(URL.init(string:)) else { return result(nil) }
+            URLSession(configuration: .ephemeral).dataTask(with: url) { data, _, error in
+                DispatchQueue.main.async {
+                    if let error { return result(FlutterError(code: "fetch", message: error.localizedDescription, details: nil)) }
+                    result(String(decoding: data ?? Data(), as: UTF8.self))
+                }
+            }.resume()
         default:
             result(FlutterMethodNotImplemented)
         }
@@ -55,7 +66,14 @@ final class TunnelBridge {
             }
             self.waitForConnected(manager, since: Date()) { connected in
                 guard connected else {
-                    return result(FlutterError(code: "start", message: "The connection didn't start. Try again.", details: nil))
+                    let failed = { (error: Error?) in
+                        let reason = error.map { "The connection didn't start: \(Self.message($0))" } ?? "The connection didn't start. Try again."
+                        result(FlutterError(code: "start", message: reason, details: nil))
+                    }
+                    // Why the tunnel stopped (the extension's startTunnel error).
+                    guard #available(iOS 16.0, *) else { return failed(nil) }
+                    manager.connection.fetchLastDisconnectError { error in DispatchQueue.main.async { failed(error) } }
+                    return
                 }
                 self.send([:]) { reply in result(reply) }
             }
@@ -85,8 +103,9 @@ final class TunnelBridge {
         let elapsed = Date().timeIntervalSince(start)
         switch manager.connection.status {
         case .connected: return done(true)
-        // A tunnel that fails to start drops back to disconnected.
-        case .disconnected, .invalid where elapsed > 2: return done(false)
+        // A tunnel that fails to start drops back to disconnected (the status
+        // still reads disconnected for a moment right after starting).
+        case .disconnected where elapsed > 2, .invalid where elapsed > 2: return done(false)
         default: if elapsed > 20 { return done(false) }
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { self.waitForConnected(manager, since: start, done) }
