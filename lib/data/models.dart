@@ -45,7 +45,9 @@ enum ProductType { residential, isp }
 /// Residential pool, see ResidentialPools in the panel.
 enum ResidentialPool { full, country, nonGeo }
 
-enum MembershipStatus { active, expiring, expired, suspended }
+/// [unsupported]: active on Shifter, but Shifter gives the app no login for it
+/// (/user/proxy-config leaves it out, e.g. the older Static Residential plans).
+enum MembershipStatus { active, expiring, expired, suspended, unsupported }
 
 sealed class Membership {
   const Membership({

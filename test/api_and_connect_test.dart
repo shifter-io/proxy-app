@@ -52,7 +52,7 @@ void main() {
     test('joins memberships, usage and proxy-config', () async {
       await api.verifyApiKey(fakeKey);
       final list = await api.memberships();
-      expect(list.map((m) => m.id), ['pqqD', 'zqJ4', 'unpd'], reason: 'ended cancelled plans and other products are hidden');
+      expect(list.map((m) => m.id), ['pqqD', 'zqJ4', 'unpd', 'stRP'], reason: 'ended cancelled plans and other products are hidden');
 
       final res = list[0] as ResidentialMembership;
       expect(res.planName, 'Spark');
@@ -71,6 +71,11 @@ void main() {
       expect(unpaid.status, MembershipStatus.suspended, reason: 'not in proxy-config yet');
       expect(unpaid.usable, isFalse);
       expect(unpaid.pool, ResidentialPool.country);
+
+      final static = list[3];
+      expect(static, isA<IspMembership>(), reason: 'Static Residential plans are fixed IPs, not the residential pool');
+      expect(static.status, MembershipStatus.unsupported, reason: 'active on the panel, but no app login');
+      expect(static.usable, isFalse);
     });
 
     test('lists ISP IPs by carrier, numbered, without addresses', () async {
@@ -121,7 +126,7 @@ void main() {
 
     test('remembers the session and picks nothing when several plans are usable', () async {
       expect(store.session?.apiKey, fakeKey);
-      expect(app.memberships, hasLength(3));
+      expect(app.memberships, hasLength(4));
       expect(app.activeId, isNull);
     });
 

@@ -50,8 +50,8 @@ class FakeShifter {
           'renews_at': _iso(25), 'trial_ends_at': null, 'canceled_at': null, 'pool': 'full', 'pool_label': 'Full Geo',
         },
         'zqJ4': {
-          'name': 'test #zqJ4 - 4 ISP Proxies', 'status': 'Active, Recurring', 'color': 'success', 'service': 'isp',
-          'uri': 'isp/zqJ4/', 'membership_id': 2, 'product': '4 ISP Proxies', 'category': 'ISP Proxies',
+          'name': 'test #zqJ4 - 4 ISP Proxies', 'status': 'Active, Recurring', 'color': 'success', 'service': 'backconnect',
+          'uri': 'backconnect/zqJ4/', 'membership_id': 2, 'product': '4 ISP Proxies', 'category': 'ISP Proxies',
           'is_recurring': true, 'is_trial': false, 'created_at': _iso(-5), 'expires_at': _iso(10),
           'renews_at': _iso(10), 'trial_ends_at': null, 'canceled_at': null,
         },
@@ -68,6 +68,14 @@ class FakeShifter {
           'uri': 'backconnect/unpd/', 'membership_id': 4, 'product': 'Starter', 'category': 'Residential Proxies',
           'is_recurring': true, 'is_trial': false, 'created_at': _iso(-1), 'expires_at': _iso(29),
           'renews_at': _iso(29), 'trial_ends_at': null, 'canceled_at': null, 'pool': 'country',
+        },
+        // Active on the panel, but proxy-config leaves it out (older Static
+        // Residential service, as on the real account): ISP, not usable.
+        'stRP': {
+          'name': 'test #stRP - 4 ISP Proxies', 'status': 'Active, Recurring', 'color': 'success',
+          'service': 'static-residential-proxies', 'uri': 'static-residential-proxies/stRP/', 'membership_id': 6,
+          'product': '4 ISP Proxies', 'category': 'Static Residential Proxies', 'is_recurring': true, 'is_trial': false,
+          'created_at': _iso(-5), 'expires_at': _iso(20), 'renews_at': _iso(20), 'trial_ends_at': null, 'canceled_at': null,
         },
         // Another product line: hidden.
         'serp': {

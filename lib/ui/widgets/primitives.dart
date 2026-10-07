@@ -944,4 +944,5 @@ SfPill statusPill(MembershipStatus s) => switch (s) {
       MembershipStatus.expiring => const SfPill('Expiring soon', tone: SfTone.warning),
       MembershipStatus.expired => const SfPill('Expired', tone: SfTone.danger),
       MembershipStatus.suspended => const SfPill('Suspended', tone: SfTone.danger),
+      MembershipStatus.unsupported => const SfPill('Not in the app yet', tone: SfTone.neutral),
     };
