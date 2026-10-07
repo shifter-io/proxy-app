@@ -62,11 +62,11 @@ void main() {
     expect(app.membershipsError, isNull);
     final plans = app.memberships!;
     for (final m in plans) {
-      debugPrint('LIVE plan ${m.id} ${m.type.name} "${m.planName}" ${m.status.name}');
+      debugPrint('LIVE plan ${m.type.name} ${m.status.name}');
     }
 
     final direct = (await tester.runAsync(_ipSeenOutside))!;
-    debugPrint('LIVE direct IP $direct');
+    debugPrint('LIVE direct IP obtained (value redacted)');
 
     final m = plans.firstWhere((m) => m.usable, orElse: () => fail('no usable plan on this account'));
     await tester.runAsync(() => app.selectMembership(m.id));
@@ -77,20 +77,20 @@ void main() {
       expect(ips, isNotEmpty, reason: 'ISP plan has no IPs');
       await tester.runAsync(() => app.setTarget(m.id, IspTarget(ips.first)));
     }
-    debugPrint('LIVE connecting with ${m.type.name} plan ${m.id}; tap Allow if iOS asks to add a VPN configuration');
+    debugPrint('LIVE connecting with ${m.type.name} plan; tap Allow if iOS asks to add a VPN configuration');
 
     await tester.runAsync(app.connect);
     await until(() => !app.isConnecting, 'connect finished', seconds: 180);
     expect(app.connection.status, ConnectionStatus.connected, reason: app.connection.message);
     final exit = app.connection.exitIp!;
-    debugPrint('LIVE app exit IP $exit (${app.connection.exitCountry})');
-    expect(exit, isNot(direct), reason: 'the exit must be Shifter, not the phone');
+    debugPrint('LIVE app exit IP obtained (value redacted)');
+    expect(exit != direct, isTrue, reason: 'the exit must be Shifter, not the phone');
     if (m is ResidentialMembership) expect(app.connection.exitCountry, 'de');
 
     if (Platform.isIOS) {
       final seen = (await tester.runAsync(_ipSeenOutside))!;
-      debugPrint('LIVE other apps exit IP $seen');
-      expect(seen, isNot(direct), reason: 'a plain iOS request must leave through Shifter');
+      debugPrint('LIVE other-app exit IP obtained (value redacted)');
+      expect(seen != direct, isTrue, reason: 'a plain iOS request must leave through Shifter');
     }
 
     await tester.runAsync(app.disconnect);
@@ -98,8 +98,8 @@ void main() {
     if (Platform.isIOS) {
       await tester.runAsync(() => Future<void>.delayed(const Duration(seconds: 2)));
       final after = (await tester.runAsync(_ipSeenOutside))!;
-      debugPrint('LIVE after disconnect IP $after');
-      expect(after, direct, reason: 'after disconnect, other apps go direct again');
+      debugPrint('LIVE post-disconnect IP obtained (value redacted)');
+      expect(after == direct, isTrue, reason: 'after disconnect, other apps go direct again');
     }
     await tester.runAsync(app.signOut);
   });

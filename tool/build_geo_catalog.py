@@ -2,7 +2,7 @@
 """Builds assets/geo/catalog.json: the residential targeting catalog (countries,
 states, cities and ISPs) shown in the location picker.
 
-Source: authorized-local-catalog config/weights.json
+Source: an authorized local weights.json export (not distributed here)
   locations[country][region][city][member][ASN][provider] = live IP count
 
 Only NAMES leave this script, never counts. Counts are used to drop any
@@ -13,7 +13,7 @@ targets are on top. Countries stay alphabetical.
 ISP names come from RIPE's public AS names list (weights.json only has AS numbers).
 
 Usage:
-  # Obtain an authorized weights.json export locally; never commit raw input.
+  # Obtain an authorized export locally; never commit the raw input.
   curl -o /tmp/asn.txt https://ftp.ripe.net/ripe/asnames/asn.txt
   python3 tool/build_geo_catalog.py /tmp/weights.json /tmp/asn.txt
 """

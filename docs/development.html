@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Shifter Proxy App — Development</title><style>
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:#0b0e17;color:#dce4ef;font:16px/1.7 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}main{max-width:1040px;margin:auto;padding:40px 32px 80px}a{color:#76b1ff;text-underline-offset:3px}h1,h2,h3{color:#f4f7fb;line-height:1.25;scroll-margin-top:24px}h1{font-size:clamp(28px,4vw,42px);letter-spacing:-.035em;margin:32px 0 20px}h2{font-size:26px;border-top:1px solid #25354b;padding-top:30px;margin-top:44px}h3{font-size:20px;margin-top:28px}p,li{max-width:90ch}p[align=center]{max-width:none}img{max-width:100%;height:auto}pre{background:#101c2c;border:1px solid #293b53;border-radius:12px;padding:20px;overflow:auto;font-size:13px;line-height:1.6}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.88em}p code,li code,td code{background:#19263a;padding:2px 5px;border-radius:4px;overflow-wrap:anywhere}.table-wrap{overflow-x:auto;margin:22px 0;border:1px solid #293b53;border-radius:12px}table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:13px 16px;border-bottom:1px solid #25354b;vertical-align:top;min-width:140px}th{background:#142239;color:#f4f7fb}tr:last-child td{border-bottom:0}strong{color:#f3f6fb}li{margin:5px 0}footer{margin-top:56px;border-top:1px solid #25354b;padding-top:20px;color:#9ba8ba;font-size:13px}blockquote{border-left:3px solid #579dff;margin-left:0;padding-left:20px;color:#b0bdce}@media(max-width:600px){main{padding:20px 18px 48px}pre{padding:14px}th,td{padding:10px}}@media print{body{background:white;color:#222}h1,h2,h3,strong{color:#111}a{color:#154fa5}main{max-width:none;padding:0}pre,th{background:#f4f6f8}footer{display:none}}
+</style></head><body><main><h1 id="shifter-proxy-app-development-guide">Shifter Proxy App — Development guide</h1>
+<p>This guide preserves implementation and historical validation notes. These checks
+were not rerun as part of the README update. See the <a href="readme.html">README</a> for
+features, platform coverage, and setup.</p>
+<p>Desktop, tablet and mobile version of the Shifter proxy extension
+(shifter-io/proxy-extension). The app (<code>lib/main.dart</code>) talks to the live
+Shifter API and routes this device through the Shifter gateway; the preview
+studio and the tests use mock data (<code>lib/data/mock_api.dart</code>).</p>
+<h2 id="how-it-works">How it works</h2>
+<ul>
+<li><strong>API</strong> (<code>lib/data/http_api.dart</code>): same endpoints and mapping as the
+  extension (<code>/api/v1/user/me</code>, <code>memberships</code>, <code>usage</code>, <code>proxy-config</code>). The
+  customer signs in with their panel API key, kept in the OS keychain
+  (<code>lib/data/store.dart</code>). A 401 signs out.</li>
+<li><strong>Routing</strong> (<code>lib/proxy/</code>): a local HTTP proxy on 127.0.0.1 adds the gateway
+  login (targeting in the username, like the extension) to every request and
+  sends bypassed hosts direct. The OS proxy points at it:
+  macOS <code>networksetup</code> (tested), Windows WinINet registry, GNOME <code>gsettings</code>
+  (both written, not yet run on those systems). The user's own proxy settings
+  are saved first and put back on disconnect, sign-out, quit, and on the next
+  launch after a crash.</li>
+<li>New location, New IP and settings swap the login in the local proxy and
+  close tunnels on the old exit, so they apply immediately (no login caching
+  workarounds as in the browsers).</li>
+<li>Only apps that follow the system proxy go through Shifter; UDP (WebRTC,
+  games) connects directly. It is a system proxy, not a VPN tunnel.</li>
+<li><strong>Android</strong> (10+): apps can't set a system proxy, so the app opens a VPN
+  slot (<code>VpnService</code>, <code>android/app/src/main/kotlin/</code>) whose network carries
+  an HTTP proxy pointing at the same local proxy (<code>setHttpProxy</code>). It has no
+  routes: no packets go through it, traffic still speaks Shifter's proxy
+  protocol, and the rest goes direct, as on desktop. Android asks the user
+  once ("Connection request"); a "Connected" notification keeps the app
+  alive in the background; the proxy keeps working after the window closes.
+  Turning the VPN off in Settings disconnects the app.</li>
+<li><strong>iOS</strong> (15+): the same idea with a packet tunnel extension
+  (<code>ios/ShifterTunnel/</code>) whose <code>NEProxySettings</code> point apps at a local proxy.
+  iOS suspends the app in the background, so that proxy runs inside the
+  extension, in Swift (<code>TunnelProxy.swift</code>, a twin of <code>local_proxy.dart</code>);
+  <code>lib/proxy/tunnel_proxy_engine.dart</code> hands it the login. Running it
+  needs a device and an Apple team with the Network Extension entitlement
+  (the simulator can't run tunnel extensions).</li>
+<li>macOS: the app runs outside the App Sandbox (networksetup is blocked inside
+  it), so ship it with Developer ID, not the Mac App Store.</li>
+</ul>
+<p>Point a build at another API or IP check:
+<code>--dart-define=SHIFTER_BASE_URL=http://127.0.0.1:18090 --dart-define=SHIFTER_IP_CHECK_URL=http://ip-check.test/json</code></p>
+<h2 id="recorded-performance">Recorded performance</h2>
+<p>The local proxy moves bytes with <code>RawSocket</code> on its own isolate: each write
+goes straight to the OS, and a side stops reading while the other can't take
+more, so a tunnel holds at most 64 KB per direction. No timers: idle costs no
+CPU. Benchmark (<code>tool/bench/</code>, M1 Max under heavy unrelated load), every test
+run straight to the gateway and through the proxy:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Direct</th>
+<th>Through local proxy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Idle</td>
+<td>–</td>
+<td>0 ms CPU, 14 MB</td>
+</tr>
+<tr>
+<td>New HTTPS tunnel + request (median / p99)</td>
+<td>0.58 / 1.29 ms</td>
+<td>0.86 / 1.37 ms</td>
+</tr>
+<tr>
+<td>Plain HTTP, 100 at a time</td>
+<td>4404 req/s</td>
+<td>3749 req/s, 0 errors</td>
+</tr>
+<tr>
+<td>One download</td>
+<td>1954 MB/s</td>
+<td>1694 MB/s, 0.5 CPU-s per GB</td>
+</tr>
+<tr>
+<td>200 tunnels × 20 MB at once</td>
+<td>2.4 s</td>
+<td>2.9 s, peak 66 MB</td>
+</tr>
+<tr>
+<td>50 slow readers (2 MB/s each)</td>
+<td>–</td>
+<td>peak 66 MB</td>
+</tr>
+<tr>
+<td>100 clients reset mid-download</td>
+<td>–</td>
+<td>proxy unaffected</td>
+</tr>
+<tr>
+<td>1,000 connections open at once (app's 256-file default)</td>
+<td>–</td>
+<td>1000/1000 (124 before raising the limit)</td>
+</tr>
+<tr>
+<td>After all of the above</td>
+<td>–</td>
+<td>0 CPU idle, no leaked sockets</td>
+</tr>
+</tbody>
+</table></div>
+<p>A 100 Mbit/s connection costs under 1 % of one core.</p>
+<p>iOS tunnel proxy (Swift, built as a Mac program): about 800 MB/s through a
+tunnel, 20 MB with 50 slow readers, 25 MB peak; iOS allows a tunnel
+extension 50 MB.</p>
+<p>No connection cap on our side (Shifter has none either): apps launched from
+the Dock get a 256 open-files limit and each proxied connection needs two, so
+the proxy raises its own limit at start (<code>lib/proxy/file_limit.dart</code>).</p>
+<pre><code class="language-bash">dart compile exe tool/bench/servers.dart -o /tmp/bench_servers
+dart compile exe tool/bench/proxy_main.dart -o /tmp/bench_proxy
+python3 tool/bench/run.py
+</code></pre>
+<p>UI: decorative motion (background halo, button glow, connected rings) runs
+on one 30 fps clock and stops while the window isn't active or visible.</p>
+<h2 id="tests">Tests</h2>
+<pre><code class="language-bash">flutter test                                    # unit + widget + screen renders
+# The real app on this Mac against a stand-in Shifter (switches the macOS proxy
+# on, then checks it is restored exactly):
+flutter test integration_test/macos_connect_test.dart -d macos \
+  --dart-define=SHIFTER_BASE_URL=http://127.0.0.1:18090 \
+  --dart-define=SHIFTER_IP_CHECK_URL=http://ip-check.test/json
+</code></pre>
+<p><code>test/proxy_test.dart</code> runs the same proxy tests against the Dart proxy and,
+on a Mac, the iOS tunnel's Swift proxy (compiled with <code>swiftc</code>).</p>
+<p>Android, on an emulator or a phone over adb (installs the app, connects,
+checks Android hands the proxy to other apps, opens a page in Chrome with
+Shifter's window closed, disconnects):</p>
+<pre><code class="language-bash">dart run tool/e2e/android_e2e.dart -d emulator-5554 --browser-package com.android.chrome
+</code></pre>
+<p>Passing on Android 10 (phone) and Android 16 (phone and tablet). This Mac's
+SDK: <code>/opt/homebrew/share/android-commandlinetools</code> (Homebrew
+<code>android-commandlinetools</code>, <code>openjdk@17</code>).</p>
+<p>iOS, on a real iPhone or iPad (signed with your Apple development team; the simulator
+can't run the tunnel extension). Against the real Shifter with a real API key,
+kept in this Mac's Keychain and never in the repo: signs in, connects with the
+first usable plan, checks the app's exit and a plain iOS request (as Safari
+makes it) both leave through Shifter, then that disconnecting goes direct:</p>
+<pre><code class="language-bash"># Add the shifter-api-key service / shifter-test account in Keychain Access first.
+tool/e2e/live_test.sh -d &lt;device id&gt;     # also runs on Android
+</code></pre>
+<p>Live-test builds embed the test key in generated build artifacts. Keep those local,
+never attach them to issues or releases, and remove them when no longer needed.
+The helper passes the key through a temporary private file; routine logs redact
+plan identifiers and observed IPs.</p>
+<p>The first run asks on the phone to add the VPN configuration: tap Allow.
+Passing on an iPhone 17 Pro Max, iOS 26.6.2. <code>tool/e2e/ios_e2e.dart</code> is the
+stand-in Shifter version (the phone reaches this Mac over Wi-Fi, so iOS asks
+for Local Network access).</p>
+<p><code>test/support/fake_shifter.dart</code> is the stand-in API + login-checking gateway
+(Dart port of the extension's <code>e2e/fake-shifter.mjs</code>).</p>
+<h2 id="see-the-ui-on-this-mac">See the UI on this Mac</h2>
+<pre><code class="language-bash"># Device preview studio: phones, foldables (Fold cover 280dp → unfolded), tablets, desktop
+flutter run -d macos -t lib/main_preview.dart
+
+# The real desktop app (resize the window to see compact → medium → expanded)
+flutter run -d macos
+
+# Render every screen on several devices to PNGs (build/screens/)
+flutter test test/render_screens_test.dart
+</code></pre>
+<p>In the studio: pick a device on the left, switch account scenario (signed out,
+all plans, single Residential, Country Geo, Non-Geo, ISP, no plans), toggle
+"Start connected", rotate, and Fold/Unfold foldables. The app keeps its state
+across device switches, so you can watch a screen reflow live.</p>
+<p>Mock API keys work like the extension: any 32+ letter/digit key; the prefix picks
+the scenario (<code>single…</code>, <code>country…</code>, <code>nongeo…</code>, <code>isp…</code>, <code>none…</code>, <code>invalid…</code>).</p>
+<h2 id="layout">Layout</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Width</th>
+<th>Layout</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>&lt; 600</td>
+<td>Phone: Home + pushed pages, bottom-sheet plan switcher</td>
+</tr>
+<tr>
+<td>600–1023</td>
+<td>Tablet / unfolded foldable: navigation rail</td>
+</tr>
+<tr>
+<td>≥ 1024</td>
+<td>Desktop / tablet landscape: sidebar + location picker docked</td>
+</tr>
+</tbody>
+</table></div>
+<p>Design tokens (<code>lib/theme/tokens.dart</code>) are copied 1:1 from the Shifter Panel /
+extension; fonts are Geist + Geist Mono; flags and brand SVGs come from the extension.</p>
+<h2 id="location-catalog">Location catalog</h2>
+<p><code>assets/geo/catalog.json</code> holds every country, state, city and ISP that customers
+can target, regenerated with <code>tool/build_geo_catalog.py</code> from the authorized local <code>weights.json</code> export (see the script header for the commands). It keeps
+<strong>names only</strong>, never counts: anything with fewer than 25 IPs is dropped.
+Inside a country, states, cities and ISPs are ordered by live IPs (most first)
+so the best targets are on top; countries stay A–Z. ISP names come
+from RIPE's public AS names list, since weights.json only has AS numbers.</p>
+<h2 id="notes">Notes</h2>
+<ul>
+<li><code>build/</code> is a symlink to <code>~/Library/Caches/shifter_app_build</code>: macOS code
+  signing fails on files inside the iCloud-synced Desktop folder.</li>
+</ul><footer>Shifter Proxy App · Standalone documentation · <a href="https://github.com/shifter-io/proxy-app">Repository</a></footer></main></body></html>

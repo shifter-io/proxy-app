@@ -49,3 +49,21 @@ app.*.map.json
 
 # build/ is a symlink to ~/Library/Caches/shifter_app_build (see README)
 /build
+
+# Local credentials, signing material, and raw inventory exports
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.mobileprovision
+*.provisionprofile
+*.jks
+*.keystore
+key.properties
+**/xcuserdata/
+weights.json
+secrets/
+.local/
