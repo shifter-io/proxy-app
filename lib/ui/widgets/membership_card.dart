@@ -7,6 +7,39 @@ import '../../theme/tokens.dart';
 import 'icons.dart';
 import 'primitives.dart';
 
+/// The plan stays prominent; the workspace is secondary, as in the extension.
+class MembershipTitle extends StatelessWidget {
+  const MembershipTitle(this.m, {super.key, this.style, this.maxLines = 1});
+  final Membership m;
+  final TextStyle? style;
+  final int maxLines;
+
+  @override
+  Widget build(BuildContext context) {
+    final textStyle = style ?? SfText.bodyStrong;
+    return Tooltip(
+      message: m.displayName,
+      child: Text.rich(
+        TextSpan(children: [
+          TextSpan(text: m.planName),
+          if (m.teamName != null)
+            TextSpan(
+              text: ' (${m.teamName})',
+              style: TextStyle(
+                fontSize: (textStyle.fontSize ?? 15) * 0.8,
+                fontWeight: FontWeight.w400,
+                color: Sf.textTertiary,
+              ),
+            ),
+        ]),
+        style: textStyle,
+        maxLines: maxLines,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+}
+
 /// Residential pool ("· Full Geo") shown beside the plan title.
 class PoolTag extends StatelessWidget {
   const PoolTag(this.m, {super.key, this.fontSize = 13});
