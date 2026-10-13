@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shifter workspace integration</title>
+<style>
+body{margin:0;background:#0b0e16;color:#e9edf5;font:16px/1.65 system-ui,sans-serif}main{max-width:850px;margin:auto;padding:40px 24px}h1{font-size:28px;line-height:1.2}h2{font-size:20px;margin-top:30px}p,li{color:#bbc4d6}a{color:#82b6ff}code,pre{background:#171e2d;font-size:13px}code{padding:2px 4px}pre{padding:16px;overflow:auto;white-space:pre-wrap}li{margin:8px 0}@media(max-width:480px){main{padding:24px 16px}}
+</style>
+<main>
+<h1>Workspace integration</h1>
+<p>Shifter uses the signed-in account’s existing API key to discover accessible personal and team workspaces. Gateway credentials, targets and traffic usage belong to the selected membership.</p>
+<h2>API contract</h2>
+<ul>
+<li><code>GET /api/v1/user/memberships?workspaces=all</code> and <code>GET /api/v1/user/proxy-config?workspaces=all</code> opt into all accessible workspaces. Usage remains <code>GET /api/v1/user/usage</code>.</li>
+<li>User API requests send the same key in both <code>Authorization: Bearer</code> and <code>X-Api-Key</code>. The existing OS secure-storage flow remains in use; no new API keys are embedded.</li>
+<li>Plans, usage and credentials join by plan hash. A membership’s workspace falls back to proxy-config metadata. The catalog retains empty workspaces and merges workspace metadata from memberships.</li>
+<li>Proxy credentials refresh before connecting. Switching memberships disconnects the previous tunnel. A catalog refresh that removes the selected plan stops its connection and clears the saved selection. Late catalog responses cannot repopulate a signed-out session.</li>
+</ul>
+<h2>Interface behavior</h2>
+<ul>
+<li>Personal appears first, then teams alphabetically. Phone sheets and tablet/desktop lists share the workspace grouping and empty-workspace states.</li>
+<li>Personal-only and older responses retain the ungrouped layout. API product names remain unchanged. Mixed legacy responses do not hide plans without workspace metadata.</li>
+<li>The selected team appears beside the plan name, with an explanation that traffic uses that workspace’s plan and wallet. Long names wrap in group headings and have tooltips in compact plan headers.</li>
+<li>Owner, viewer, billing and admin roles can connect. Viewer and billing roles receive “Open in panel” instead of “Renew” for inactive plans.</li>
+</ul>
+<h2>Local verification</h2>
+<pre>flutter analyze
+flutter test test/api_and_connect_test.dart test/proxy_test.dart test/workspaces_test.dart test/workspace_layout_test.dart
+# Optional screenshots in qa-results/workspaces:
+flutter test test/workspace_layout_test.dart --dart-define=WORKSPACE_SCREENSHOTS=true
+flutter build macos --debug</pre>
+<p>The regression suites cover exact opt-in and headers, team Residential and ISP credentials for all four roles, usage mapping, remembered selection, membership switching, revoked access, stale responses, legacy and personal-only responses, and empty teams. Layout tests cover 280×653, 320×568, 393×852, 600×800, 768×1024, 1024×768, 1440×900, 1024×480 and 844×390, plus 1.3× text at 320px.</p>
+<p>API and proxy tests use local fixtures. Production workspace deployment and a live team account require separate verification; successful local tests do not establish backend deployment status.</p>
+<h2>Source</h2>
+<p>Based on <a href="https://github.com/shifter-io/proxy-extension/tree/33a8f275d76dec3f83f478483954be72553bdc0f">Proxy Extension commit 33a8f275d76de</a>, including its API adapter, workspace UI and <code>e2e/workspaces.mjs</code> regression scenarios.</p>
+</main>
+</html>

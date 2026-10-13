@@ -63,7 +63,7 @@ void main() {
 
     test('joins memberships, usage and proxy-config', () async {
       await api.verifyApiKey(fakeKey);
-      final list = await api.memberships();
+      final list = (await api.memberships()).memberships;
       expect(list.map((m) => m.id), ['pqqD', 'zqJ4', 'old1', 'unpd'], reason: 'legacy plans and other products are hidden');
 
       final res = list[0] as ResidentialMembership;
@@ -109,7 +109,7 @@ void main() {
       });
       final plans = (await tester.runAsync(() async {
         await api.verifyApiKey(fakeKey);
-        return api.memberships();
+        return (await api.memberships()).memberships;
       }))!;
       final res = plans.first as ResidentialMembership;
       expect(res.traffic, isNull);
@@ -137,7 +137,7 @@ void main() {
     test('residential byte figures take precedence over an incorrect metered flag', () async {
       residentialUsage({'metered': false});
       await api.verifyApiKey(fakeKey);
-      final res = (await api.memberships()).first as ResidentialMembership;
+      final res = (await api.memberships()).memberships.first as ResidentialMembership;
       expect(res.traffic!.totalBytes, 5000000000);
       expect(res.traffic!.usedBytes, 1250000000);
       expect(trafficLeft(res)!.left, 3750000000);
@@ -146,14 +146,14 @@ void main() {
     test('a quota without usage or a remaining balance is unavailable, not unused', () async {
       residentialUsage({'used_bytes': null, 'remaining_bytes': null});
       await api.verifyApiKey(fakeKey);
-      final res = (await api.memberships()).first as ResidentialMembership;
+      final res = (await api.memberships()).memberships.first as ResidentialMembership;
       expect(res.traffic, isNull);
     });
 
     test('a supplied remaining balance is preserved when used bytes are absent', () async {
       residentialUsage({'used_bytes': null});
       await api.verifyApiKey(fakeKey);
-      final res = (await api.memberships()).first as ResidentialMembership;
+      final res = (await api.memberships()).memberships.first as ResidentialMembership;
       expect(res.traffic!.usedBytes, 1250000000);
       expect(trafficLeft(res)!.left, 3750000000);
     });
@@ -161,14 +161,14 @@ void main() {
     test('a zero residential balance stays zero', () async {
       residentialUsage({'used_bytes': 5000000000, 'remaining_bytes': 0});
       await api.verifyApiKey(fakeKey);
-      final res = (await api.memberships()).first as ResidentialMembership;
+      final res = (await api.memberships()).memberships.first as ResidentialMembership;
       expect(trafficLeft(res), (left: 0, ratio: 0.0, total: 5000000000));
     });
 
     test('overage without a remaining field displays zero remaining traffic', () async {
       residentialUsage({'used_bytes': 6250000000, 'remaining_bytes': null});
       await api.verifyApiKey(fakeKey);
-      final res = (await api.memberships()).first as ResidentialMembership;
+      final res = (await api.memberships()).memberships.first as ResidentialMembership;
       expect(trafficLeft(res), (left: 0, ratio: 0.0, total: 5000000000));
     });
 

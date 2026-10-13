@@ -23,8 +23,9 @@ const _timeout = Duration(seconds: 20);
 /// shifter_docs/shifter-extension-api.md). Port of the extension's
 /// src/lib/api/http/index.ts.
 ///
-/// - `/api/v1/user/*` take the key as `Authorization: Bearer` and wrap
+/// - `/api/v1/user/*` send both `Authorization: Bearer` and `X-Api-Key`, and wrap
 ///   bodies in `{ error, code, data }`.
+/// - Memberships and proxy-config opt into `workspaces=all`; usage stays unfiltered.
 /// - Locations come from the bundled catalog. The geo endpoints
 ///   (`X-Api-Key`, plain arrays, day cache) only name ISP carriers the
 ///   catalog doesn't know.
@@ -63,9 +64,9 @@ class HttpShifterApi implements ShifterApi {
   Future<User> me() async => _toUser(await _user<Map<String, dynamic>>('/api/v1/user/me'));
 
   @override
-  Future<List<Membership>> memberships() async {
+  Future<MembershipCatalog> memberships() async {
     final (plans, usage, config) = await (
-      _user<Object?>('/api/v1/user/memberships'),
+      _user<Object?>('/api/v1/user/memberships?workspaces=all'),
       _user<Object?>('/api/v1/user/usage'),
       _proxyConfig(fresh: true),
     ).wait.onError<ParallelWaitError>((e, _) => throw _firstError(e.errors));
@@ -77,10 +78,23 @@ class HttpShifterApi implements ShifterApi {
 
     // The panel returns `[]` instead of `{}` when there are no plans.
     final entries = plans is Map ? plans.cast<String, dynamic>().entries : const <MapEntry<String, dynamic>>[];
-    return [
+    final memberships = <Membership>[
       for (final e in entries)
         ?_toMembership(e.key, e.value as Map<String, dynamic>, liveByHash[e.key], usageById[e.key], baseUrl),
     ];
+    final byId = <String, Workspace>{
+      for (final workspace in _list(config['workspaces']).map(Workspace.fromJson).whereType<Workspace>())
+        workspace.id: workspace,
+    };
+    for (final membership in memberships) {
+      final workspace = membership.workspace;
+      if (workspace != null) byId.putIfAbsent(workspace.id, () => workspace);
+    }
+    final workspaces = byId.values.toList()..sort((a, b) {
+      if (a.personal != b.personal) return a.personal ? -1 : 1;
+      return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+    });
+    return MembershipCatalog(memberships: memberships, workspaces: workspaces);
   }
 
   // ── Locations: the bundled catalog, not the geo endpoints ──
@@ -176,7 +190,7 @@ class HttpShifterApi implements ShifterApi {
     final key = _apiKey ?? '';
     final c = _proxyConfigCache;
     if (!fresh && c != null && c.key == key && DateTime.now().difference(c.at) < _proxyConfigTtl) return c.value;
-    final value = _user<Map<String, dynamic>?>('/api/v1/user/proxy-config').then((d) => {'plans': d?['plans'] ?? const []});
+    final value = _user<Map<String, dynamic>?>('/api/v1/user/proxy-config?workspaces=all').then((d) => {'plans': d?['plans'] ?? const [], 'workspaces': d?['workspaces'] ?? const []});
     final entry = (at: DateTime.now(), key: key, value: value);
     _proxyConfigCache = entry;
     value.catchError((_) {
@@ -189,7 +203,7 @@ class HttpShifterApi implements ShifterApi {
   Future<T> _user<T>(String path, {String? key}) async {
     key ??= _apiKey;
     if (key == null) throw ApiException('Not signed in', code: ApiErrorCode.unauthorized);
-    final body = await _request(path, {'Authorization': 'Bearer $key'});
+    final body = await _request(path, {'Authorization': 'Bearer $key', 'X-Api-Key': key});
     if (body is! Map<String, dynamic>) throw ApiException('Unexpected response from Shifter.');
     final error = body['error'];
     if (error != null) {
@@ -318,6 +332,7 @@ Membership? _toMembership(
     final proxies = live?['type'] == 'isp' ? _list(live!['proxies']) : const <Map<String, dynamic>>[];
     return IspMembership(
       id: hash,
+      workspace: Workspace.fromJson(m['workspace'] ?? live?['workspace']),
       planName: planName,
       status: status,
       expiresAt: expiresAt,
@@ -332,6 +347,7 @@ Membership? _toMembership(
   final res = live?['type'] == 'residential' ? live : null;
   return ResidentialMembership(
     id: hash,
+    workspace: Workspace.fromJson(m['workspace'] ?? live?['workspace']),
     planName: planName,
     status: status,
     expiresAt: expiresAt,

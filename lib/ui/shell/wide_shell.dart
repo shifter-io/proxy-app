@@ -71,7 +71,9 @@ class _ConnectSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
-    final m = app.activeMembership!;
+    final m = app.activeMembership;
+    // AppRoot keeps the outgoing shell alive while fading to sign-in or plans.
+    if (m == null) return const SizedBox.shrink();
     final connected = app.isConnected && app.connection.membershipId == m.id;
 
     return LayoutBuilder(builder: (context, c) {
@@ -83,7 +85,7 @@ class _ConnectSection extends StatelessWidget {
         Positioned.fill(child: Atmosphere(connected: connected)),
         Column(children: [
           SfTopBar(
-            title: 'Connect',
+            title: m.teamName == null ? 'Connect' : m.displayName,
             large: true,
             actions: [SfPill(m.type == ProductType.isp ? 'ISP' : 'Residential', tone: m.type == ProductType.isp ? SfTone.neutral : SfTone.info, xs: false)],
           ),
@@ -162,7 +164,8 @@ class _Sidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
-    final m = app.activeMembership!;
+    final m = app.activeMembership;
+    if (m == null) return const SizedBox.shrink();
     final pad = MediaQuery.paddingOf(context);
     return Container(
       width: 268,
@@ -174,7 +177,7 @@ class _Sidebar extends StatelessWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         const Padding(padding: EdgeInsets.only(left: 8), child: Align(alignment: Alignment.centerLeft, child: Wordmark(height: 24))),
         const SizedBox(height: 28),
-        _PlanMiniCard(m: m, onTap: app.usableMemberships.length > 1 ? () => onSelect(Section.plans) : null),
+        _PlanMiniCard(m: m, onTap: app.canSwitchMembership ? () => onSelect(Section.plans) : null),
         const SizedBox(height: 22),
         for (final (s, icon, label) in _nav)
           Padding(
@@ -263,7 +266,7 @@ class _PlanMiniCard extends StatelessWidget {
         SfSwitcher(
           axis: Axis.horizontal,
           child: Row(key: ValueKey(m.id), children: [
-            Flexible(child: Text(m.planName, maxLines: 1, overflow: TextOverflow.ellipsis, style: SfText.bodyStrong)),
+            Flexible(child: Tooltip(message: m.displayName, child: Text(m.displayName, maxLines: 2, overflow: TextOverflow.ellipsis, style: SfText.bodyStrong))),
             const SizedBox(width: 6),
             Flexible(child: PoolTag(m, fontSize: 12.5)),
           ]),

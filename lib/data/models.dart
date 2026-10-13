@@ -47,6 +47,28 @@ enum ResidentialPool { full, country, nonGeo }
 
 enum MembershipStatus { active, expiring, expired, suspended }
 
+/// Workspace metadata returned by the panel's workspaces=all opt-in.
+class Workspace {
+  const Workspace({required this.id, required this.name, required this.role, required this.personal});
+  final String id;
+  final String name;
+  final String role;
+  final bool personal;
+
+  static Workspace? fromJson(Object? value) {
+    if (value is! Map || value['id'] is! String || value['name'] is! String) return null;
+    return Workspace(id: value['id'] as String, name: value['name'] as String,
+        role: value['role'] as String? ?? 'viewer', personal: value['personal'] == true);
+  }
+}
+
+class MembershipCatalog {
+  const MembershipCatalog({required this.memberships, this.workspaces = const []});
+  final List<Membership> memberships;
+  /// Includes accessible workspaces without an active plan.
+  final List<Workspace> workspaces;
+}
+
 sealed class Membership {
   const Membership({
     required this.id,
@@ -56,10 +78,17 @@ sealed class Membership {
     this.renewsAt,
     this.statusLabel,
     this.manageUrl,
+    this.workspace,
   });
 
   /// The plan's short id (hash) in the panel, e.g. "pqqD".
   final String id;
+  final Workspace? workspace;
+
+  String? get teamName => workspace != null && !workspace!.personal ? workspace!.name : null;
+  String get displayName => teamName == null ? planName : '$planName ($teamName)';
+  bool get canManage => workspace == null || workspace!.personal ||
+      workspace!.role == 'owner' || workspace!.role == 'admin';
 
   /// Plan title exactly as the API returns it ("Pro", "25 ISP Proxies").
   final String planName;
@@ -113,6 +142,7 @@ class ResidentialMembership extends Membership {
     super.renewsAt,
     super.statusLabel,
     super.manageUrl,
+    super.workspace,
     required this.pool,
     this.traffic,
     this.entryPoints = const [],
@@ -143,6 +173,7 @@ class IspMembership extends Membership {
     super.renewsAt,
     super.statusLabel,
     super.manageUrl,
+    super.workspace,
     required this.ipCount,
     required this.countries,
   });

@@ -56,7 +56,7 @@ abstract class ShifterApi {
   Future<Session> verifyApiKey(String apiKey);
 
   Future<User> me();
-  Future<List<Membership>> memberships();
+  Future<MembershipCatalog> memberships();
 
   // Residential locations (bundled catalog, data/geo_catalog.dart).
   Future<List<GeoCountry>> countries();

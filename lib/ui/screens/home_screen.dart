@@ -26,7 +26,7 @@ class HomeScreen extends StatelessWidget {
     final app = AppScope.of(context);
     final m = app.activeMembership;
     if (m == null) return const SizedBox.shrink();
-    final canSwitch = app.usableMemberships.length > 1;
+    final canSwitch = app.canSwitchMembership;
     return PageScaffold(
       atmosphere: true,
       connected: app.isConnected && app.connection.membershipId == m.id,
@@ -91,7 +91,7 @@ class PlanSwitcherButton extends StatelessWidget {
                 SfSwitcher(
                   axis: Axis.horizontal,
                   child: Row(key: ValueKey(m.id), mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.center, children: [
-                    Flexible(child: Text(m.planName, maxLines: 1, overflow: TextOverflow.ellipsis, style: SfText.bodyStrong.copyWith(fontSize: 14.5, height: 1.1))),
+                    Flexible(child: Tooltip(message: m.displayName, child: Text(m.displayName, maxLines: 1, overflow: TextOverflow.ellipsis, style: SfText.bodyStrong.copyWith(fontSize: 14.5, height: 1.1)))),
                     const SizedBox(width: 6),
                     Flexible(child: PoolTag(m, fontSize: 12.5)),
                     if (onTap != null) ...[const SizedBox(width: 4), const SfIcon(SfIcons.chevronDown, size: 15, color: Sf.textTertiary)],
@@ -120,7 +120,8 @@ class Dashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
-    final m = app.activeMembership!;
+    final m = app.activeMembership;
+    if (m == null) return const SizedBox.shrink();
     final target = app.currentTarget(m);
     final c = app.connection;
     final here = c.membershipId == m.id || c.status == ConnectionStatus.error;
@@ -167,10 +168,15 @@ class Dashboard extends StatelessWidget {
         ),
       const SizedBox(height: 12),
       FadeSlideIn(delay: const Duration(milliseconds: 140), child: StatsCard(m: m, settings: app.settings, onSession: onOpenSession)),
+      if (m.teamName != null) ...[
+        const SizedBox(height: 12),
+        Text('Traffic uses ${m.teamName}’s plan and wallet.', textAlign: TextAlign.center,
+            style: SfText.micro.copyWith(height: 1.5)),
+      ],
       const SizedBox(height: 18),
       FadeSlideIn(
         delay: const Duration(milliseconds: 200),
-        child: RenewalLine(m, onRenew: () => openExternal(context, ShifterUrls.renew(m.id))),
+        child: RenewalLine(m, onRenew: () => openExternal(context, m.manageUrl ?? ShifterUrls.renew(m.id))),
       ),
     ]);
   }
