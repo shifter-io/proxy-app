@@ -91,64 +91,20 @@ class PlansList extends StatelessWidget {
           ),
       ]);
     } else {
-      final usable = list.where((m) => m.usable).toList();
-      final inactive = list.where((m) => !m.usable && m.status != MembershipStatus.expired).toList();
-      final expired = list.where((m) => m.status == MembershipStatus.expired).toList()
-        ..sort((a, b) => b.expiresAt.compareTo(a.expiresAt));
-      var i = 0;
-      Widget card(Membership m) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: FadeSlideIn(
-              delay: FadeSlideIn.stagger(i++, stepMs: 60),
-              child: MembershipCard(
-                m,
-                selected: embedded && m.id == app.activeId,
-                onSelect: () async {
-                  await app.selectMembership(m.id);
-                  onChosen?.call();
-                },
-                onRenew: () => openExternal(context, ShifterUrls.renew(m.id)),
-              ),
-            ),
-          );
       content = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        if (usable.isEmpty)
-          EmptyState(
-            icon: SfIcons.layers,
-            title: 'No active memberships',
-            body: 'Get a Residential or ISP plan on Shifter and it will show up here instantly.',
-            action: SfButton(
-              label: const Text('View plans'),
-              trailing: const SfIcon(SfIcons.external, size: 14, color: Colors.white),
-              small: true,
-              onPressed: () => openExternal(context, ShifterUrls.order),
-            ),
+        if (!embedded) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 4, 4, 18),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Choose a plan', style: SfText.title),
+              const SizedBox(height: 6),
+              Text(app.hasWorkspaceGroups
+                  ? 'Your plans, across every workspace. Choose one to connect.'
+                  : 'Pick the membership this device should connect with. You can switch any time.', style: SfText.bodyMuted),
+            ]),
           ),
-        if (usable.isNotEmpty) ...[
-          if (!embedded) ...[
-            FadeSlideIn(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(4, 4, 4, 18),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Choose a plan', style: SfText.title),
-                  const SizedBox(height: 6),
-                  Text('Pick the membership this device should connect with. You can switch any time.', style: SfText.bodyMuted),
-                ]),
-              ),
-            ),
-          ],
-          SectionLabel('Active', trailing: CountText(usable.length)),
-          for (final m in usable) card(m),
         ],
-        if (inactive.isNotEmpty) ...[
-          const SizedBox(height: 14),
-          const SectionLabel('Inactive'),
-          for (final m in inactive) card(m),
-        ],
-        if (expired.isNotEmpty) ...[
-          const SizedBox(height: 14),
-          _ExpiredPlans(count: expired.length, children: [for (final m in expired) card(m)]),
-        ],
+        _PlanGroups(onChosen: onChosen, showSelected: embedded),
         const SizedBox(height: 10),
         SfButton(
           label: const Text('Add a plan'),
@@ -170,9 +126,95 @@ class PlansList extends StatelessWidget {
   }
 }
 
+/// Shared by the full page and phone sheet so empty teams stay discoverable.
+class _PlanGroups extends StatelessWidget {
+  const _PlanGroups({this.onChosen, this.showSelected = true});
+  final VoidCallback? onChosen;
+  final bool showSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final app = AppScope.of(context);
+    final all = app.memberships ?? const <Membership>[];
+    final grouped = app.hasWorkspaceGroups;
+    final groups = <({String id, String name, List<Membership> plans})>[
+      if (!grouped) (id: 'all', name: '', plans: all)
+      else ...[
+        if (!app.workspaces.any((w) => w.personal) && all.any((m) => m.workspace == null))
+          (id: 'legacy-personal', name: 'Personal', plans: all.where((m) => m.workspace == null).toList()),
+        for (final w in app.workspaces)
+          (id: w.id, name: w.name, plans: all.where((m) => m.workspace?.id == w.id || (m.workspace == null && w.personal)).toList()),
+      ],
+    ];
+    Widget card(Membership m) => Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: MembershipCard(
+        m,
+        key: ValueKey('plan-${m.id}'),
+        selected: showSelected && m.id == app.activeId,
+        onSelect: () async {
+          await app.selectMembership(m.id);
+          if (context.mounted && app.activeId == m.id) onChosen?.call();
+        },
+        onRenew: () => openExternal(context, m.manageUrl ?? ShifterUrls.renew(m.id)),
+      ),
+    );
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      for (final group in groups)
+        Builder(key: ValueKey('workspace-${group.id}'), builder: (context) {
+          final usable = group.plans.where((m) => m.usable).toList();
+          final inactive = group.plans.where((m) => !m.usable && m.status != MembershipStatus.expired).toList();
+          final expired = group.plans.where((m) => m.status == MembershipStatus.expired).toList()
+            ..sort((a, b) => b.expiresAt.compareTo(a.expiresAt));
+          return Padding(
+            padding: EdgeInsets.only(bottom: grouped ? 20 : 0),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              if (grouped)
+                Semantics(
+                  header: true,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(2, 4, 2, 14),
+                    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      const Padding(padding: EdgeInsets.only(top: 2), child: SfIcon(SfIcons.layers, size: 17, color: Sf.accentLight)),
+                      const SizedBox(width: 10),
+                      Expanded(child: Text(group.name, style: SfText.bodyStrong)),
+                    ]),
+                  ),
+                ),
+              if (usable.isEmpty)
+                if (grouped)
+                  SfCard(child: Text('No active Residential or ISP plans in this workspace.', style: SfText.bodyMuted))
+                else
+                  EmptyState(
+                    icon: SfIcons.layers,
+                    title: 'No active memberships',
+                    body: 'Get a Residential or ISP plan on Shifter and it will show up here instantly.',
+                    action: SfButton(label: const Text('View plans'), small: true,
+                        onPressed: () => openExternal(context, ShifterUrls.order)),
+                  ),
+              if (usable.isNotEmpty) ...[
+                SectionLabel('Active', trailing: CountText(usable.length)),
+                for (final m in usable) card(m),
+              ],
+              if (inactive.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                const SectionLabel('Inactive'),
+                for (final m in inactive) card(m),
+              ],
+              if (expired.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                _ExpiredPlans(key: ValueKey('expired-${group.id}'), count: expired.length, children: [for (final m in expired) card(m)]),
+              ],
+            ]),
+          );
+        }),
+    ]);
+  }
+}
+
 /// Ended plans, folded away under "Expired (n)" until tapped.
 class _ExpiredPlans extends StatefulWidget {
-  const _ExpiredPlans({required this.count, required this.children});
+  const _ExpiredPlans({super.key, required this.count, required this.children});
   final int count;
   final List<Widget> children;
 
@@ -235,8 +277,6 @@ Future<void> showPlanSwitcher(BuildContext context) {
 class _PlanSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final app = AppScope.of(context);
-    final usable = app.usableMemberships;
     final maxH = MediaQuery.sizeOf(context).height * 0.85;
     final bottom = MediaQuery.paddingOf(context).bottom;
     return Container(
@@ -262,22 +302,7 @@ class _PlanSheet extends StatelessWidget {
             shrinkWrap: true,
             padding: EdgeInsets.fromLTRB(16, 4, 16, 20 + bottom),
             children: [
-              for (final (i, m) in usable.indexed)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: FadeSlideIn(
-                    delay: FadeSlideIn.stagger(i, stepMs: 50),
-                    child: MembershipCard(
-                      m,
-                      selected: m.id == app.activeId,
-                      onSelect: () async {
-                        await app.selectMembership(m.id);
-                        if (context.mounted) Navigator.pop(context);
-                      },
-                      onRenew: () => openExternal(context, ShifterUrls.renew(m.id)),
-                    ),
-                  ),
-                ),
+              _PlanGroups(onChosen: () => Navigator.pop(context)),
             ],
           ),
         ),

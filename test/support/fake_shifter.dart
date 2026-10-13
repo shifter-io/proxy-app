@@ -42,7 +42,12 @@ class FakeShifter {
   String get apiUrl => 'http://$host:${api.port}';
   int get gatewayPort => gateway.port;
 
-  Map<String, dynamic> get memberships => {
+  Map<String, dynamic>? membershipsResponse;
+  Map<String, dynamic>? proxyConfigResponse;
+  bool requireWorkspaceOptIn = false;
+  final apiRequests = <({Uri uri, bool bearer, bool apiKey})>[];
+
+  Map<String, dynamic> get memberships => membershipsResponse ?? {
         'pqqD': {
           'name': 'test #pqqD - Spark', 'status': 'Active', 'color': 'success', 'service': 'backconnect',
           'uri': 'backconnect/pqqD/', 'membership_id': 1, 'product': 'Spark', 'category': 'Residential Proxies',
@@ -104,7 +109,7 @@ class FakeShifter {
         ],
       };
 
-  Map<String, dynamic> get proxyConfig => {
+  Map<String, dynamic> get proxyConfig => proxyConfigResponse ?? {
         'plans': [
           {
             'membership_id': 1, 'hash': 'pqqD', 'product': 'Spark', 'status': 'Active', 'protocol': 'http',
@@ -163,6 +168,14 @@ class FakeShifter {
     }
 
     if (req.uri.path == '/_test/step') return send(200, {'step': step});
+    apiRequests.add((uri: req.uri,
+        bearer: req.headers.value('authorization') == 'Bearer $fakeKey',
+        apiKey: req.headers.value('x-api-key') == fakeKey));
+    if (requireWorkspaceOptIn &&
+        (req.uri.path.endsWith('/memberships') || req.uri.path.endsWith('/proxy-config')) &&
+        (req.uri.query != 'workspaces=all' || req.headers.value('x-api-key') != fakeKey)) {
+      return send(400, {'error': 'Workspace opt-in required', 'code': 400});
+    }
     final authed = req.headers.value('authorization') == 'Bearer $fakeKey' || req.headers.value('x-api-key') == fakeKey;
     if (!authed) return send(401, {'error': 'Unauthorized', 'code': 401});
     void ok(Object data) => send(200, {'error': null, 'code': 200, 'data': data});

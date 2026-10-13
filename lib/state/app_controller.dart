@@ -50,6 +50,9 @@ class AppController extends ChangeNotifier {
   AuthPhase phase = AuthPhase.booting;
   Session? session;
   List<Membership>? memberships;
+  List<Workspace> workspaces = [];
+  int _authGeneration = 0;
+  int _catalogGeneration = 0;
   String? membershipsError;
   String? activeId;
   Map<String, Target> _targets = {};
@@ -138,7 +141,11 @@ class AppController extends ChangeNotifier {
   // ── Auth ──────────────────────────────────────────────────────────────
 
   Future<void> signIn(Session s) async {
+    ++_authGeneration;
     api.useSession(s);
+    memberships = null;
+    workspaces = [];
+    membershipsError = null;
     session = s;
     phase = AuthPhase.signedIn;
     await store.writeSession(s);
@@ -148,8 +155,9 @@ class AppController extends ChangeNotifier {
 
   /// Picks the plan to show: the remembered one, else the only usable one.
   Future<void> _routeAfterAuth(String? preferredId) async {
+    final auth = _authGeneration;
     final list = await reloadMemberships();
-    if (phase != AuthPhase.signedIn) return;
+    if (phase != AuthPhase.signedIn || auth != _authGeneration || membershipsError != null) return;
     final usable = list.where((m) => m.usable).toList();
     final next = usable.any((m) => m.id == preferredId)
         ? preferredId
@@ -160,6 +168,7 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> signOut() async {
+    ++_authGeneration;
     await disconnect();
     await _clearSession();
   }
@@ -171,7 +180,10 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> _clearSession() async {
+    ++_authGeneration;
+    ++_catalogGeneration;
     api.useSession(null);
+    workspaces = [];
     session = null;
     memberships = null;
     membershipsError = null;
@@ -181,15 +193,28 @@ class AppController extends ChangeNotifier {
   }
 
   Future<List<Membership>> reloadMemberships() async {
+    final auth = _authGeneration;
+    final request = ++_catalogGeneration;
+    bool current() => !_disposed && phase == AuthPhase.signedIn &&
+        auth == _authGeneration && request == _catalogGeneration;
     membershipsError = null;
     _notify();
     try {
-      final list = await api.memberships();
-      if (phase != AuthPhase.signedIn) return const [];
+      final catalog = await api.memberships();
+      if (!current()) return const [];
+      final list = catalog.memberships;
       memberships = list;
+      workspaces = catalog.workspaces;
+      // Removed access must also stop an already-running tunnel.
+      if (activeId != null && !list.any((m) => m.id == activeId && m.usable)) {
+        await disconnect();
+        if (!current()) return const [];
+        await _setActive(null);
+      }
       _notify();
       return list;
     } on ApiException catch (e) {
+      if (!current()) return const [];
       if (e.unauthorized) {
         await _expireSession();
         return const [];
@@ -200,6 +225,7 @@ class AppController extends ChangeNotifier {
       _notify();
       return const [];
     } catch (_) {
+      if (!current()) return const [];
       membershipsError = 'Could not load your memberships.';
       _notify();
       return const [];
@@ -218,10 +244,16 @@ class AppController extends ChangeNotifier {
     await store.writeActiveMembership(id);
   }
 
+  bool get hasWorkspaceGroups => workspaces.length > 1 || workspaces.any((w) => !w.personal);
+  bool get canSwitchMembership => usableMemberships.length > 1 || hasWorkspaceGroups;
+
   Future<void> selectMembership(String id) async {
+    final auth = _authGeneration;
+    if (!usableMemberships.any((m) => m.id == id)) return;
     if (connection.status != ConnectionStatus.disconnected && connection.membershipId != id) {
       await disconnect();
     }
+    if (auth != _authGeneration || !usableMemberships.any((m) => m.id == id)) return;
     await _setActive(id);
   }
 
@@ -276,7 +308,7 @@ class AppController extends ChangeNotifier {
 
   Future<void> connect() async {
     final m = activeMembership;
-    if (m == null) return;
+    if (m == null || !m.usable || phase != AuthPhase.signedIn) return;
     final target = currentTarget(m);
     if (target == null) return;
     await _run(m.id, target);
@@ -355,6 +387,7 @@ class AppController extends ChangeNotifier {
         // A failed switch must not leave a half-applied proxy behind.
         _endpoint = null;
         await engine.clear().catchError((_) {});
+        if (gen != _generation) return;
         if (e is ApiException && e.unauthorized) {
           await _clearSession();
         }

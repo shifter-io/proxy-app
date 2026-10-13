@@ -58,10 +58,10 @@ class MockShifterApi implements ShifterApi {
   User _user() => User(id: 'u_mock', email: scenario.isEmpty ? 'you@example.com' : '$scenario@example.com', name: 'Example User');
 
   @override
-  Future<List<Membership>> memberships() async {
+  Future<MembershipCatalog> memberships() async {
     await _delay(600);
     final all = Fixtures.memberships;
-    return switch (scenario) {
+    final memberships = switch (scenario) {
       'single' => all.where((m) => m.id == 'm_res_1').toList(),
       'country' => all.where((m) => m.id == 'm_res_country').toList(),
       'nongeo' => all.where((m) => m.id == 'm_res_nongeo').toList(),
@@ -69,6 +69,7 @@ class MockShifterApi implements ShifterApi {
       'none' => all.where((m) => m.status == MembershipStatus.expired).toList(),
       _ => all,
     };
+    return MembershipCatalog(memberships: memberships);
   }
 
   // Geo comes from the real catalog (names only), so the picker shows every
