@@ -17,25 +17,73 @@ class MembershipTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textStyle = style ?? SfText.bodyStrong;
+    final team = m.teamName;
+    final workspaceStyle = TextStyle(
+      fontSize: (textStyle.fontSize ?? 15) * 0.8,
+      fontWeight: FontWeight.w400,
+      color: Sf.textTertiary,
+    );
+    TextSpan label(String plan, String workspace) => TextSpan(children: [
+      TextSpan(text: plan),
+      TextSpan(text: ' ($workspace)', style: workspaceStyle),
+    ]);
+    Widget text(InlineSpan span) => Text.rich(
+      span,
+      style: textStyle,
+      maxLines: maxLines,
+      overflow: TextOverflow.clip,
+      semanticsLabel: m.displayName,
+    );
     return Tooltip(
       message: m.displayName,
-      child: Text.rich(
-        TextSpan(children: [
-          TextSpan(text: m.planName),
-          if (m.teamName != null)
-            TextSpan(
-              text: ' (${m.teamName})',
-              style: TextStyle(
-                fontSize: (textStyle.fontSize ?? 15) * 0.8,
-                fontWeight: FontWeight.w400,
-                color: Sf.textTertiary,
-              ),
-            ),
-        ]),
-        style: textStyle,
-        maxLines: maxLines,
-        overflow: TextOverflow.ellipsis,
-      ),
+      child: team == null
+          ? Text(m.planName, style: textStyle, maxLines: maxLines, overflow: TextOverflow.ellipsis)
+          : LayoutBuilder(builder: (context, constraints) {
+              // Fit the complete label, including its final ')', before painting.
+              // Framework ellipsis on the whole span would remove that bracket.
+              final painter = TextPainter(
+                textDirection: Directionality.of(context),
+                textScaler: MediaQuery.textScalerOf(context),
+                locale: Localizations.maybeLocaleOf(context),
+                maxLines: maxLines,
+              );
+              bool fits(TextSpan span) {
+                painter.text = TextSpan(
+                  style: DefaultTextStyle.of(context).style.merge(textStyle),
+                  children: [span],
+                );
+                painter.layout(maxWidth: constraints.maxWidth);
+                return !painter.didExceedMaxLines && painter.width <= constraints.maxWidth;
+              }
+              // Search complete grapheme clusters so emoji and combining marks
+              // are never split by truncation.
+              String shorten(String value, TextSpan Function(String) candidate) {
+                final characters = value.characters.toList();
+                var low = 0, high = characters.length;
+                while (low < high) {
+                  final mid = (low + high + 1) ~/ 2;
+                  final shortened = '${characters.take(mid).join().trimRight()}…';
+                  if (fits(candidate(shortened))) {
+                    low = mid;
+                  } else {
+                    high = mid - 1;
+                  }
+                }
+                return '${characters.take(low).join().trimRight()}…';
+              }
+              try {
+                final full = label(m.planName, team);
+                if (fits(full)) return text(full);
+                if (fits(label(m.planName, '…'))) {
+                  return text(label(m.planName, shorten(team, (name) => label(m.planName, name))));
+                }
+                // Very long product names also make room for the workspace.
+                final plan = shorten(m.planName, (name) => label(name, '…'));
+                return text(label(plan, '…'));
+              } finally {
+                painter.dispose();
+              }
+            }),
     );
   }
 }
