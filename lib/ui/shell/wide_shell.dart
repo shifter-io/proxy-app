@@ -85,7 +85,11 @@ class _ConnectSection extends StatelessWidget {
         Positioned.fill(child: Atmosphere(connected: connected)),
         Column(children: [
           SfTopBar(
-            title: m.teamName == null ? 'Connect' : m.displayName,
+            title: m.teamName == null ? 'Connect' : null,
+            leading: m.teamName == null ? null : Align(
+              alignment: Alignment.centerLeft,
+              child: MembershipTitle(m, style: SfText.title),
+            ),
             large: true,
             actions: [SfPill(m.type == ProductType.isp ? 'ISP' : 'Residential', tone: m.type == ProductType.isp ? SfTone.neutral : SfTone.info, xs: false)],
           ),
@@ -266,7 +270,7 @@ class _PlanMiniCard extends StatelessWidget {
         SfSwitcher(
           axis: Axis.horizontal,
           child: Row(key: ValueKey(m.id), children: [
-            Flexible(child: Tooltip(message: m.displayName, child: Text(m.displayName, maxLines: 2, overflow: TextOverflow.ellipsis, style: SfText.bodyStrong))),
+            Flexible(child: MembershipTitle(m, maxLines: 2)),
             const SizedBox(width: 6),
             Flexible(child: PoolTag(m, fontSize: 12.5)),
           ]),

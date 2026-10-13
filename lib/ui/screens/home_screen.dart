@@ -91,7 +91,7 @@ class PlanSwitcherButton extends StatelessWidget {
                 SfSwitcher(
                   axis: Axis.horizontal,
                   child: Row(key: ValueKey(m.id), mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.center, children: [
-                    Flexible(child: Tooltip(message: m.displayName, child: Text(m.displayName, maxLines: 1, overflow: TextOverflow.ellipsis, style: SfText.bodyStrong.copyWith(fontSize: 14.5, height: 1.1)))),
+                    Flexible(child: MembershipTitle(m, style: SfText.bodyStrong.copyWith(fontSize: 14.5, height: 1.1))),
                     const SizedBox(width: 6),
                     Flexible(child: PoolTag(m, fontSize: 12.5)),
                     if (onTap != null) ...[const SizedBox(width: 4), const SfIcon(SfIcons.chevronDown, size: 15, color: Sf.textTertiary)],
