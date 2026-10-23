@@ -29,11 +29,24 @@ android {
         versionName = flutter.versionName
     }
 
+    buildFeatures { buildConfig = true }
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("play") { dimension = "distribution" }
+        create("direct") { dimension = "distribution" }
+    }
+    signingConfigs {
+        create("production") {
+            val file = System.getenv("SHIFTER_ANDROID_KEYSTORE")
+            if (file != null) storeFile = rootProject.file(file)
+            storePassword = System.getenv("SHIFTER_ANDROID_STORE_PASSWORD")
+            keyAlias = System.getenv("SHIFTER_ANDROID_KEY_ALIAS")
+            keyPassword = System.getenv("SHIFTER_ANDROID_KEY_PASSWORD")
+        }
+    }
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("production")
         }
     }
 }
@@ -46,4 +59,18 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+// Never produce a distributable debug-signed APK by accident.
+tasks.configureEach {
+    if (name.startsWith("validateSigning") && name.endsWith("Release")) {
+        doFirst {
+            for (key in listOf("SHIFTER_ANDROID_KEYSTORE", "SHIFTER_ANDROID_STORE_PASSWORD", "SHIFTER_ANDROID_KEY_ALIAS", "SHIFTER_ANDROID_KEY_PASSWORD")) {
+                require(!System.getenv(key).isNullOrBlank()) { "Missing production signing setting: $key" }
+            }
+        }
+    }
+}
+dependencies {
+    "playImplementation"("com.google.android.play:app-update:2.1.0")
 }

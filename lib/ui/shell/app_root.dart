@@ -50,7 +50,12 @@ class _AppRootState extends State<AppRoot> {
     final child = switch (gate) {
       _Gate.splash || _Gate.loadingPlans => const _Splash(key: ValueKey('splash')),
       _Gate.login => const LoginScreen(key: ValueKey('login')),
-      _Gate.choosePlan => const PlansScreen(key: ValueKey('plans')),
+      _Gate.choosePlan => PlansScreen(
+          key: const ValueKey('plans'),
+          onOpenSettings: () => Navigator.of(context).push(CupertinoPageRoute(
+            builder: (ctx) => SettingsScreen(onBack: () => Navigator.pop(ctx)),
+          )),
+        ),
       _Gate.compact => const _CompactShell(key: ValueKey('compact')),
       _Gate.wide => const WideShell(key: ValueKey('wide')),
     };

@@ -26,9 +26,7 @@ final class TunnelBridge {
             guard let login = call.arguments as? [String: Any] else { return result(FlutterError(code: "args", message: "No login", details: nil)) }
             apply(login, result)
         case "stop":
-            stopRequested = true
-            manager?.connection.stopVPNTunnel()
-            result(nil)
+            stopExisting(result)
         case "status":
             send([:]) { reply in result(reply) }
         case "fetch":
@@ -45,6 +43,31 @@ final class TunnelBridge {
         default:
             result(FlutterMethodNotImplemented)
         }
+    }
+
+    /// Recovery only loads our existing profile; it never creates or rewrites
+    /// another VPN configuration. Acknowledgement follows confirmed teardown.
+    private func stopExisting(_ result: @escaping FlutterResult) {
+        NETunnelProviderManager.loadAllFromPreferences { [weak self] managers, error in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                if let error { return result(FlutterError(code: "stop", message: Self.message(error), details: nil)) }
+                guard let manager = managers?.first(where: {
+                    ($0.protocolConfiguration as? NETunnelProviderProtocol)?.providerBundleIdentifier == Self.providerBundleIdentifier
+                }) else { return result(nil) }
+                self.manager = manager
+                self.stopRequested = true
+                manager.connection.stopVPNTunnel()
+                self.waitForStopped(manager, since: Date(), result)
+            }
+        }
+    }
+    private func waitForStopped(_ manager: NETunnelProviderManager, since start: Date, _ result: @escaping FlutterResult) {
+        if manager.connection.status == .disconnected || manager.connection.status == .invalid { return result(nil) }
+        if Date().timeIntervalSince(start) > 20 {
+            return result(FlutterError(code: "stop", message: "The connection has not stopped. Retry before installing an update.", details: nil))
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { self.waitForStopped(manager, since: start, result) }
     }
 
     private func apply(_ login: [String: Any], _ result: @escaping FlutterResult) {
@@ -85,7 +108,9 @@ final class TunnelBridge {
     private func loadManager(_ done: @escaping (NETunnelProviderManager?, Error?) -> Void) {
         NETunnelProviderManager.loadAllFromPreferences { managers, error in
             if let error { return done(nil, error) }
-            let manager = managers?.first ?? NETunnelProviderManager()
+            let manager = managers?.first(where: {
+                ($0.protocolConfiguration as? NETunnelProviderProtocol)?.providerBundleIdentifier == Self.providerBundleIdentifier
+            }) ?? NETunnelProviderManager()
             let proto = NETunnelProviderProtocol()
             proto.providerBundleIdentifier = Self.providerBundleIdentifier
             proto.serverAddress = "Shifter"

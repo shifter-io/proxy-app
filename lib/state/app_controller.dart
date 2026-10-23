@@ -11,6 +11,7 @@ import '../data/models.dart';
 import '../data/store.dart';
 import '../proxy/proxy_engine.dart';
 import '../proxy/system_proxy.dart';
+import '../update/update_store.dart';
 
 enum AuthPhase { booting, signedOut, signedIn }
 
@@ -28,7 +29,7 @@ const _exitCheckEvery = Duration(seconds: 15);
 class AppController extends ChangeNotifier {
   /// Defaults to the in-memory mock backend (preview studio, tests); the
   /// real app passes [HttpShifterApi], [PersistentStore] and [LocalProxyEngine].
-  AppController({ShifterApi? api, Store? store, ProxyEngine? engine, this.demoKey, this.demoConnected = false})
+  AppController({ShifterApi? api, Store? store, ProxyEngine? engine, this.demoKey, this.demoConnected = false, this.suppressUpdateReconnect = false})
       : api = api ?? MockShifterApi(),
         store = store ?? MemoryStore(),
         engine = engine ?? MockProxyEngine(delay: demoConnected ? Duration.zero : const Duration(milliseconds: 1100)) {
@@ -40,6 +41,10 @@ class AppController extends ChangeNotifier {
   final ShifterApi api;
   final Store store;
   final ProxyEngine engine;
+  final bool suppressUpdateReconnect;
+  bool _updatePreparing = false;
+  bool get updatePreparing => _updatePreparing;
+  bool _recoveryFailed = false;
 
   /// Preview only: sign in with this key on start (skips the login screen).
   final String? demoKey;
@@ -83,7 +88,13 @@ class AppController extends ChangeNotifier {
     // A crash or force-quit while connected must not leave the OS pointing
     // at a proxy that is gone.
     final started = DateTime.now();
-    await engine.recover();
+    try {
+      await engine.recover();
+    } catch (_) {
+      _recoveryFailed = true;
+      connection = const ProxyConnection.error('Could not restore network settings. Disconnect and retry before updating.');
+    }
+    final suppressReconnect = suppressUpdateReconnect && await UpdateStore.consumeRestartSuppression();
     final (stored, saved, active, targets, recent) = await (
       store.readSession(),
       store.readSettings(),
@@ -116,7 +127,7 @@ class AppController extends ChangeNotifier {
       _notify();
     }, onError: (_) {}));
     await _routeAfterAuth(activeId);
-    if (settings.autoConnect && activeMembership != null && phase == AuthPhase.signedIn) await connect();
+    if (!suppressReconnect && !_recoveryFailed && settings.autoConnect && activeMembership != null && phase == AuthPhase.signedIn) await connect();
   }
 
   Future<void> _bootDemo(String key) async {
@@ -304,7 +315,7 @@ class AppController extends ChangeNotifier {
   bool get isConnecting => connection.status == ConnectionStatus.connecting;
 
   /// False on devices that can't route other apps yet (phones, tablets).
-  bool get canConnect => engine.supported;
+  bool get canConnect => engine.supported && !_updatePreparing && !_recoveryFailed;
 
   Future<void> connect() async {
     final m = activeMembership;
@@ -324,15 +335,47 @@ class AppController extends ChangeNotifier {
   Future<void> disconnect() {
     final gen = ++_generation;
     _watchExit(false);
-    if (connection.status != ConnectionStatus.disconnected) {
-      connection = const ProxyConnection.disconnected();
-      _notify();
-    }
     return _serial(() async {
       if (gen != _generation) return;
-      _endpoint = null;
-      await engine.clear().catchError((_) {});
+      try {
+        await engine.clear();
+        _endpoint = null;
+        _recoveryFailed = false;
+        connection = const ProxyConnection.disconnected();
+      } catch (_) {
+        _recoveryFailed = true;
+        connection = const ProxyConnection.error('Could not restore network settings. Retry disconnecting before closing Shifter.');
+      }
+      _notify();
     });
+  }
+
+  /// Holds the connection gate throughout revalidation and native handoff.
+  /// No timeout outside this transaction may release the gate while cleanup runs.
+  Future<void> prepareForUpdate(Future<void> Function() handoff) async {
+    if (_updatePreparing) throw StateError('An update is already being prepared.');
+    _updatePreparing = true;
+    ++_generation;
+    _watchExit(false);
+    _notify();
+    try {
+      await _serial(() async {
+        try { await engine.clear(); } catch (_) {
+          _recoveryFailed = true;
+          connection = const ProxyConnection.error('Could not restore network settings. Retry disconnecting before updating.');
+          _notify();
+          rethrow;
+        }
+        _endpoint = null;
+        _recoveryFailed = false;
+        connection = const ProxyConnection.disconnected();
+        _notify();
+        await handoff();
+      });
+    } finally {
+      _updatePreparing = false;
+      _notify();
+    }
   }
 
   Future<void> toggleConnection() async {
@@ -342,8 +385,7 @@ class AppController extends ChangeNotifier {
 
   /// App is quitting: put the OS proxy back before the process ends.
   Future<void> shutdown() async {
-    await disconnect();
-    await _queue;
+    await prepareForUpdate(() async {});
   }
 
   /// Serializes connect / disconnect so quick taps can't interleave.
@@ -356,6 +398,7 @@ class AppController extends ChangeNotifier {
   /// Connects (or re-connects) to [target]. A fresh sticky session id means
   /// a fresh exit IP; [keepSid] re-applies the same session.
   Future<void> _run(String membershipId, Target target, {bool keepSid = false}) {
+    if (!canConnect) return Future.value();
     final gen = ++_generation;
     _watchExit(false);
     connection = ProxyConnection.connecting(membershipId, target);

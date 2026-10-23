@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "environment": "production",
+  "distribution": "direct",
+  "platform": "android",
+  "architecture": "universal",
+  "channel": "stable",
+  "releases": [{
+    "releaseId": "android-0.2.0-2",
+    "applicationId": "io.shifter.shifter_app",
+    "displayVersion": "0.2.0",
+    "build": 2,
+    "minimumOs": "29",
+    "notes": "Describe the changes for users.",
+    "enabled": true,
+    "rolloutPercentage": 5,
+    "artifact": {
+      "relativePath": "releases/android/0.2.0-2/Shifter.apk",
+      "format": "apk",
+      "expectedSigner": "REPLACE_WITH_LOWERCASE_SHA256_OF_PRODUCTION_SIGNING_CERTIFICATE"
+    }
+  }]
+}

@@ -10,6 +10,7 @@ import 'state/app_controller.dart';
 import 'theme/theme.dart';
 import 'theme/tokens.dart';
 import 'ui/shell/app_root.dart';
+import 'ui/update/update_host.dart';
 import 'ui/widgets/ambient_motion.dart';
 
 /// One complete app instance. The preview studio runs several of these side
@@ -34,11 +35,12 @@ class ShifterApp extends StatefulWidget {
 class _ShifterAppState extends State<ShifterApp> {
   late final AppController controller = _create();
   AppLifecycleListener? _lifecycle;
+  final _navigatorKey = GlobalKey<NavigatorState>();
 
   AppController _create() {
     if (!widget.live) return AppController(demoKey: widget.demoKey, demoConnected: widget.demoConnected);
     final store = PersistentStore();
-    return AppController(api: HttpShifterApi(store: store), store: store, engine: ProxyEngine.forPlatform(store));
+    return AppController(api: HttpShifterApi(store: store), store: store, engine: ProxyEngine.forPlatform(store), suppressUpdateReconnect: true);
   }
 
   @override
@@ -47,8 +49,12 @@ class _ShifterAppState extends State<ShifterApp> {
     // Quitting while connected: put the OS proxy settings back first.
     if (widget.live) {
       _lifecycle = AppLifecycleListener(onExitRequested: () async {
-        await controller.shutdown().timeout(const Duration(seconds: 8), onTimeout: () {});
-        return AppExitResponse.exit;
+        try {
+          await controller.shutdown();
+          return AppExitResponse.exit;
+        } catch (_) {
+          return AppExitResponse.cancel;
+        }
       });
     }
   }
@@ -68,6 +74,7 @@ class _ShifterAppState extends State<ShifterApp> {
       controller: controller,
       child: MaterialApp(
         title: 'Shifter',
+        navigatorKey: _navigatorKey,
         debugShowCheckedModeBanner: false,
         theme: buildShifterTheme(),
         // Paint behind route fades too, so the native surface never shows
@@ -82,9 +89,9 @@ class _ShifterAppState extends State<ShifterApp> {
             systemNavigationBarIconBrightness: Brightness.light,
             systemNavigationBarContrastEnforced: false,
           ),
-          child: ColoredBox(color: Sf.bgDeepest, child: child!),
+          child: UpdateHost(app: controller, enabled: widget.live, navigatorKey: _navigatorKey, child: ColoredBox(color: Sf.bgDeepest, child: child!)),
         ),
-        home: const AmbientMotionScope(child: AppRoot()),
+        home: const UpdateBackGuard(child: AmbientMotionScope(child: AppRoot())),
       ),
     );
   }
