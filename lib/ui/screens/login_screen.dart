@@ -8,6 +8,7 @@ import '../../state/app_controller.dart';
 import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
 import '../links.dart';
+import '../update/update_host.dart';
 import '../widgets/atmosphere.dart';
 import '../widgets/icons.dart';
 import '../widgets/layout.dart';
@@ -362,21 +363,9 @@ class _LoginFormState extends State<_LoginForm> with SingleTickerProviderStateMi
       const SizedBox(height: 12),
       Text('Sign up, then copy your key from Profile → API Key.', textAlign: TextAlign.center, style: SfText.micro.copyWith(fontSize: 12.5)),
       const SizedBox(height: 10),
-      Center(
-        child: SfLinkButton(
-          text: 'Preview with a demo key',
-          fontSize: 12.5,
-          onTap: busy
-              ? () {}
-              : () {
-                  const demo = 'demo0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUV';
-                  _ctl.text = demo;
-                  _verify(demo);
-                },
-        ),
-      ),
       if (widget.showWordmark) const Spacer(),
       const SizedBox(height: 24),
+      TextButton(onPressed: UpdateScope.of(context)?.open, child: const Text('About / App updates')),
       Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         const SfIcon(SfIcons.lock, size: 13, color: Sf.textMuted),
         const SizedBox(width: 6),

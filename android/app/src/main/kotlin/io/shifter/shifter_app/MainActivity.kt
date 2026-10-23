@@ -20,6 +20,7 @@ class MainActivity : FlutterActivity() {
         return FlutterEngine(context.applicationContext).also { engine ->
             engine.dartExecutor.executeDartEntrypoint(DartExecutor.DartEntrypoint.createDefault())
             VpnBridge.attach(context, engine)
+            UpdateBridge.attach(context, engine)
             cache.put(ENGINE_ID, engine)
         }
     }
@@ -27,9 +28,11 @@ class MainActivity : FlutterActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         VpnBridge.activity = this
+        UpdateBridge.activity = this
     }
 
     override fun onDestroy() {
+        if (UpdateBridge.activity === this) UpdateBridge.activity = null
         if (VpnBridge.activity === this) VpnBridge.activity = null
         super.onDestroy()
     }
@@ -40,6 +43,7 @@ class MainActivity : FlutterActivity() {
             VpnBridge.onConsent(resultCode == RESULT_OK)
             return
         }
+        if (DistributionUpdates.onActivityResult(requestCode, resultCode)) return
         super.onActivityResult(requestCode, resultCode, data)
     }
 

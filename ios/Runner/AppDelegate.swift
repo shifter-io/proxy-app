@@ -4,6 +4,7 @@ import UIKit
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   private var tunnel: TunnelBridge?
+  private var updates: UpdateBridge?
 
   override func application(
     _ application: UIApplication,
@@ -16,6 +17,7 @@ import UIKit
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "ShifterTunnel") {
       tunnel = TunnelBridge(messenger: registrar.messenger())
+      updates = UpdateBridge(messenger: registrar.messenger())
     }
   }
 }

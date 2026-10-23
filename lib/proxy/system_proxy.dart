@@ -53,7 +53,7 @@ class UnsupportedSystemProxy implements SystemProxy {
 }
 
 Future<String> _run(String exe, List<String> args) async {
-  final r = await Process.run(exe, args);
+  final r = await Process.run(exe, args).timeout(const Duration(seconds: 15));
   if (r.exitCode != 0) {
     throw SystemProxyException('Could not change the system proxy (${exe.split('/').last} ${args.first}: ${'${r.stderr}'.trim()})');
   }
@@ -132,7 +132,7 @@ class MacSystemProxy extends SystemProxy {
     final saved = (backup?['services'] as Map?)?.cast<String, dynamic>();
     if (saved == null) return;
     for (final MapEntry(key: s, value: v as Map) in saved.entries) {
-      try {
+      {
         for (final (kind, set, state) in [
           ('web', '-setwebproxy', '-setwebproxystate'),
           ('secure', '-setsecurewebproxy', '-setsecurewebproxystate'),
@@ -144,8 +144,18 @@ class MacSystemProxy extends SystemProxy {
         }
         final domains = (v['bypass'] as List).cast<String>();
         await _run(_ns, ['-setproxybypassdomains', s, ...(domains.isEmpty ? ['Empty'] : domains)]);
-      } on SystemProxyException {
-        // The service may be gone (USB tethering unplugged); nothing to restore.
+        final restored = await _read(s);
+        for (final kind in ['web', 'secure']) {
+          final expected = v[kind] as Map;
+          final actual = restored[kind] as Map;
+          if (actual['on'] != expected['on'] || ((expected['host'] as String).isNotEmpty &&
+              (actual['host'] != expected['host'] || actual['port'] != expected['port']))) {
+            throw SystemProxyException('Could not confirm restored proxy settings.');
+          }
+        }
+        if ((restored['bypass'] as List).join('\n') != (v['bypass'] as List).join('\n')) {
+          throw SystemProxyException('Could not confirm restored proxy bypass settings.');
+        }
       }
     }
     await store.writeProxyBackup(null);
@@ -170,13 +180,16 @@ class WindowsSystemProxy extends SystemProxy {
 
   Future<void> _set(String name, String type, String value) => _run('reg', ['add', _key, '/v', name, '/t', type, '/d', value, '/f']);
 
-  Future<void> _delete(String name) => Process.run('reg', ['delete', _key, '/v', name, '/f']);
+  Future<void> _delete(String name) async {
+    if (await _query(name) != null) await _run('reg', ['delete', _key, '/v', name, '/f']);
+    if (await _query(name) != null) throw SystemProxyException('Could not remove proxy setting.');
+  }
 
-  Future<void> _refresh() => Process.run('powershell', [
+  Future<void> _refresh() => _run('powershell', [
         '-NoProfile',
         '-Command',
         r'''$s='[DllImport("wininet.dll")] public static extern bool InternetSetOption(System.IntPtr h,int o,System.IntPtr b,int l);';'''
-            r'''$t=Add-Type -MemberDefinition $s -Name W -Namespace S -PassThru;$t::InternetSetOption(0,39,0,0)|Out-Null;$t::InternetSetOption(0,37,0,0)|Out-Null''',
+            r'''$ErrorActionPreference="Stop";$t=Add-Type -MemberDefinition $s -Name W -Namespace S -PassThru;if(-not $t::InternetSetOption(0,39,0,0)){exit 1};if(-not $t::InternetSetOption(0,37,0,0)){exit 1}''',
       ]);
 
   @override
@@ -257,7 +270,10 @@ class LinuxSystemProxy extends SystemProxy {
     if (b == null) return;
     for (final (schema, key) in _keys) {
       final v = b['$schema $key'] as String?;
-      if (v != null) await _set(schema, key, v).catchError((_) {});
+      if (v != null) {
+        await _set(schema, key, v);
+        if (await _get(schema, key) != v) throw SystemProxyException('Could not confirm restored proxy settings.');
+      }
     }
     await store.writeProxyBackup(null);
   }

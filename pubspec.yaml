@@ -7,10 +7,15 @@ environment:
   sdk: ^3.13.4
 
 dependencies:
+  crypto: ^3.0.7
+  cryptography: ^2.9.0
+  ffi: ^2.2.0
   flutter:
     sdk: flutter
   flutter_secure_storage: ^11.2.0
   flutter_svg: ^2.0.17
+  package_info_plus: ^10.2.2
+  path_provider: ^2.1.6
   shared_preferences: ^2.5.5
   url_launcher: ^6.3.3
 

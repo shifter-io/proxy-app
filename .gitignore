@@ -67,3 +67,6 @@ key.properties
 weights.json
 secrets/
 .local/
+
+# Local QA output (may contain live-account data)
+qa-results/

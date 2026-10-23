@@ -259,3 +259,7 @@ Use [Shifter's support resources](https://shifter.io/docs?utm_source=github&utm_
 ## License
 
 Project source is released under the [MIT License](LICENSE). Third-party dependencies, fonts, and assets retain their own licenses. Shifter branding retains its respective rights. See [third-party asset notices](docs/third-party-notices.html).
+
+## Application updates
+
+See [Application updates](docs/app-updates.md) for platform integration, signed CDN metadata, Android flavors, publishing commands and production qualification gates. Updates are disabled until production configuration is supplied.

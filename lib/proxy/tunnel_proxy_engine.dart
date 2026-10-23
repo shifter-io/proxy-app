@@ -23,6 +23,7 @@ class TunnelProxyEngine implements ProxyEngine {
   final _rejected = StreamController<void>.broadcast();
   final _stopped = StreamController<void>.broadcast();
   int? _port;
+  int? get port => _port;
 
   @override
   bool get supported => true;
@@ -34,7 +35,7 @@ class TunnelProxyEngine implements ProxyEngine {
   /// A tunnel left running by a previous run (the app was closed while
   /// connected) still routes traffic; end it so the app's state is the truth.
   @override
-  Future<void> recover() => _channel.invokeMethod('stop').catchError((_) {});
+  Future<void> recover() => _channel.invokeMethod('stop');
 
   @override
   Future<void> apply(GatewayEndpoint endpoint) async {
@@ -55,8 +56,8 @@ class TunnelProxyEngine implements ProxyEngine {
 
   @override
   Future<void> clear() async {
-    _port = null;
     await _channel.invokeMethod('stop');
+    _port = null;
   }
 
   @override

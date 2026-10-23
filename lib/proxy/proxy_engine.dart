@@ -85,7 +85,7 @@ class LocalProxyEngine implements ProxyEngine {
   Stream<void> get stopped => _system.stopped;
 
   @override
-  Future<void> recover() => applySystemProxy ? _system.restoreIfNeeded().catchError((_) {}) : Future.value();
+  Future<void> recover() => applySystemProxy ? _system.restoreIfNeeded() : Future.value();
 
   @override
   Future<void> apply(GatewayEndpoint endpoint) async {
@@ -107,8 +107,8 @@ class LocalProxyEngine implements ProxyEngine {
   @override
   Future<void> clear() async {
     if (applySystemProxy) {
-      _systemBypass = null;
       await _system.disable();
+      _systemBypass = null;
     }
     await _proxy.stop();
   }

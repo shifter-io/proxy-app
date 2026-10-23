@@ -8,6 +8,8 @@ import '../../state/app_controller.dart';
 import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
 import '../links.dart';
+import '../update/update_panel.dart';
+import '../update/update_host.dart';
 import '../widgets/icons.dart';
 import '../widgets/layout.dart';
 import '../widgets/primitives.dart';
@@ -31,7 +33,7 @@ class SettingsScreen extends StatelessWidget {
     var i = 0;
     Widget section(Widget w) => FadeSlideIn(delay: FadeSlideIn.stagger(i++, stepMs: 60), child: Padding(padding: const EdgeInsets.only(bottom: 26), child: w));
 
-    return PageScaffold(
+    return UpdateBackGuard(child: PageScaffold(
       header: embedded ? const SfTopBar(title: 'Settings', large: true) : SfTopBar(title: 'Settings', onBack: onBack),
       body: ListView(
         physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
@@ -155,12 +157,12 @@ class SettingsScreen extends StatelessWidget {
                   onPressed: () => _confirmSignOut(context, app),
                 ),
               ])),
-              Text('Shifter app v0.1.0', textAlign: TextAlign.center, style: SfText.micro.copyWith(color: Sf.textFaint)),
+              section(const AppUpdatesEntry()),
             ]),
           ),
         ],
       ),
-    );
+    ));
   }
 
   static String _maskKey(String? key) => key == null || key.length < 8 ? '' : '${key.substring(0, 4)}••••${key.substring(key.length - 4)}';
