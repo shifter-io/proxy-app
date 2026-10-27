@@ -1,0 +1,3 @@
+# The CI pool runners' labels (.github/workflows/ci.yml), for actionlint.
+self-hosted-runner:
+  labels: [ci-heavy, ci-light]
