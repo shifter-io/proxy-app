@@ -1,0 +1,214 @@
+# Tier-1 merge gate (PROJECT checks; README.md and docs/development.md list the
+# commands), run on every ready pull request and on every push to main.
+#
+# Every job runs on the shared CI pool's self-hosted runners (`ci-heavy`: the
+# servers are identical and none is pinned). Pinned toolchains (Flutter, JDK,
+# Android SDK, Python tools) are installed by .github/ci/setup.sh into
+# $CI_CACHE_DIR/proxy-app and reused across runs; nothing else is cached. A job-started hook on the servers refuses every job
+# except the owner's own pull requests from branches of this repository, pushes
+# to main, schedules and owner dispatches.
+#
+# What a pull request runs depends on what it changes (the `changes` job): a
+# change only to README.md, docs/ or tool/render_docs.py runs only the docs job;
+# the Android APKs build when android/ changes; the Linux desktop build and the
+# native/updater Rust checks run when linux/ or native/updater/ changes; a change
+# to pubspec or to this workflow builds everything. Draft pull requests run
+# nothing until they are marked ready. On main every job runs.
+#
+# Not here (no Mac runners in the pool): macOS and iOS builds, the Swift
+# tunnel-proxy tests of test/proxy_test.dart and the Android emulator e2e. They
+# stay on the shared pool's Mac class outside GitHub Actions. Live-account tests
+# skip themselves without credentials. Known load-sensitive tests are not
+# retried: a failure is reported as it is.
+name: ci
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # Checkout makes HEAD the pull request merged into its base, so HEAD^1 is
+  # the base and the diff is the request's; on main HEAD^1 is the previous
+  # (squash-merged) head.
+  changes:
+    name: changes
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    runs-on: [self-hosted, ci-heavy]
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+      android: ${{ steps.diff.outputs.android }}
+      linux: ${{ steps.diff.outputs.linux }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+      - id: diff
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" != pull_request ]; then
+            printf 'code=true\nandroid=true\nlinux=true\n' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # --no-renames lists a moved file under its old path too.
+          files=$(git diff --name-only --no-renames HEAD^1 HEAD)
+          code=false; [ -n "$files" ] || code=true
+          grep -qvE '^(README\.md|docs/.*|tool/render_docs\.py)$' <<< "$files" && code=true
+          all='^(pubspec\.(yaml|lock)|\.github/(workflows/ci\.yml|ci/.*))$'
+          android=false; grep -qE "^android/|$all" <<< "$files" && android=true
+          linux=false; grep -qE "^(linux|native/updater)/|$all" <<< "$files" && linux=true
+          printf 'code=%s\nandroid=%s\nlinux=%s\n' "$code" "$android" "$linux" | tee -a "$GITHUB_OUTPUT"
+
+  # Every ready pull request runs this job, a docs-only one nothing else.
+  docs:
+    name: docs
+    needs: changes
+    runs-on: [self-hosted, ci-heavy]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+      - run: .github/ci/setup.sh python
+      - name: Whitespace errors in the change
+        run: git diff --check HEAD^1 HEAD
+      - name: Rendered docs are fresh
+        run: |
+          python3 tool/render_docs.py
+          git diff --exit-code --stat ||
+            { echo "Stale: run python3 tool/render_docs.py and commit docs/*.html"; exit 1; }
+
+  lint:
+    name: format and analyze
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: [self-hosted, ci-heavy]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+      - run: .github/ci/setup.sh flutter
+      - id: pub
+        run: flutter pub get --enforce-lockfile
+      # Each check below runs even when the one before it failed, so one run
+      # reports every failure. Format covers changed files only, whole files:
+      # the tree is not format-clean yet (PROJECT baseline); this becomes the
+      # whole tree once it is.
+      - name: dart format (changed files)
+        run: |
+          mapfile -t files < <(git diff --name-only --diff-filter=AMR HEAD^1 HEAD -- '*.dart')
+          if [ ${#files[@]} -eq 0 ]; then echo "No changed Dart files"; exit 0; fi
+          dart format --output=none --set-exit-if-changed "${files[@]}"
+      - if: ${{ !cancelled() && steps.pub.outcome == 'success' }}
+        run: flutter analyze --no-pub --fatal-infos --fatal-warnings
+
+  test:
+    name: tests and changed-line coverage
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: [self-hosted, ci-heavy]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+      - run: .github/ci/setup.sh flutter
+      - run: .github/ci/setup.sh python
+      - id: pub
+        run: flutter pub get --enforce-lockfile
+      # A library no test imports would be missing from lcov.info, and
+      # diff-cover would not count its lines: one generated (uncommitted) test
+      # imports every library under lib/.
+      - name: Load every library for coverage
+        run: |
+          pkg=$(sed -n 's/^name: *//p' pubspec.yaml)
+          { find lib -name '*.dart' | sort | sed -E "s#^lib/(.*)#import 'package:$pkg/\1';#"
+            echo 'void main() {}'; } > test/ci_all_libraries_test.dart
+      - run: flutter test --no-pub --coverage
+      # The checks below run even when the one before failed, so one run
+      # reports every failure. The publisher tests need OpenSSL 3 (the
+      # servers' Ubuntu ships it).
+      - name: tool/update tests
+        if: ${{ !cancelled() && steps.pub.outcome == 'success' }}
+        run: |
+          openssl version
+          python3 -m coverage run --include='tool/update/*' -m unittest discover -s tool/update -p 'test_*.py'
+          python3 -m coverage lcov -o coverage/tool-update.lcov
+      - name: Changed-line coverage (85%; 90% for critical paths)
+        if: ${{ !cancelled() && steps.pub.outcome == 'success' }}
+        run: |
+          git diff -U0 --no-ext-diff HEAD^1 HEAD > "$RUNNER_TEMP/change.diff"
+          reports=(coverage/lcov.info coverage/tool-update.lcov)
+          status=0
+          diff-cover "${reports[@]}" --diff-file "$RUNNER_TEMP/change.diff" --fail-under 85 \
+            --format "markdown:$RUNNER_TEMP/coverage.md" || status=$?
+          cat "$RUNNER_TEMP/coverage.md" >> "$GITHUB_STEP_SUMMARY"
+          diff-cover "${reports[@]}" --diff-file "$RUNNER_TEMP/change.diff" --fail-under 90 \
+            --include 'lib/update/**' lib/proxy/system_proxy.dart lib/data/store.dart 'tool/update/**' 'native/updater/**' || status=$?
+          exit "$status"
+      # test/update_ui_test.dart writes its screenshot outside the checkout.
+      - name: Remove test output outside the checkout
+        if: always()
+        run: |
+          rm -rf "$GITHUB_WORKSPACE/../reports/app-updates-evidence"
+          if [ -d "$GITHUB_WORKSPACE/../reports" ]; then rmdir --ignore-fail-on-non-empty "$GITHUB_WORKSPACE/../reports"; fi
+
+  android:
+    name: android debug APKs
+    needs: changes
+    if: needs.changes.outputs.android == 'true'
+    runs-on: [self-hosted, ci-heavy]
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: .github/ci/setup.sh flutter
+      - run: .github/ci/setup.sh android
+      - run: flutter pub get --enforce-lockfile
+      - run: flutter build apk --debug --flavor direct
+      - run: flutter build apk --debug --flavor play
+
+  linux:
+    name: linux debug build and native/updater
+    needs: changes
+    if: needs.changes.outputs.linux == 'true'
+    runs-on: [self-hosted, ci-heavy]
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: .github/ci/setup.sh flutter
+      # CMake and Ninja come from the pinned Python tools.
+      - run: .github/ci/setup.sh python
+      - id: rust
+        run: .github/ci/setup.sh rust
+      # The desktop build below runs even when these checks fail, so one run
+      # reports both.
+      - name: cargo fmt, clippy and test
+        working-directory: native/updater
+        run: |
+          cargo fmt --check
+          cargo clippy --locked --all-targets -- -D warnings
+          cargo test --locked
+      # The desktop build links GTK 3 and libsecret, system packages that need
+      # root to install: the pool's server image must provide them.
+      - name: System libraries
+        id: libs
+        if: ${{ !cancelled() && steps.rust.outcome == 'success' }}
+        run: |
+          missing=$(for m in gtk+-3.0 libsecret-1; do pkg-config --exists "$m" || echo "$m"; done)
+          [ -z "$missing" ] || { echo "Missing on this runner (needs the server image): $missing"; exit 1; }
+      - if: ${{ !cancelled() && steps.libs.outcome == 'success' }}
+        run: |
+          flutter pub get --enforce-lockfile
+          flutter build linux --debug
