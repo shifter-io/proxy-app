@@ -101,15 +101,19 @@ jobs:
         with:
           fetch-depth: 2
       - run: .github/ci/setup.sh flutter
-      - run: flutter pub get --enforce-lockfile
-      # Changed files only, whole files: the tree is not format-clean yet
-      # (PROJECT baseline); this becomes the whole tree once it is.
+      - id: pub
+        run: flutter pub get --enforce-lockfile
+      # Each check below runs even when the one before it failed, so one run
+      # reports every failure. Format covers changed files only, whole files:
+      # the tree is not format-clean yet (PROJECT baseline); this becomes the
+      # whole tree once it is.
       - name: dart format (changed files)
         run: |
           mapfile -t files < <(git diff --name-only --diff-filter=AMR HEAD^1 HEAD -- '*.dart')
           if [ ${#files[@]} -eq 0 ]; then echo "No changed Dart files"; exit 0; fi
           dart format --output=none --set-exit-if-changed "${files[@]}"
-      - run: flutter analyze --no-pub --fatal-infos --fatal-warnings
+      - if: ${{ !cancelled() && steps.pub.outcome == 'success' }}
+        run: flutter analyze --no-pub --fatal-infos --fatal-warnings
 
   test:
     name: tests and changed-line coverage
@@ -123,23 +127,38 @@ jobs:
           fetch-depth: 2
       - run: .github/ci/setup.sh flutter
       - run: .github/ci/setup.sh python
-      - run: flutter pub get --enforce-lockfile
+      - id: pub
+        run: flutter pub get --enforce-lockfile
+      # A library no test imports would be missing from lcov.info, and
+      # diff-cover would not count its lines: one generated (uncommitted) test
+      # imports every library under lib/.
+      - name: Load every library for coverage
+        run: |
+          pkg=$(sed -n 's/^name: *//p' pubspec.yaml)
+          { find lib -name '*.dart' | sort | sed -E "s#^lib/(.*)#import 'package:$pkg/\1';#"
+            echo 'void main() {}'; } > test/ci_all_libraries_test.dart
       - run: flutter test --no-pub --coverage
-      # The publisher tests need OpenSSL 3 (the servers' Ubuntu ships it).
+      # The checks below run even when the one before failed, so one run
+      # reports every failure. The publisher tests need OpenSSL 3 (the
+      # servers' Ubuntu ships it).
       - name: tool/update tests
+        if: ${{ !cancelled() && steps.pub.outcome == 'success' }}
         run: |
           openssl version
           python3 -m coverage run --include='tool/update/*' -m unittest discover -s tool/update -p 'test_*.py'
           python3 -m coverage lcov -o coverage/tool-update.lcov
       - name: Changed-line coverage (85%; 90% for critical paths)
+        if: ${{ !cancelled() && steps.pub.outcome == 'success' }}
         run: |
           git diff -U0 --no-ext-diff HEAD^1 HEAD > "$RUNNER_TEMP/change.diff"
           reports=(coverage/lcov.info coverage/tool-update.lcov)
+          status=0
           diff-cover "${reports[@]}" --diff-file "$RUNNER_TEMP/change.diff" --fail-under 85 \
-            --format "markdown:$RUNNER_TEMP/coverage.md"
+            --format "markdown:$RUNNER_TEMP/coverage.md" || status=$?
           cat "$RUNNER_TEMP/coverage.md" >> "$GITHUB_STEP_SUMMARY"
           diff-cover "${reports[@]}" --diff-file "$RUNNER_TEMP/change.diff" --fail-under 90 \
-            --include 'lib/update/**' lib/proxy/system_proxy.dart lib/data/store.dart 'tool/update/**' 'native/updater/**'
+            --include 'lib/update/**' lib/proxy/system_proxy.dart lib/data/store.dart 'tool/update/**' 'native/updater/**' || status=$?
+          exit "$status"
       # test/update_ui_test.dart writes its screenshot outside the checkout.
       - name: Remove test output outside the checkout
         if: always()
