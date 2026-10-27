@@ -191,7 +191,10 @@ jobs:
       - run: .github/ci/setup.sh flutter
       # CMake and Ninja come from the pinned Python tools.
       - run: .github/ci/setup.sh python
-      - run: .github/ci/setup.sh rust
+      - id: rust
+        run: .github/ci/setup.sh rust
+      # The desktop build below runs even when these checks fail, so one run
+      # reports both.
       - name: cargo fmt, clippy and test
         working-directory: native/updater
         run: |
@@ -201,8 +204,12 @@ jobs:
       # The desktop build links GTK 3 and libsecret, system packages that need
       # root to install: the pool's server image must provide them.
       - name: System libraries
+        id: libs
+        if: ${{ !cancelled() && steps.rust.outcome == 'success' }}
         run: |
           missing=$(for m in gtk+-3.0 libsecret-1; do pkg-config --exists "$m" || echo "$m"; done)
           [ -z "$missing" ] || { echo "Missing on this runner (needs the server image): $missing"; exit 1; }
-      - run: flutter pub get --enforce-lockfile
-      - run: flutter build linux --debug
+      - if: ${{ !cancelled() && steps.libs.outcome == 'success' }}
+        run: |
+          flutter pub get --enforce-lockfile
+          flutter build linux --debug
