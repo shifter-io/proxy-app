@@ -11,7 +11,7 @@ use std::{
     path::{Path, PathBuf},
 };
 use velopack::{
-    locator::{auto_locate_app_manifest, LocationContext, VelopackLocatorConfig},
+    locator::{auto_locate_app_manifest, LocationContext, VelopackLocator, VelopackLocatorConfig},
     sources::FileSource,
     UpdateCheck, UpdateManager, UpdateOptions, VelopackApp,
 };
@@ -31,9 +31,22 @@ fn private_dir(path: &Path) -> Result<()> {
     }
     Ok(())
 }
+/// Velopack's root: the app bundle or install directory.
+#[cfg(not(target_os = "linux"))]
+fn root_dir(l: &VelopackLocator) -> PathBuf {
+    l.get_root_dir()
+}
+/// Velopack's root on Linux is the AppImage file itself; the pinned velopack
+/// offers no `get_root_dir` there.
+#[cfg(target_os = "linux")]
+fn root_dir(l: &VelopackLocator) -> PathBuf {
+    l.get_appimage_path()
+}
 fn config() -> Result<VelopackLocatorConfig> {
-    let l = auto_locate_app_manifest(LocationContext::FromCurrentExe)?;
-    let root = l.get_root_dir();
+    locator_config(&auto_locate_app_manifest(LocationContext::FromCurrentExe)?)
+}
+fn locator_config(l: &VelopackLocator) -> Result<VelopackLocatorConfig> {
+    let root = root_dir(l);
     let bins = l.get_current_bin_dir();
     let mut manifest = bins.join("sq.version");
     if !manifest.exists() {
@@ -234,5 +247,27 @@ mod tests {
             assert!(verify(&link, 3, &hash).is_err());
         }
         fs::remove_dir_all(dir).unwrap();
+    }
+    #[test]
+    fn config_uses_locator_root() {
+        let dir = std::env::temp_dir().join(format!("shifter-root-test-{}", std::process::id()));
+        fs::create_dir_all(&dir).unwrap();
+        let root = dir.join("Shifter.AppImage");
+        let paths = VelopackLocatorConfig {
+            RootAppDir: root.clone(),
+            PackagesDir: dir.join("packages"),
+            ..Default::default()
+        };
+        let l = VelopackLocator::new_with_manifest(paths, Default::default());
+        let c = locator_config(&l).unwrap();
+        assert_eq!(c.RootAppDir, root);
+        #[cfg(target_os = "linux")]
+        assert_eq!(c.PackagesDir, dir.join(".shifter-updates"));
+        #[cfg(not(target_os = "linux"))]
+        assert_eq!(c.PackagesDir, dir.join("packages/shifter-verified-v1"));
+        assert!(c.PackagesDir.is_dir());
+        fs::remove_dir_all(dir).unwrap();
+        // The test binary is not an installed app, so locating fails closed.
+        assert!(config().is_err());
     }
 }
