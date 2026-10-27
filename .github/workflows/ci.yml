@@ -87,7 +87,8 @@ jobs:
       - name: Rendered docs are fresh
         run: |
           python3 tool/render_docs.py
-          git diff --exit-code --stat
+          git diff --exit-code --stat ||
+            { echo "Stale: run python3 tool/render_docs.py and commit docs/*.html"; exit 1; }
 
   lint:
     name: format and analyze
@@ -129,13 +130,13 @@ jobs:
         run: |
           openssl version
           python3 -m coverage run --include='tool/update/*' -m unittest discover -s tool/update -p 'test_*.py'
-          python3 -m coverage xml -o coverage/tool-update.xml
+          python3 -m coverage lcov -o coverage/tool-update.lcov
       - name: Changed-line coverage (85%; 90% for critical paths)
         run: |
           git diff -U0 --no-ext-diff HEAD^1 HEAD > "$RUNNER_TEMP/change.diff"
-          reports=(coverage/lcov.info coverage/tool-update.xml)
+          reports=(coverage/lcov.info coverage/tool-update.lcov)
           diff-cover "${reports[@]}" --diff-file "$RUNNER_TEMP/change.diff" --fail-under 85 \
-            --markdown-report "$RUNNER_TEMP/coverage.md"
+            --format "markdown:$RUNNER_TEMP/coverage.md"
           cat "$RUNNER_TEMP/coverage.md" >> "$GITHUB_STEP_SUMMARY"
           diff-cover "${reports[@]}" --diff-file "$RUNNER_TEMP/change.diff" --fail-under 90 \
             --include 'lib/update/**' lib/proxy/system_proxy.dart lib/data/store.dart 'tool/update/**' 'native/updater/**'
@@ -172,6 +173,12 @@ jobs:
       # CMake and Ninja come from the pinned Python tools.
       - run: .github/ci/setup.sh python
       - run: .github/ci/setup.sh rust
+      - name: cargo fmt, clippy and test
+        working-directory: native/updater
+        run: |
+          cargo fmt --check
+          cargo clippy --locked --all-targets -- -D warnings
+          cargo test --locked
       # The desktop build links GTK 3 and libsecret, system packages that need
       # root to install: the pool's server image must provide them.
       - name: System libraries
@@ -180,9 +187,3 @@ jobs:
           [ -z "$missing" ] || { echo "Missing on this runner (needs the server image): $missing"; exit 1; }
       - run: flutter pub get --enforce-lockfile
       - run: flutter build linux --debug
-      - name: cargo fmt, clippy and test
-        working-directory: native/updater
-        run: |
-          cargo fmt --check
-          cargo clippy --locked --all-targets -- -D warnings
-          cargo test --locked
