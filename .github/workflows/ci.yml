@@ -1,8 +1,8 @@
 # Tier-1 merge gate (PROJECT checks; README.md and docs/development.md list the
 # commands), run on every ready pull request and on every push to main.
 #
-# Every job runs on the shared CI pool's self-hosted runners (`ci-heavy`: the
-# servers are identical and none is pinned). Pinned toolchains (Flutter, JDK,
+# Every job runs on a fresh one-job CI-SelfHosted runner (`ci-4cpu`; `ci-2cpu`
+# for changes and docs). Pinned toolchains (Flutter, JDK,
 # Android SDK, Python tools) are installed by .github/ci/setup.sh into
 # $CI_CACHE_DIR/proxy-app and reused across runs; nothing else is cached. A job-started hook on the servers refuses every job
 # except the owner's own pull requests from branches of this repository, pushes
@@ -42,7 +42,7 @@ jobs:
   changes:
     name: changes
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
-    runs-on: [self-hosted, ci-heavy]
+    runs-on: [self-hosted, ci-2cpu]
     timeout-minutes: 5
     outputs:
       code: ${{ steps.diff.outputs.code }}
@@ -74,7 +74,7 @@ jobs:
   docs:
     name: docs
     needs: changes
-    runs-on: [self-hosted, ci-heavy]
+    runs-on: [self-hosted, ci-2cpu]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -93,7 +93,7 @@ jobs:
     name: format and analyze
     needs: changes
     if: needs.changes.outputs.code == 'true'
-    runs-on: [self-hosted, ci-heavy]
+    runs-on: [self-hosted, ci-4cpu]
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -118,7 +118,7 @@ jobs:
     name: tests and changed-line coverage
     needs: changes
     if: needs.changes.outputs.code == 'true'
-    runs-on: [self-hosted, ci-heavy]
+    runs-on: [self-hosted, ci-4cpu]
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -169,7 +169,7 @@ jobs:
     name: android debug APKs
     needs: changes
     if: needs.changes.outputs.android == 'true'
-    runs-on: [self-hosted, ci-heavy]
+    runs-on: [self-hosted, ci-4cpu]
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -183,7 +183,7 @@ jobs:
     name: linux debug build and native/updater
     needs: changes
     if: needs.changes.outputs.linux == 'true'
-    runs-on: [self-hosted, ci-heavy]
+    runs-on: [self-hosted, ci-4cpu]
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

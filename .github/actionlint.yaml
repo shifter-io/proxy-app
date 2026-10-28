@@ -1,3 +1,3 @@
-# The CI pool runners' labels (.github/workflows/ci.yml), for actionlint.
+# The CI-SelfHosted runners' labels (.github/workflows/ci.yml), for actionlint.
 self-hosted-runner:
-  labels: [ci-heavy]
+  labels: [ci-2cpu, ci-4cpu, ci-8cpu]

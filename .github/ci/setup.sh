@@ -116,7 +116,7 @@ android_sdk() {
     "$tools/bin/sdkmanager" --sdk_root="$sdk" "${ANDROID_PACKAGES[@]}" >/dev/null
     touch "$stamp"
   fi
-  # Overrides the project's 8 GB Gradle heap: ci-heavy servers have 8 GB in total.
+  # Overrides the project's 8 GB Gradle heap: ci-4cpu runners have 8 GB in total.
   env_set GRADLE_USER_HOME "$ROOT/gradle"
   mkdir -p "$ROOT/gradle"
   printf '%s\n' 'org.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=1g' 'org.gradle.daemon=false' \
