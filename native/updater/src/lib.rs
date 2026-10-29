@@ -253,6 +253,9 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("shifter-root-test-{}", std::process::id()));
         fs::create_dir_all(&dir).unwrap();
         let root = dir.join("Shifter.AppImage");
+        // Windows Velopack replaces a packages dir it cannot write with one in
+        // %LOCALAPPDATA%, so it must exist for the test to stay in `dir`.
+        fs::create_dir_all(dir.join("packages")).unwrap();
         let paths = VelopackLocatorConfig {
             RootAppDir: root.clone(),
             PackagesDir: dir.join("packages"),
