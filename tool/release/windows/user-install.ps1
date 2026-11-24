@@ -16,8 +16,8 @@ if (Get-Process shifter_app -ErrorAction SilentlyContinue | Where-Object Session
 
 $result = Start-Process -FilePath $Setup -ArgumentList '--silent' -PassThru -Wait
 if ($result.ExitCode -ne 0) { throw "Velopack Setup exited with code $($result.ExitCode)." }
-$launcher = Join-Path $env:LOCALAPPDATA 'Shifter.ProxyApp\Shifter.exe'
-if (-not (Test-Path -LiteralPath $launcher -PathType Leaf)) { throw 'The per-user launcher was not installed.' }
+$runner = Join-Path $env:LOCALAPPDATA 'Shifter.ProxyApp\current\shifter_app.exe'
+if (-not (Test-Path -LiteralPath $runner -PathType Leaf)) { throw 'The per-user app was not installed.' }
 
 if ($Attribution) {
     $directory = Join-Path $env:LOCALAPPDATA 'Shifter'
@@ -34,7 +34,9 @@ if ($Attribution) {
     }
 }
 
-$action = New-ScheduledTaskAction -Execute $launcher -Argument '--background'
+# Track the interactive process itself. The Velopack shortcut stub exits as
+# soon as it starts the app, which hides later crashes from Task Scheduler.
+$action = New-ScheduledTaskAction -Execute $runner -Argument '--background'
 $trigger = New-ScheduledTaskTrigger -AtLogOn -User $principal.Identity.Name
 $user = New-ScheduledTaskPrincipal -UserId $sid -LogonType Interactive -RunLevel Limited
 $settings = New-ScheduledTaskSettingsSet -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1) `
