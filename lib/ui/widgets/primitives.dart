@@ -8,6 +8,7 @@ import '../../data/models.dart';
 import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
 import 'icons.dart';
+import '../../i18n/i18n.dart';
 
 // ── Interaction ─────────────────────────────────────────────────────────
 
@@ -649,7 +650,7 @@ class _SfSearchFieldState extends State<SfSearchField> {
                   icon: SfIcons.x,
                   size: 36,
                   iconSize: 15,
-                  tooltip: 'Clear',
+                  tooltip: tr('Clear'),
                   onTap: () {
                     _ctl.clear();
                     widget.onChanged('');
@@ -940,8 +941,8 @@ class SfSwitcher extends StatelessWidget {
 
 /// Status pill for a membership.
 SfPill statusPill(MembershipStatus s) => switch (s) {
-      MembershipStatus.active => const SfPill('Active', tone: SfTone.success),
-      MembershipStatus.expiring => const SfPill('Expiring soon', tone: SfTone.warning),
-      MembershipStatus.expired => const SfPill('Expired', tone: SfTone.danger),
-      MembershipStatus.suspended => const SfPill('Suspended', tone: SfTone.danger),
+      MembershipStatus.active => SfPill(tr('Active'), tone: SfTone.success),
+      MembershipStatus.expiring => SfPill(tr('Expiring soon'), tone: SfTone.warning),
+      MembershipStatus.expired => SfPill(tr('Expired'), tone: SfTone.danger),
+      MembershipStatus.suspended => SfPill(tr('Suspended'), tone: SfTone.danger),
     };

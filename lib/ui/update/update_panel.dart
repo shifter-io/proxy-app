@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../state/app_controller.dart';
+import '../../i18n/i18n.dart';
 import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
 import '../../update/update_models.dart';
@@ -17,11 +18,11 @@ class AppUpdatesEntry extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('App updates', style: SfText.heading),
+        Text(tr('App updates'), style: SfText.heading),
         const SizedBox(height: 8),
         if (updates != null)
           Text(
-            'Version ${updates.identity.version} (${updates.identity.build})',
+            trf('Version {version} ({build})', {'version': updates.identity.version, 'build': updates.identity.build}),
             style: SfText.small,
           ),
         if (updates?.supportsAutomaticInstall == true)
@@ -29,15 +30,15 @@ class AppUpdatesEntry extends StatelessWidget {
             listenable: updates!,
             builder: (context, _) => SwitchListTile.adaptive(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Install eligible updates automatically'),
-              subtitle: const Text('Applies at startup while disconnected.'),
+              title: Text(tr('Install eligible updates automatically')),
+              subtitle: Text(tr('Applies at startup while disconnected.')),
               value: updates.automaticInstallEnabled,
               onChanged: updates.setAutomaticInstall,
             ),
           ),
         TextButton(
           onPressed: scope?.open,
-          child: const Text('Check for updates'),
+          child: Text(tr('Check for updates')),
         ),
       ],
     );
@@ -61,9 +62,9 @@ class UpdatePanel extends StatelessWidget {
       children: [
         Row(
           children: [
-            Expanded(child: Text('App updates', style: SfText.heading)),
+            Expanded(child: Text(tr('App updates'), style: SfText.heading)),
             Semantics(
-              label: 'Close app updates',
+              label: tr('Close app updates'),
               button: true,
               child: IconButton(
                 onPressed: installing ? null : onClose,
@@ -74,14 +75,14 @@ class UpdatePanel extends StatelessWidget {
         ),
         if (u != null)
           Text(
-            'Installed: ${u.identity.version} (${u.identity.build})',
+            trf('Installed: {version} ({build})', {'version': u.identity.version, 'build': u.identity.build}),
             style: SfText.small,
           ),
         const SizedBox(height: 14),
         Semantics(
           liveRegion: true,
           child: Text(
-            u?.status ?? scope.problem ?? 'Update information is loading…',
+            u?.status ?? tr(scope.problem ?? 'Update information is loading…'),
             style: SfText.body,
           ),
         ),
@@ -89,13 +90,13 @@ class UpdatePanel extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: 6),
             child: Text(
-              'Last checked: ${u!.lastCheck!.toLocal().toString().split('.').first}',
+              trf('Last checked: {time}', {'time': u!.lastCheck!.toLocal().toString().split('.').first}),
               style: SfText.micro,
             ),
           ),
         if (r != null) ...[
           const SizedBox(height: 16),
-          Text('Version ${r.version}', style: SfText.body),
+          Text(trf('Version {version}', {'version': r.version}), style: SfText.body),
           if (r.artifact != null)
             Text(
               '${(r.byteLength / 1048576).toStringAsFixed(1)} MB',
@@ -113,7 +114,7 @@ class UpdatePanel extends StatelessWidget {
           const SizedBox(height: 18),
           LinearProgressIndicator(
             value: u?.phase == UpdatePhase.downloading ? u?.progress : null,
-            semanticsLabel: 'Update progress',
+            semanticsLabel: tr('Update progress'),
           ),
         ],
         const SizedBox(height: 18),
@@ -122,41 +123,41 @@ class UpdatePanel extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: Text(
-                'Shifter will disconnect before opening the installer. It will stay disconnected afterward.',
+                tr('Shifter will disconnect before opening the installer. It will stay disconnected afterward.'),
                 style: SfText.small,
               ),
             ),
           if (u.manualDownload != null)
             OutlinedButton(
               onPressed: u.busy ? null : u.openManualDownload,
-              child: const Text('Download AppImage'),
+              child: Text(tr('Download AppImage')),
             ),
           if (u.canDownload)
             FilledButton(
               onPressed: u.download,
-              child: const Text('Download update'),
+              child: Text(tr('Download update')),
             ),
           if (u.canInstall)
             FilledButton(
               onPressed: u.install,
               child: Text(
-                connected ? 'Disconnect and restart' : 'Restart and install',
+                connected ? tr('Disconnect and restart') : tr('Restart and install'),
               ),
             ),
           if (u.phase == UpdatePhase.downloading && u.capabilities.cancel)
             TextButton(
               onPressed: u.cancelDownload,
-              child: const Text('Cancel download'),
+              child: Text(tr('Cancel download')),
             ),
           if (!u.ready && u.phase != UpdatePhase.handingOff)
             OutlinedButton(
               onPressed: u.busy ? null : () => u.check(),
-              child: const Text('Check for updates'),
+              child: Text(tr('Check for updates')),
             ),
         ],
         TextButton(
           onPressed: installing ? null : onClose,
-          child: Text(r == null ? 'Close' : 'Later'),
+          child: Text(r == null ? tr('Close') : tr('Later')),
         ),
       ],
     );
@@ -198,13 +199,13 @@ class RequiredUpdatePanel extends StatelessWidget {
           ),
           const SizedBox(height: 22),
           Text(
-            'Update required',
+            tr('Update required'),
             textAlign: TextAlign.center,
             style: SfText.display,
           ),
           const SizedBox(height: 10),
           Text(
-            'A new version of Shifter is required. Update to keep using the app.',
+            tr('A new version of Shifter is required. Update to keep using the app.'),
             textAlign: TextAlign.center,
             style: SfText.bodyMuted,
           ),
@@ -229,7 +230,7 @@ class RequiredUpdatePanel extends StatelessWidget {
                 value: updates.phase == UpdatePhase.downloading
                     ? updates.progress
                     : null,
-                semanticsLabel: 'Update progress',
+                semanticsLabel: tr('Update progress'),
               ),
             const SizedBox(height: 8),
             Semantics(
@@ -247,14 +248,14 @@ class RequiredUpdatePanel extends StatelessWidget {
                 ? null
                 : updates.updateNow,
             icon: const Icon(Icons.download, size: 18),
-            label: Text(manual ? 'Download AppImage' : 'Update now'),
+            label: Text(manual ? tr('Download AppImage') : tr('Update now')),
           ),
           if (!manual &&
               updates.phase == UpdatePhase.error &&
               updates.manualDownload != null)
             TextButton(
               onPressed: updates.busy ? null : updates.openManualDownload,
-              child: const Text('Download AppImage'),
+              child: Text(tr('Download AppImage')),
             ),
         ],
       ),

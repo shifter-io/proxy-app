@@ -5,6 +5,7 @@ import '../../theme/tokens.dart';
 import 'atmosphere.dart';
 import 'icons.dart';
 import 'primitives.dart';
+import '../../i18n/i18n.dart';
 
 /// Width classes, Material 3 window size classes.
 ///  compact   < 600   phones, foldable cover screens (down to 280 wide)
@@ -94,7 +95,7 @@ class SfTopBar extends StatelessWidget {
       child: SizedBox(
         height: large ? 76 : 58,
         child: Row(children: [
-          if (onBack != null) SfIconButton(icon: SfIcons.arrowLeft, tooltip: 'Back', onTap: onBack),
+          if (onBack != null) SfIconButton(icon: SfIcons.arrowLeft, tooltip: tr('Back'), onTap: onBack),
           if (onBack != null && title != null) const SizedBox(width: 4),
           if (leading != null) Expanded(child: leading!),
           if (title != null)

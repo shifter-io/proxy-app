@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../data/models.dart';
+import '../../i18n/i18n.dart';
 import '../../state/app_controller.dart';
 import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
@@ -25,14 +26,14 @@ class PlansScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
     final header = embedded
-        ? const SfTopBar(title: 'Plans', large: true)
+        ? SfTopBar(title: tr('Plans'), large: true)
         : SfTopBar(
             onBack: onBack,
             leading: Padding(
               padding: EdgeInsets.only(left: onBack == null ? 8 : 4),
               child: const Align(alignment: Alignment.centerLeft, child: Wordmark(height: 22)),
             ),
-            actions: [if (onOpenSettings != null) SfIconButton(icon: SfIcons.settings, tooltip: 'Settings', onTap: onOpenSettings)],
+            actions: [if (onOpenSettings != null) SfIconButton(icon: SfIcons.settings, tooltip: tr('Settings'), onTap: onOpenSettings)],
           );
     return PageScaffold(
       atmosphere: !embedded,
@@ -64,9 +65,9 @@ class PlansList extends StatelessWidget {
     if (app.membershipsError != null) {
       content = EmptyState(
         icon: SfIcons.refresh,
-        title: 'Something went wrong',
+        title: tr('Something went wrong'),
         body: app.membershipsError!,
-        action: SfButton(label: const Text('Try again'), variant: SfButtonVariant.ghost, small: true, onPressed: app.reloadMemberships),
+        action: SfButton(label: Text(tr('Try again')), variant: SfButtonVariant.ghost, small: true, onPressed: app.reloadMemberships),
       );
     } else if (list == null) {
       content = Column(children: [
@@ -96,11 +97,11 @@ class PlansList extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(4, 4, 4, 18),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Choose a plan', style: SfText.title),
+              Text(tr('Choose a plan'), style: SfText.title),
               const SizedBox(height: 6),
               Text(app.hasWorkspaceGroups
-                  ? 'Your plans, across every workspace. Choose one to connect.'
-                  : 'Pick the membership this device should connect with. You can switch any time.', style: SfText.bodyMuted),
+                  ? tr('Your plans, across every workspace. Choose one to connect.')
+                  : tr('Pick the membership this device should connect with. You can switch any time.'), style: SfText.bodyMuted),
             ]),
           ),
         ],
@@ -108,7 +109,7 @@ class PlansList extends StatelessWidget {
         if (showPurchaseLinks) ...[
         const SizedBox(height: 10),
         SfButton(
-          label: const Text('Add a plan'),
+          label: Text(tr('Add a plan')),
           leading: const SfIcon(SfIcons.plus, size: 16, color: Sf.textSecondary),
           variant: SfButtonVariant.ghost,
           small: true,
@@ -143,9 +144,9 @@ class _PlanGroups extends StatelessWidget {
       if (!grouped) (id: 'all', name: '', plans: all)
       else ...[
         if (!app.workspaces.any((w) => w.personal) && all.any((m) => m.workspace == null))
-          (id: 'legacy-personal', name: 'Personal', plans: all.where((m) => m.workspace == null).toList()),
+          (id: 'legacy-personal', name: tr('Personal'), plans: all.where((m) => m.workspace == null).toList()),
         for (final w in app.workspaces)
-          (id: w.id, name: w.name, plans: all.where((m) => m.workspace?.id == w.id || (m.workspace == null && w.personal)).toList()),
+          (id: w.id, name: w.personal ? tr('Personal') : w.name, plans: all.where((m) => m.workspace?.id == w.id || (m.workspace == null && w.personal)).toList()),
       ],
     ];
     Widget card(Membership m) => Padding(
@@ -185,24 +186,24 @@ class _PlanGroups extends StatelessWidget {
                 ),
               if (usable.isEmpty)
                 if (grouped)
-                  SfCard(child: Text('No active Residential or ISP plans in this workspace.', style: SfText.bodyMuted))
+                  SfCard(child: Text(tr('No active Residential or ISP plans in this workspace.'), style: SfText.bodyMuted))
                 else
                   EmptyState(
                     icon: SfIcons.layers,
-                    title: 'No active memberships',
-                    body: 'Get a Residential or ISP plan on Shifter and it will show up here instantly.',
+                    title: tr('No active memberships'),
+                    body: tr('Get a Residential or ISP plan on Shifter and it will show up here instantly.'),
                     action: showPurchaseLinks
-                        ? SfButton(label: const Text('View plans'), small: true,
+                        ? SfButton(label: Text(tr('View plans')), small: true,
                             onPressed: () => openExternal(context, ShifterUrls.order))
                         : null,
                   ),
               if (usable.isNotEmpty) ...[
-                SectionLabel('Active', trailing: CountText(usable.length)),
+                SectionLabel(tr('Active'), trailing: CountText(usable.length)),
                 for (final m in usable) card(m),
               ],
               if (inactive.isNotEmpty) ...[
                 const SizedBox(height: 14),
-                const SectionLabel('Inactive'),
+                SectionLabel(tr('Inactive')),
                 for (final m in inactive) card(m),
               ],
               if (expired.isNotEmpty) ...[
@@ -239,7 +240,7 @@ class _ExpiredPlansState extends State<_ExpiredPlans> {
           behavior: HitTestBehavior.opaque,
           onTap: () => setState(() => _open = !_open),
           child: SectionLabel(
-            'Expired',
+            tr('Expired'),
             trailing: Row(mainAxisSize: MainAxisSize.min, children: [
               CountText(widget.count),
               const SizedBox(width: 6),
@@ -297,8 +298,8 @@ class _PlanSheet extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.fromLTRB(22, 16, 12, 8),
           child: Row(children: [
-            Expanded(child: Text('Switch plan', style: SfText.heading)),
-            SfIconButton(icon: SfIcons.x, tooltip: 'Close', onTap: () => Navigator.pop(context)),
+            Expanded(child: Text(tr('Switch plan'), style: SfText.heading)),
+            SfIconButton(icon: SfIcons.x, tooltip: tr('Close'), onTap: () => Navigator.pop(context)),
           ]),
         ),
         Flexible(

@@ -2,6 +2,7 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../i18n/i18n.dart';
 
 abstract final class ShifterUrls {
   static const panel = 'https://shifter.io/panel';
@@ -26,6 +27,6 @@ Future<void> openExternal(BuildContext context, String url) async {
   if (!ok) {
     messenger
       ?..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text("Couldn't open $url"), duration: const Duration(seconds: 3)));
+      ..showSnackBar(SnackBar(content: Text(trf("Couldn't open {url}", {'url': url})), duration: const Duration(seconds: 3)));
   }
 }

@@ -1,3 +1,4 @@
+import '../i18n/i18n.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -167,10 +168,10 @@ class HttpShifterApi implements ShifterApi {
   @override
   Future<ProxyCredentials> credentials(String membershipId) async {
     final plan = _list((await _proxyConfig(fresh: true))['plans']).where((p) => p['hash'] == membershipId).firstOrNull;
-    if (plan == null) throw ApiException('This plan is not active on the gateway yet.', code: ApiErrorCode.validation);
+    if (plan == null) throw ApiException(tr('This plan is not active on the gateway yet.'), code: ApiErrorCode.validation);
     final protocol = (plan['protocol'] as String?)?.toLowerCase();
     if (protocol != null && protocol != 'http') {
-      throw ApiException("This plan uses ${protocol.toUpperCase()}, which the app can't connect to yet.", code: ApiErrorCode.validation);
+      throw ApiException(trf("This plan uses {protocol}, which the app can't connect to yet.", {'protocol': protocol.toUpperCase()}), code: ApiErrorCode.validation);
     }
     final residential = plan['type'] == 'residential';
     return ProxyCredentials(
@@ -202,9 +203,9 @@ class HttpShifterApi implements ShifterApi {
 
   Future<T> _user<T>(String path, {String? key}) async {
     key ??= _apiKey;
-    if (key == null) throw ApiException('Not signed in', code: ApiErrorCode.unauthorized);
+    if (key == null) throw ApiException(tr('Not signed in'), code: ApiErrorCode.unauthorized);
     final body = await _request(path, {'Authorization': 'Bearer $key', 'X-Api-Key': key});
-    if (body is! Map<String, dynamic>) throw ApiException('Unexpected response from Shifter.');
+    if (body is! Map<String, dynamic>) throw ApiException(tr('Unexpected response from Shifter.'));
     final error = body['error'];
     if (error != null) {
       throw ApiException('$error', code: body['code'] == 401 ? ApiErrorCode.unauthorized : ApiErrorCode.server);
@@ -214,7 +215,7 @@ class HttpShifterApi implements ShifterApi {
 
   Future<List<dynamic>> _geo(String kind, Map<String, String> params) async {
     final key = _apiKey;
-    if (key == null) throw ApiException('Not signed in', code: ApiErrorCode.unauthorized);
+    if (key == null) throw ApiException(tr('Not signed in'), code: ApiErrorCode.unauthorized);
     final qs = Uri(queryParameters: params).query;
     final cacheKey = 'geo:$kind:$qs';
     final cached = await _store?.readCache(cacheKey);
@@ -241,21 +242,21 @@ class HttpShifterApi implements ShifterApi {
       res = await req.close().timeout(_timeout);
       text = await res.transform(utf8.decoder).join().timeout(_timeout);
     } on TimeoutException {
-      throw ApiException("Couldn't reach Shifter. Check your connection and try again.", code: ApiErrorCode.network);
+      throw ApiException(tr("Couldn't reach Shifter. Check your connection and try again."), code: ApiErrorCode.network);
     } on IOException {
-      throw ApiException("Couldn't reach Shifter. Check your connection and try again.", code: ApiErrorCode.network);
+      throw ApiException(tr("Couldn't reach Shifter. Check your connection and try again."), code: ApiErrorCode.network);
     }
-    if (res.statusCode == 401) throw ApiException('Invalid API key', code: ApiErrorCode.unauthorized);
+    if (res.statusCode == 401) throw ApiException(tr('Invalid API key'), code: ApiErrorCode.unauthorized);
     if (res.statusCode == 429) {
-      throw ApiException('Too many requests. Wait a minute and try again.', code: ApiErrorCode.rateLimited);
+      throw ApiException(tr('Too many requests. Wait a minute and try again.'), code: ApiErrorCode.rateLimited);
     }
     if (res.statusCode < 200 || res.statusCode >= 300) {
-      throw ApiException('Shifter returned ${res.statusCode}. Try again later.');
+      throw ApiException(trf('Shifter returned {status}. Try again later.', {'status': res.statusCode}));
     }
     try {
       return jsonDecode(text);
     } on FormatException {
-      throw ApiException('Unexpected response from Shifter.');
+      throw ApiException(tr('Unexpected response from Shifter.'));
     }
   }
 }

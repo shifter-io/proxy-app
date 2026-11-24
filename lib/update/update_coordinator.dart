@@ -1,3 +1,4 @@
+import '../i18n/i18n.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -126,24 +127,27 @@ class UpdateCoordinator extends ChangeNotifier {
       capabilities.install &&
       !busy &&
       (ready || (phase == UpdatePhase.error && _artifact != null));
+  /// Shown to the user, in the app language. [error] and capability reasons
+  /// stay in English (tests, logs) and are translated here.
   String get status => switch (phase) {
     UpdatePhase.idle =>
       repository == null
-          ? 'Updates are not configured for this build.'
-          : 'Check for a newer version of Shifter.',
-    UpdatePhase.checking => 'Checking for updates…',
-    UpdatePhase.current => 'You are up to date.',
-    UpdatePhase.available => 'Shifter ${release?.version ?? ''} is available.',
-    UpdatePhase.unavailable =>
+          ? tr('Updates are not configured for this build.')
+          : tr('Check for a newer version of Shifter.'),
+    UpdatePhase.checking => tr('Checking for updates…'),
+    UpdatePhase.current => tr('You are up to date.'),
+    UpdatePhase.available => trf('Shifter {version} is available.', {'version': release?.version ?? ''}),
+    UpdatePhase.unavailable => tr(
       error ??
           capabilities.reason ??
           'Update availability could not be confirmed for this installation.',
-    UpdatePhase.downloading => 'Downloading update…',
-    UpdatePhase.verifying => 'Verifying update…',
-    UpdatePhase.ready => 'Update ready to install.',
-    UpdatePhase.preparingInstall => 'Preparing to update…',
-    UpdatePhase.handingOff => 'The update has been handed to the installer.',
-    UpdatePhase.error => error ?? 'Could not check for updates. Please retry.',
+    ),
+    UpdatePhase.downloading => tr('Downloading update…'),
+    UpdatePhase.verifying => tr('Verifying update…'),
+    UpdatePhase.ready => tr('Update ready to install.'),
+    UpdatePhase.preparingInstall => tr('Preparing to update…'),
+    UpdatePhase.handingOff => tr('The update has been handed to the installer.'),
+    UpdatePhase.error => tr(error ?? 'Could not check for updates. Please retry.'),
   };
   void _notify() {
     if (!_disposed) notifyListeners();
@@ -182,8 +186,8 @@ class UpdateCoordinator extends ChangeNotifier {
           error = e is UpdateFailure
               ? e.message
               : e is PlatformException
-              ? (e.message ?? 'The installer could not complete the update.')
-              : 'The update could not be completed. Please retry.';
+              ? (e.message ?? tr('The installer could not complete the update.'))
+              : tr('The update could not be completed. Please retry.');
         }
       } finally {
         await processLock?.close();
@@ -278,7 +282,7 @@ class UpdateCoordinator extends ChangeNotifier {
     if (phase == UpdatePhase.handingOff) return Future.value();
     return _run(() async {
       if (repository == null) {
-        error = 'Updates are not configured for this build.';
+        error = tr('Updates are not configured for this build.');
         phase = UpdatePhase.unavailable;
         return;
       }
@@ -336,7 +340,7 @@ class UpdateCoordinator extends ChangeNotifier {
       }
       await store.write('lastSuccess', clock().toUtc().toIso8601String());
       if (release == null && requiredVersion != null) {
-        error = 'The required update is unavailable for this installation. Try again shortly.';
+        error = tr('The required update is unavailable for this installation. Try again shortly.');
       }
       phase = release != null
           ? (_artifact != null ? UpdatePhase.ready : UpdatePhase.available)

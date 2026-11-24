@@ -8,6 +8,17 @@
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>es</string>
+		<string>zh-Hans</string>
+		<string>de</string>
+		<string>fr</string>
+		<string>ja</string>
+		<string>ko</string>
+		<string>pt-BR</string>
+	</array>
 	<key>CFBundleDisplayName</key>
 	<string>Shifter</string>
 	<key>CFBundleExecutable</key>

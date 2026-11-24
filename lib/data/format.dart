@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import '../i18n/i18n.dart';
 import 'models.dart';
 
 /// Formatting + targeting helpers, ported from the extension
@@ -23,15 +24,16 @@ String formatBytes(num bytes, {int digits = 1}) {
 
 const _months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-String formatDate(DateTime d) => '${_months[d.month - 1]} ${d.day}, ${d.year}';
+String formatDate(DateTime d) =>
+    trf('{month} {day}, {year}', {'month': tr(_months[d.month - 1]), 'day': d.day, 'year': d.year});
 
 /// "in 23 days", "tomorrow", "6 days ago"
 String relativeDays(DateTime d) {
   final diff = (d.difference(DateTime.now()).inHours / 24).round();
-  if (diff == 0) return 'today';
-  if (diff == 1) return 'tomorrow';
-  if (diff == -1) return 'yesterday';
-  return diff > 0 ? 'in $diff days' : '${-diff} days ago';
+  if (diff == 0) return tr('today');
+  if (diff == 1) return tr('tomorrow');
+  if (diff == -1) return tr('yesterday');
+  return diff > 0 ? trf('in {n} days', {'n': diff}) : trf('{n} days ago', {'n': -diff});
 }
 
 String formatDuration(int seconds) {
@@ -57,7 +59,7 @@ String formatUptime(Duration d) {
 /// "New York · AS7922"
 String ispIpPlace(IspIp ip) => [ip.city ?? ip.country.toUpperCase(), if (ip.asn != null) 'AS${ip.asn}'].join(' · ');
 
-String productLabel(ProductType t) => t == ProductType.residential ? 'Residential' : 'ISP';
+String productLabel(ProductType t) => t == ProductType.residential ? tr('Residential') : 'ISP';
 
 String poolLabel(ResidentialPool p) => switch (p) {
       ResidentialPool.full => 'Full Geo',
@@ -80,9 +82,9 @@ const popularCountries = ['us', 'gb', 'de', 'fr', 'ca'];
 String? poolLimitNote(ResidentialPool p) => switch (p) {
       ResidentialPool.full => null,
       ResidentialPool.country =>
-        'Your Country Geo plan targets by country. Full Geo adds state, city and ISP targeting.',
+        tr('Your Country Geo plan targets by country. Full Geo adds state, city and ISP targeting.'),
       ResidentialPool.nonGeo =>
-        'Non-Geo plans use random IPs worldwide. Upgrade to Country Geo or Full Geo to pick a location.',
+        tr('Non-Geo plans use random IPs worldwide. Upgrade to Country Geo or Full Geo to pick a location.'),
     };
 
 /// Drops any level the pool can't serve.
@@ -99,18 +101,18 @@ ResidentialTarget clampTarget(ResidentialTarget t, ResidentialPool pool) {
 ({String title, String subtitle}) describeTarget(Target? target) {
   switch (target) {
     case null:
-      return (title: 'Choose location', subtitle: 'No location selected');
+      return (title: tr('Choose location'), subtitle: tr('No location selected'));
     case IspTarget(:final ip):
       return (title: ip.label, subtitle: ispIpPlace(ip));
     case ResidentialTarget t:
-      if (t.country == null) return (title: 'Random location', subtitle: 'Worldwide · best available');
+      if (t.country == null) return (title: tr('Random location'), subtitle: tr('Worldwide · best available'));
       final title = t.city?.name ?? t.region?.name ?? t.country!.name;
       final trail = [
         if (t.city != null && t.region != null) t.region!.name,
         if (t.city != null || t.region != null) t.country!.name,
       ].join(', ');
       final asn = t.asn?.name ?? '';
-      return (title: title, subtitle: [trail.isEmpty ? 'Any city' : trail, asn].where((s) => s.isNotEmpty).join(' · '));
+      return (title: title, subtitle: [trail.isEmpty ? tr('Any city') : trail, asn].where((s) => s.isNotEmpty).join(' · '));
   }
 }
 

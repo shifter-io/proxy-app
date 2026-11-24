@@ -5,6 +5,7 @@ import 'dart:math';
 import 'package:flutter/widgets.dart';
 
 import '../data/api.dart';
+import '../i18n/i18n.dart';
 import '../data/format.dart';
 import '../data/geo_catalog.dart';
 import '../data/mock_api.dart';
@@ -16,7 +17,7 @@ import '../update/update_store.dart';
 
 enum AuthPhase { booting, signedOut, signedIn }
 
-const _rejectedMessage = 'Shifter rejected the proxy login. Check your plan is active and has traffic left.';
+String _rejectedMessage() => tr('Shifter rejected the proxy login. Check your plan is active and has traffic left.');
 
 /// Residential exits can change under the same session (the peer goes away,
 /// a rotating session gets a new IP per request), so while connected the
@@ -94,7 +95,7 @@ class AppController extends ChangeNotifier {
       await engine.recover();
     } catch (_) {
       _recoveryFailed = true;
-      connection = const ProxyConnection.error('Could not restore network settings. Disconnect and retry before updating.');
+      connection = ProxyConnection.error(tr('Could not restore network settings. Disconnect and retry before updating.'));
     }
     final suppressReconnect = suppressUpdateReconnect && await UpdateStore.consumeRestartSuppression();
     final (stored, saved, active, targets, recent) = await (
@@ -234,12 +235,12 @@ class AppController extends ChangeNotifier {
       }
       membershipsError = e.code == ApiErrorCode.network || e.code == ApiErrorCode.rateLimited
           ? e.message
-          : 'Could not load your memberships.';
+          : tr('Could not load your memberships.');
       _notify();
       return const [];
     } catch (_) {
       if (!current()) return const [];
-      membershipsError = 'Could not load your memberships.';
+      membershipsError = tr('Could not load your memberships.');
       _notify();
       return const [];
     }
@@ -366,7 +367,7 @@ class AppController extends ChangeNotifier {
         connection = const ProxyConnection.disconnected();
       } catch (_) {
         _recoveryFailed = true;
-        connection = const ProxyConnection.error('Could not restore network settings. Retry disconnecting before closing Shifter.');
+        connection = ProxyConnection.error(tr('Could not restore network settings. Retry disconnecting before closing Shifter.'));
       }
       _notify();
     });
@@ -387,7 +388,7 @@ class AppController extends ChangeNotifier {
       await _serial(() async {
         try { await engine.clear(); } catch (_) {
           _recoveryFailed = true;
-          connection = const ProxyConnection.error('Could not restore network settings. Retry disconnecting before updating.');
+          connection = ProxyConnection.error(tr('Could not restore network settings. Retry disconnecting before updating.'));
           _notify();
           rethrow;
         }
@@ -443,10 +444,10 @@ class AppController extends ChangeNotifier {
         if (gen != _generation) return;
         if (exit == null) {
           throw _ConnectFailure(_loginRejected
-              ? _rejectedMessage
+              ? _rejectedMessage()
               : target is ResidentialTarget && target.country != null
-                  ? 'No IP is available for this location right now. Try a wider area.'
-                  : 'The Shifter gateway did not respond. Check your plan has traffic left.');
+                  ? tr('No IP is available for this location right now. Try a wider area.')
+                  : tr('The Shifter gateway did not respond. Check your plan has traffic left.'));
         }
         connection = ProxyConnection.connected(membershipId, target, DateTime.now(), exit.ip, exitCountry: exit.country);
         _notify();
@@ -463,8 +464,8 @@ class AppController extends ChangeNotifier {
         connection = ProxyConnection.error(switch (e) {
           _ConnectFailure(:final message) => message,
           ApiException(:final message) => message,
-          SystemProxyException(:final message) => message,
-          _ => 'Could not connect. Try again.',
+          SystemProxyException(:final message) => tr(message),
+          _ => tr('Could not connect. Try again.'),
         });
         _notify();
       }
@@ -476,7 +477,7 @@ class AppController extends ChangeNotifier {
     if (!isConnected) return;
     final gen = ++_generation;
     _watchExit(false);
-    connection = const ProxyConnection.error(_rejectedMessage);
+    connection = ProxyConnection.error(_rejectedMessage());
     _notify();
     unawaited(_serial(() async {
       if (gen != _generation) return;

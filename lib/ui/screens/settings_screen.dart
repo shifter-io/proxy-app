@@ -13,6 +13,7 @@ import '../update/update_panel.dart';
 import '../widgets/icons.dart';
 import '../widgets/layout.dart';
 import '../widgets/primitives.dart';
+import '../../i18n/i18n.dart';
 
 const _ttlPresets = [60, 300, 600, 1800, 3600];
 const _ttlMin = 30;
@@ -34,7 +35,7 @@ class SettingsScreen extends StatelessWidget {
     Widget section(Widget w) => FadeSlideIn(delay: FadeSlideIn.stagger(i++, stepMs: 60), child: Padding(padding: const EdgeInsets.only(bottom: 26), child: w));
 
     return UpdateBackGuard(child: PageScaffold(
-      header: embedded ? const SfTopBar(title: 'Settings', large: true) : SfTopBar(title: 'Settings', onBack: onBack),
+      header: embedded ? SfTopBar(title: tr('Settings'), large: true) : SfTopBar(title: tr('Settings'), onBack: onBack),
       body: ListView(
         physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
         padding: EdgeInsets.fromLTRB(pad, embedded ? 4 : 20, pad, 28 + bottom),
@@ -44,23 +45,23 @@ class SettingsScreen extends StatelessWidget {
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               // ── Session ───────────────────────────────────────────────
               section(Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                const SectionLabel('IP session'),
+                SectionLabel(tr('IP session')),
                 SfCard(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                     SfSegmented<SessionMode>(
                       value: s.sessionMode,
                       onChanged: (v) => app.updateSettings(s.copyWith(sessionMode: v)),
-                      options: const [
-                        (SessionMode.sticky, Row(mainAxisSize: MainAxisSize.min, children: [SfIcon(SfIcons.clock, size: 15), SizedBox(width: 6), Text('Sticky')])),
-                        (SessionMode.rotating, Row(mainAxisSize: MainAxisSize.min, children: [SfIcon(SfIcons.shuffle, size: 15), SizedBox(width: 6), Text('Rotating')])),
+                      options: [
+                        (SessionMode.sticky, Row(mainAxisSize: MainAxisSize.min, children: [const SfIcon(SfIcons.clock, size: 15), const SizedBox(width: 6), Text(tr('Sticky'))])),
+                        (SessionMode.rotating, Row(mainAxisSize: MainAxisSize.min, children: [const SfIcon(SfIcons.shuffle, size: 15), const SizedBox(width: 6), Text(tr('Rotating'))])),
                       ],
                     ),
                     const SizedBox(height: 12),
                     SfSwitcher(
                       child: Text(
                         sticky
-                            ? 'Keep the same exit IP for a while. Best for logins, carts and anything with a session.'
-                            : 'A fresh exit IP on every request. Best for scraping and price checks.',
+                            ? tr('Keep the same exit IP for a while. Best for logins, carts and anything with a session.')
+                            : tr('A fresh exit IP on every request. Best for scraping and price checks.'),
                         key: ValueKey(sticky),
                         style: SfText.bodyMuted.copyWith(fontSize: 13),
                       ),
@@ -77,20 +78,20 @@ class SettingsScreen extends StatelessWidget {
 
               // ── Connection ────────────────────────────────────────────
               section(Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                const SectionLabel('Connection'),
+                SectionLabel(tr('Connection')),
                 SfCard(
                   padding: EdgeInsets.zero,
                   child: Column(children: [
                     _SwitchRow(
-                      title: 'Strict location',
-                      body: 'Fail instead of falling back to a wider area when the exact city or ISP has no free IP.',
+                      title: tr('Strict location'),
+                      body: tr('Fail instead of falling back to a wider area when the exact city or ISP has no free IP.'),
                       value: s.strict,
                       onChanged: (v) => app.updateSettings(s.copyWith(strict: v)),
                     ),
                     const _Divider(),
                     _SwitchRow(
-                      title: 'Connect on launch',
-                      body: 'Reconnect to your last location when Shifter starts.',
+                      title: tr('Connect on launch'),
+                      body: tr('Reconnect to your last location when Shifter starts.'),
                       value: s.autoConnect,
                       onChanged: (v) => app.updateSettings(s.copyWith(autoConnect: v)),
                     ),
@@ -100,20 +101,20 @@ class SettingsScreen extends StatelessWidget {
 
               // ── How traffic is routed (system proxy, not a tunnel) ────
               section(Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                const SectionLabel('How traffic is routed'),
+                SectionLabel(tr('How traffic is routed')),
                 SfCard(
                   padding: EdgeInsets.zero,
-                  child: Column(children: const [
+                  child: Column(children: [
                     _InfoRow(
                       icon: SfIcons.dns,
-                      title: 'DNS through Shifter',
-                      body: 'Apps that follow the system proxy (browsers and most apps) look sites up at your exit location, not on your local network.',
+                      title: tr('DNS through Shifter'),
+                      body: tr('Apps that follow the system proxy (browsers and most apps) look sites up at your exit location, not on your local network.'),
                     ),
-                    _Divider(),
+                    const _Divider(),
                     _InfoRow(
                       icon: SfIcons.shieldCheck,
-                      title: 'What connects directly',
-                      body: 'UDP traffic (WebRTC calls, games) and apps that ignore the system proxy don’t go through Shifter. Turn off WebRTC in your browser if it must never show your real IP.',
+                      title: tr('What connects directly'),
+                      body: tr('UDP traffic (WebRTC calls, games) and apps that ignore the system proxy don’t go through Shifter. Turn off WebRTC in your browser if it must never show your real IP.'),
                     ),
                   ]),
                 ),
@@ -123,7 +124,7 @@ class SettingsScreen extends StatelessWidget {
 
               // ── Account ───────────────────────────────────────────────
               section(Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                const SectionLabel('Account'),
+                SectionLabel(tr('Account')),
                 SfCard(
                   padding: EdgeInsets.zero,
                   child: Column(children: [
@@ -134,7 +135,7 @@ class SettingsScreen extends StatelessWidget {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            Text(app.session?.user.email ?? 'API key', style: SfText.body, maxLines: 1, overflow: TextOverflow.ellipsis),
+                            Text(app.session?.user.email ?? tr('API key'), style: SfText.body, maxLines: 1, overflow: TextOverflow.ellipsis),
                             const SizedBox(height: 2),
                             Text(_maskKey(app.session?.apiKey), style: SfText.mono.copyWith(fontSize: 12, color: Sf.textMuted)),
                           ]),
@@ -143,17 +144,17 @@ class SettingsScreen extends StatelessWidget {
                     ),
                     const _Divider(),
                     if (showPurchaseLinks) ...[
-                      _LinkRow(text: 'Open Shifter dashboard', onTap: () => openExternal(context, ShifterUrls.panel)),
+                      _LinkRow(text: tr('Open Shifter dashboard'), onTap: () => openExternal(context, ShifterUrls.panel)),
                       const _Divider(),
                     ],
-                    _LinkRow(text: 'Help & support', onTap: () => openExternal(context, ShifterUrls.support)),
+                    _LinkRow(text: tr('Help & support'), onTap: () => openExternal(context, ShifterUrls.support)),
                     const _Divider(),
-                    _LinkRow(text: 'Privacy policy', onTap: () => openExternal(context, ShifterUrls.privacy)),
+                    _LinkRow(text: tr('Privacy policy'), onTap: () => openExternal(context, ShifterUrls.privacy)),
                   ]),
                 ),
                 const SizedBox(height: 14),
                 SfButton(
-                  label: const Text('Sign out'),
+                  label: Text(tr('Sign out')),
                   leading: const SfIcon(SfIcons.logout, size: 16, color: Color(0xFFFECACA)),
                   variant: SfButtonVariant.danger,
                   small: true,
@@ -186,14 +187,14 @@ class SettingsScreen extends StatelessWidget {
             child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               const Align(alignment: Alignment.centerLeft, child: IconTile(SfIcons.logout, tone: SfTone.danger, size: 42)),
               const SizedBox(height: 16),
-              Text('Sign out of Shifter?', style: SfText.heading),
+              Text(tr('Sign out of Shifter?'), style: SfText.heading),
               const SizedBox(height: 6),
-              Text('This disconnects the proxy and removes your API key from this device.', style: SfText.bodyMuted),
+              Text(tr('This disconnects the proxy and removes your API key from this device.'), style: SfText.bodyMuted),
               const SizedBox(height: 22),
               Row(children: [
-                Expanded(child: SfButton(label: const Text('Cancel'), variant: SfButtonVariant.ghost, small: true, expand: true, onPressed: () => Navigator.pop(ctx, false))),
+                Expanded(child: SfButton(label: Text(tr('Cancel')), variant: SfButtonVariant.ghost, small: true, expand: true, onPressed: () => Navigator.pop(ctx, false))),
                 const SizedBox(width: 10),
-                Expanded(child: SfButton(label: const Text('Sign out'), variant: SfButtonVariant.danger, small: true, expand: true, onPressed: () => Navigator.pop(ctx, true))),
+                Expanded(child: SfButton(label: Text(tr('Sign out')), variant: SfButtonVariant.danger, small: true, expand: true, onPressed: () => Navigator.pop(ctx, true))),
               ]),
             ]),
           ),
@@ -259,7 +260,7 @@ class _InfoRow extends StatelessWidget {
             Row(children: [
               Flexible(child: Text(title, style: SfText.body)),
               const SizedBox(width: 8),
-              const SfPill('Always on', tone: SfTone.success),
+              SfPill(tr('Always on'), tone: SfTone.success),
             ]),
             const SizedBox(height: 4),
             Text(body, style: SfText.small.copyWith(height: 1.45)),
@@ -304,7 +305,7 @@ class _TtlEditor extends StatelessWidget {
       padding: const EdgeInsets.only(top: 18),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Row(children: [
-          Expanded(child: Text('Session length (TTL)', style: SfText.body.copyWith(color: Sf.textSecondary, fontSize: 13.5))),
+          Expanded(child: Text(tr('Session length (TTL)'), style: SfText.body.copyWith(color: Sf.textSecondary, fontSize: 13.5))),
           Text('${value}s', style: SfText.mono.copyWith(fontSize: 12.5, color: Sf.textTertiary)),
         ]),
         const SizedBox(height: 10),
@@ -343,7 +344,7 @@ class _TtlEditor extends StatelessWidget {
         }),
         const SizedBox(height: 12),
         Row(children: [
-          Expanded(child: Text('Custom (seconds)', style: SfText.small.copyWith(color: Sf.textMuted))),
+          Expanded(child: Text(tr('Custom (seconds)'), style: SfText.small.copyWith(color: Sf.textMuted))),
           Container(
             height: 38,
             decoration: BoxDecoration(
@@ -428,10 +429,10 @@ class _BypassListState extends State<_BypassList> {
   Widget build(BuildContext context) {
     final borderColor = _error ? const Color(0x99EF4444) : _focus.hasFocus ? Sf.accent : Sf.borderInput;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      const SectionLabel('Bypass proxy for'),
+      SectionLabel(tr('Bypass proxy for')),
       SfCard(
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text('These sites and hosts always connect directly, without Shifter.', style: SfText.small.copyWith(height: 1.45)),
+          Text(tr('These sites and hosts always connect directly, without Shifter.'), style: SfText.small.copyWith(height: 1.45)),
           const SizedBox(height: 12),
           AnimatedSize(
             duration: const Duration(milliseconds: 260),
@@ -455,7 +456,7 @@ class _BypassListState extends State<_BypassList> {
                         icon: SfIcons.x,
                         size: 26,
                         iconSize: 12,
-                        tooltip: 'Remove $h',
+                        tooltip: trf('Remove {host}', {'host': h}),
                         onTap: () => widget.onChanged(widget.list.where((x) => x != h).toList()),
                       ),
                     ]),
@@ -484,11 +485,11 @@ class _BypassListState extends State<_BypassList> {
                     autocorrect: false,
                     keyboardType: TextInputType.url,
                     style: const TextStyle(fontFamily: kSans, fontSize: 14, color: Sf.textPrimary),
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       isDense: true,
                       border: InputBorder.none,
-                      hintText: 'example.com or *.example.com',
-                      hintStyle: TextStyle(fontFamily: kSans, fontSize: 14, color: Sf.textMuted),
+                      hintText: tr('example.com or *.example.com'),
+                      hintStyle: const TextStyle(fontFamily: kSans, fontSize: 14, color: Sf.textMuted),
                     ),
                   ),
                 ),
@@ -498,7 +499,7 @@ class _BypassListState extends State<_BypassList> {
             Pressable(
               onTap: _add,
               scale: 0.9,
-              semanticLabel: 'Add',
+              semanticLabel: tr('Add'),
               child: Container(
                 width: 42,
                 height: 42,

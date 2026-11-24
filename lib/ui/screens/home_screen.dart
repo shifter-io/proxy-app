@@ -14,6 +14,7 @@ import '../widgets/membership_card.dart';
 import '../widgets/power_button.dart';
 import '../widgets/primitives.dart';
 import 'data_use_screen.dart';
+import '../../i18n/i18n.dart';
 
 /// Phone home: plan switcher in the top bar, everything else centred.
 class HomeScreen extends StatelessWidget {
@@ -34,7 +35,7 @@ class HomeScreen extends StatelessWidget {
       header: SfTopBar(
         border: false,
         leading: PlanSwitcherButton(m: m, onTap: canSwitch ? onSwitchPlan : null),
-        actions: [SfIconButton(icon: SfIcons.settings, tooltip: 'Settings', onTap: onOpenSettings)],
+        actions: [SfIconButton(icon: SfIcons.settings, tooltip: tr('Settings'), onTap: onOpenSettings)],
       ),
       body: LayoutBuilder(builder: (context, c) {
         final pad = context.pagePadding;
@@ -79,7 +80,7 @@ class PlanSwitcherButton extends StatelessWidget {
         scale: 0.97,
         hoverColor: const Color(0x0AFFFFFF),
         borderRadius: BorderRadius.circular(Sf.r),
-        semanticLabel: onTap != null ? 'Switch membership' : null,
+        semanticLabel: onTap != null ? tr('Switch membership') : null,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -87,7 +88,7 @@ class PlanSwitcherButton extends StatelessWidget {
             const SizedBox(width: 10),
             Flexible(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                Text('MEMBERSHIP', style: SfText.label.copyWith(fontSize: 9.5)),
+                Text(tr('MEMBERSHIP'), style: SfText.label.copyWith(fontSize: 9.5)),
                 const SizedBox(height: 3),
                 SfSwitcher(
                   axis: Axis.horizontal,
@@ -180,7 +181,7 @@ class Dashboard extends StatelessWidget {
       FadeSlideIn(delay: const Duration(milliseconds: 140), child: StatsCard(m: m, settings: app.settings, onSession: onOpenSession)),
       if (m.teamName != null) ...[
         const SizedBox(height: 12),
-        Text('Traffic uses ${m.teamName}’s plan and wallet.', textAlign: TextAlign.center,
+        Text(trf('Traffic uses {team}’s plan and wallet.', {'team': m.teamName}), textAlign: TextAlign.center,
             style: SfText.micro.copyWith(height: 1.5)),
       ],
       const SizedBox(height: 18),
@@ -219,10 +220,10 @@ class _Hero extends StatelessWidget {
     final connected = status == ConnectionStatus.connected;
     final connecting = status == ConnectionStatus.connecting;
     final title = switch (status) {
-      ConnectionStatus.connected => 'Connected',
-      ConnectionStatus.connecting => 'Connecting…',
-      ConnectionStatus.error => 'Connection failed',
-      ConnectionStatus.disconnected => 'Not connected',
+      ConnectionStatus.connected => tr('Connected'),
+      ConnectionStatus.connecting => tr('Connecting…'),
+      ConnectionStatus.error => tr('Connection failed'),
+      ConnectionStatus.disconnected => tr('Not connected'),
     };
 
     Widget sub;
@@ -238,7 +239,7 @@ class _Hero extends StatelessWidget {
           Text(exitIp!, style: SfText.mono.copyWith(fontSize: 13.5, color: Sf.textSecondary)),
           if (since != null) _Uptime(since: since!),
           if (onNewIp != null)
-            SfIconButton(icon: SfIcons.refresh, tooltip: 'New IP', size: 30, iconSize: 14, color: Sf.textMuted, onTap: onNewIp),
+            SfIconButton(icon: SfIcons.refresh, tooltip: tr('New IP'), size: 30, iconSize: 14, color: Sf.textMuted, onTap: onNewIp),
         ],
       );
     } else if (connecting) {
@@ -247,7 +248,7 @@ class _Hero extends StatelessWidget {
       sub = Text(error ?? '', key: const ValueKey('e'), style: SfText.small.copyWith(color: Sf.dangerLight), textAlign: TextAlign.center);
     } else {
       sub = Text(
-        needsTarget ? 'Pick an IP to get started' : 'Tap to route this device through Shifter',
+        needsTarget ? tr('Pick an IP to get started') : tr('Tap to route this device through Shifter'),
         key: ValueKey('d$needsTarget'),
         style: SfText.small,
         textAlign: TextAlign.center,
@@ -276,9 +277,9 @@ class _Hero extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 10),
                   child: FadeSlideIn(
                     offset: 8,
-                    child: Wrap(alignment: WrapAlignment.center, spacing: 6, runSpacing: 6, children: const [
-                      SfPill('DNS via Shifter', tone: SfTone.success, icon: SfIcons.shieldCheck),
-                      SfPill('System proxy', tone: SfTone.neutral, icon: SfIcons.lock),
+                    child: Wrap(alignment: WrapAlignment.center, spacing: 6, runSpacing: 6, children: [
+                      SfPill(tr('DNS via Shifter'), tone: SfTone.success, icon: SfIcons.shieldCheck),
+                      SfPill(tr('System proxy'), tone: SfTone.neutral, icon: SfIcons.lock),
                     ]),
                   ),
                 )
@@ -331,11 +332,11 @@ class LocationCard extends StatelessWidget {
     final t = target;
     final ({String title, String subtitle}) d;
     if (locked) {
-      d = (title: 'Random location', subtitle: 'Worldwide · Non-Geo plan');
+      d = (title: tr('Random location'), subtitle: tr('Worldwide · Non-Geo plan'));
     } else if (mm is IspMembership && t == null) {
-      d = (title: 'Choose an IP', subtitle: '${mm.ipCount} static ISP IPs on this plan');
+      d = (title: tr('Choose an IP'), subtitle: trf('{n} static ISP IPs on this plan', {'n': mm.ipCount}));
     } else if (mm is ResidentialMembership && !poolTargeting(mm.pool).subCountry && t is ResidentialTarget && t.country != null) {
-      d = (title: t.country!.name, subtitle: 'Country-level · Country Geo plan');
+      d = (title: tr(t.country!.name), subtitle: tr('Country-level · Country Geo plan'));
     } else {
       d = describeTarget(t);
     }
@@ -367,7 +368,7 @@ class LocationCard extends StatelessWidget {
         const SizedBox(width: 14),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(mm is IspMembership ? 'STATIC IP' : 'LOCATION', style: SfText.label.copyWith(fontSize: 9.5)),
+            Text(mm is IspMembership ? tr('STATIC IP') : tr('LOCATION'), style: SfText.label.copyWith(fontSize: 9.5)),
             const SizedBox(height: 4),
             SfSwitcher(
               axis: Axis.horizontal,
@@ -390,7 +391,7 @@ class LocationCard extends StatelessWidget {
           const SfIcon(SfIcons.chevronRight, size: 18, color: Sf.accentLight)
         else
           Row(mainAxisSize: MainAxisSize.min, children: [
-            Text('Change', style: SfText.small.copyWith(color: Sf.accentLight, fontWeight: FontWeight.w500)),
+            Text(tr('Change'), style: SfText.small.copyWith(color: Sf.accentLight, fontWeight: FontWeight.w500)),
             const SizedBox(width: 2),
             const SfIcon(SfIcons.chevronRight, size: 16, color: Sf.accentLight),
           ]),
@@ -413,7 +414,7 @@ class StatsCard extends StatelessWidget {
     final traffic = mm is ResidentialMembership ? trafficLeft(mm) : null;
     final usage = mm is ResidentialMembership && traffic != null
         ? _Stat(
-            label: 'Traffic left',
+            label: tr('Traffic left'),
             value: Text.rich(TextSpan(children: [
               TextSpan(text: formatBytes(traffic.left)),
               TextSpan(
@@ -424,14 +425,14 @@ class StatsCard extends StatelessWidget {
             sub: Padding(padding: const EdgeInsets.only(top: 4), child: SfProgressBar(ratio: traffic.ratio, height: 4)),
           )
         : mm is ResidentialMembership
-            ? const _Stat(label: 'Traffic left', value: Text('—'), sub: Text('Usage not available yet'))
-            : const _Stat(label: 'Bandwidth', value: Text('Unlimited'), sub: Text('No traffic cap'));
+            ? _Stat(label: tr('Traffic left'), value: const Text('—'), sub: Text(tr('Usage not available yet')))
+            : _Stat(label: tr('Bandwidth'), value: Text(tr('Unlimited')), sub: Text(tr('No traffic cap')));
     final session = mm is IspMembership
-        ? const _Stat(label: 'IP', value: Text('Static'), sub: Text('Same IP every time'))
+        ? _Stat(label: 'IP', value: Text(tr('Static')), sub: Text(tr('Same IP every time')))
         : _Stat(
-            label: 'Session',
-            value: Text(settings.sessionMode == SessionMode.sticky ? formatDuration(settings.ttlSeconds) : 'Rotating'),
-            sub: Text(settings.sessionMode == SessionMode.sticky ? 'Sticky IP' : 'New IP per request'),
+            label: tr('Session'),
+            value: Text(settings.sessionMode == SessionMode.sticky ? formatDuration(settings.ttlSeconds) : tr('Rotating')),
+            sub: Text(settings.sessionMode == SessionMode.sticky ? tr('Sticky IP') : tr('New IP per request')),
             action: true,
           );
     final sessionCell = mm is IspMembership

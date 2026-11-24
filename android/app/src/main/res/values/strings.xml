@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- English. Other languages: values-<locale>/strings.xml, generated from
+     assets/i18n/<locale>.json by tool/i18n/android_strings.py (same keys as the app). -->
+<resources>
+    <string name="notification_channel">Connection</string>
+    <string name="notification_title">Connected through Shifter</string>
+    <string name="notification_text_full">All apps go through your Shifter location.</string>
+    <string name="notification_text_proxy">Apps that use the system proxy go through your Shifter location.</string>
+</resources>

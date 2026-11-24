@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/format.dart';
 import '../../data/models.dart';
+import '../../i18n/i18n.dart';
 import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
 import 'icons.dart';
@@ -120,12 +121,12 @@ class RenewalLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final Widget line;
     if (m.status == MembershipStatus.expired) {
-      line = Text('Expired ${formatDate(m.expiresAt)}', style: SfText.small.copyWith(color: Sf.dangerLight));
+      line = Text(trf('Expired {date}', {'date': formatDate(m.expiresAt)}), style: SfText.small.copyWith(color: Sf.dangerLight));
     } else {
       final tone = m.status == MembershipStatus.expiring ? Sf.warningLight : Sf.textTertiary;
       line = Text.rich(
         TextSpan(children: [
-          TextSpan(text: '${m.renewsAt != null ? 'Renews' : 'Expires'} ${relativeDays(m.renewsAt ?? m.expiresAt)}', style: TextStyle(color: tone)),
+          TextSpan(text: trf(m.renewsAt != null ? 'Renews {when}' : 'Expires {when}', {'when': relativeDays(m.renewsAt ?? m.expiresAt)}), style: TextStyle(color: tone)),
           TextSpan(text: ' · ${formatDate(m.renewsAt ?? m.expiresAt)}', style: const TextStyle(color: Sf.textMuted)),
         ]),
         style: SfText.small,
@@ -138,7 +139,7 @@ class RenewalLine extends StatelessWidget {
       spacing: 12,
       children: [
         line,
-        if (!m.usable && onRenew != null) SfLinkButton(text: m.canManage ? 'Renew' : 'Open in panel', icon: SfIcons.external, onTap: onRenew!, fontSize: 12.5),
+        if (!m.usable && onRenew != null) SfLinkButton(text: m.canManage ? tr('Renew') : tr('Open in panel'), icon: SfIcons.external, onTap: onRenew!, fontSize: 12.5),
       ],
     );
   }
@@ -152,22 +153,22 @@ class UsageLine extends StatelessWidget {
     final mm = m;
     if (mm is! ResidentialMembership) {
       return Row(children: [
-        Text('Bandwidth', style: SfText.small),
+        Text(tr('Bandwidth'), style: SfText.small),
         const Spacer(),
-        Text('Unlimited', style: SfText.mono.copyWith(fontSize: 12.5, color: Sf.textSecondary)),
+        Text(tr('Unlimited'), style: SfText.mono.copyWith(fontSize: 12.5, color: Sf.textSecondary)),
       ]);
     }
     final t = trafficLeft(mm);
     if (t == null) {
       return Row(children: [
-        Text('Traffic left', style: SfText.small),
+        Text(tr('Traffic left'), style: SfText.small),
         const Spacer(),
         Text('—', style: SfText.mono.copyWith(fontSize: 12.5, color: Sf.textSecondary)),
       ]);
     }
     return Column(children: [
       Row(crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [
-        Text('Traffic left', style: SfText.small),
+        Text(tr('Traffic left'), style: SfText.small),
         const Spacer(),
         Text.rich(TextSpan(children: [
           TextSpan(text: formatBytes(t.left), style: const TextStyle(color: Sf.textPrimary, fontWeight: FontWeight.w500)),

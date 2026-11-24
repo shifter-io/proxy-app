@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../../../data/format.dart';
 import '../../../data/geo_catalog.dart';
 import '../../../data/models.dart';
+import '../../../i18n/i18n.dart';
 import '../../../state/app_controller.dart';
 import '../../../theme/theme.dart';
 import '../../../theme/tokens.dart';
@@ -128,14 +129,14 @@ class _ResidentialPickerState extends State<ResidentialPicker> {
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
     final title = switch (level) {
-      _Level.countries => 'Choose location',
-      _Level.country => country!.name,
+      _Level.countries => tr('Choose location'),
+      _Level.country => tr(country!.name),
       _Level.region => region!.name,
     };
     final hint = switch (level) {
-      _Level.countries => countryOnly ? 'Search countries' : 'Search country, state, city or ISP',
-      _Level.country => 'Search in ${country!.name}',
-      _Level.region => 'Search in ${region!.name}',
+      _Level.countries => countryOnly ? tr('Search countries') : tr('Search country, state, city or ISP'),
+      _Level.country => trf('Search in {place}', {'place': tr(country!.name)}),
+      _Level.region => trf('Search in {place}', {'place': region!.name}),
     };
     final pad = widget.embedded ? 20.0 : context.pagePadding;
     final current = app.targetFor(widget.m.id);
@@ -201,7 +202,7 @@ class _ResidentialPickerState extends State<ResidentialPicker> {
   }
 
   Widget _label(String text, {Widget? trailing}) =>
-      Padding(padding: const EdgeInsets.fromLTRB(8, 18, 8, 0), child: SectionLabel(text, trailing: trailing));
+      Padding(padding: const EdgeInsets.fromLTRB(8, 18, 8, 0), child: SectionLabel(tr(text), trailing: trailing));
 
   // ── Level 1: countries + global search ────────────────────────────────
 
@@ -216,7 +217,7 @@ class _ResidentialPickerState extends State<ResidentialPicker> {
           if (loading && data == null) return ListView(padding: padding, children: const [RowsSkeleton(count: 4)]);
           if (hits.isEmpty) {
             return ListView(padding: padding, children: [
-              EmptyState(icon: SfIcons.search, title: 'No matches', body: 'Nothing found for “$debounced”. Try a country, state, city or ISP.'),
+              EmptyState(icon: SfIcons.search, title: tr('No matches'), body: trf('Nothing found for “{query}”. Try a country, state, city or ISP.', {'query': debounced})),
             ]);
           }
           return _lazy(padding, [for (final h in hits) () => _SearchHitRow(hit: h, onTap: () => _apply(_hitToTarget(h)))]);
@@ -238,8 +239,8 @@ class _ResidentialPickerState extends State<ResidentialPicker> {
           if (poolLimitNote(widget.m.pool) != null) () => _LimitNote(poolLimitNote(widget.m.pool)!),
           () => SfRow(
                 leading: const SfFlag(null),
-                title: 'Random location',
-                subtitle: 'Best available IP, anywhere',
+                title: tr('Random location'),
+                subtitle: tr('Best available IP, anywhere'),
                 selected: draft.country == null,
                 onTap: () => _apply(ResidentialTarget.worldwide),
               ),
@@ -264,7 +265,7 @@ class _ResidentialPickerState extends State<ResidentialPicker> {
 
   Widget _countryRow(GeoCountry c) => SfRow(
         leading: SfFlag(c.code),
-        title: c.name,
+        title: tr(c.name),
         selected: draft.country?.code == c.code,
         trailingIcon: countryOnly ? null : SfIcons.chevronRight,
         onTap: () {
@@ -299,7 +300,7 @@ class _ResidentialPickerState extends State<ResidentialPicker> {
           case _Tab.regions:
             final list = regions.where((r) => match(r.name)).toList();
             rows = list.isEmpty
-                ? [() => const _NoneHere('states')]
+                ? [() => const _NoneHere('No states match your search.')]
                 : [
                     for (final r in list)
                       () => SfRow(
@@ -317,7 +318,7 @@ class _ResidentialPickerState extends State<ResidentialPicker> {
           case _Tab.cities:
             final list = cities.where((x) => match(x.name)).toList();
             rows = list.isEmpty
-                ? [() => const _NoneHere('cities')]
+                ? [() => const _NoneHere('No cities match your search.')]
                 : [
                     for (final city in list)
                       () => SfRow(
@@ -335,8 +336,8 @@ class _ResidentialPickerState extends State<ResidentialPicker> {
         return _lazy(padding, [
           () => SfRow(
                 leading: SfFlag(c.code),
-                title: 'Any location in ${c.name}',
-                subtitle: 'Country-level targeting',
+                title: trf('Any location in {country}', {'country': tr(c.name)}),
+                subtitle: tr('Country-level targeting'),
                 selected: inThisCountry && draft.region == null && draft.city == null,
                 onTap: () => _setPlace(c),
               ),
@@ -378,7 +379,7 @@ class _ResidentialPickerState extends State<ResidentialPicker> {
         } else {
           final list = (data ?? const <GeoCity>[]).where((x) => match(x.name)).toList();
           rows = [
-            if (!loading && list.isEmpty) () => const _NoneHere('cities'),
+            if (!loading && list.isEmpty) () => const _NoneHere('No cities match your search.'),
             for (final city in list)
               () => SfRow(
                     leading: const SfIcon(SfIcons.pin, size: 17, color: Sf.textTertiary),
@@ -392,8 +393,8 @@ class _ResidentialPickerState extends State<ResidentialPicker> {
         return _lazy(padding, [
           () => SfRow(
                 leading: const SfIcon(SfIcons.map, size: 17, color: Sf.textTertiary),
-                title: 'Any city in ${r.name}',
-                subtitle: 'State-level · ${c.name}',
+                title: trf('Any city in {place}', {'place': r.name}),
+                subtitle: trf('State-level · {country}', {'country': tr(c.name)}),
                 selected: inThisRegion && draft.city == null,
                 onTap: () => _setPlace(c, r: r),
               ),
@@ -417,7 +418,7 @@ class _ResidentialPickerState extends State<ResidentialPicker> {
   /// ISPs for the most specific place picked (city > state > country).
   List<Widget Function()> _ispRows(GeoCountry c, GeoRegion? r, GeoCity? city, bool Function(String) match) {
     final catalog = GeoCatalog.instance;
-    final scopeName = city?.name ?? r?.name ?? c.name;
+    final scopeName = city?.name ?? r?.name ?? tr(c.name);
     final q = query.trim().toLowerCase().replaceFirst(RegExp(r'^as(?=\d)'), '');
     final list = (catalog?.isps(c.code, region: r?.slug, city: city?.slug) ?? const <GeoAsn>[])
         .where((a) => match(a.name) || (q.isNotEmpty && '${a.asn}'.startsWith(q)))
@@ -426,11 +427,11 @@ class _ResidentialPickerState extends State<ResidentialPicker> {
       () => Padding(
             padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
             child: Text(
-              'ISPs available in $scopeName. Pick one to only get IPs from that provider.',
+              trf('ISPs available in {place}. Pick one to only get IPs from that provider.', {'place': scopeName}),
               style: SfText.micro.copyWith(fontSize: 12.5, height: 1.5),
             ),
           ),
-      if (list.isEmpty) () => const _NoneHere('ISPs'),
+      if (list.isEmpty) () => const _NoneHere('No ISPs match your search.'),
       for (final a in list)
         () => SfRow(
               leading: const SfIcon(SfIcons.network, size: 17, color: Sf.textTertiary),
@@ -463,19 +464,19 @@ class _SearchHitRow extends StatelessWidget {
       GeoHitKind.asn => h.asn!.name,
       GeoHitKind.city => h.city!.name,
       GeoHitKind.region => h.region!.name,
-      GeoHitKind.country => h.country.name,
+      GeoHitKind.country => tr(h.country.name),
     };
     final subtitle = switch (h.kind) {
-      GeoHitKind.asn => 'AS${h.asn!.asn} · ${h.country.name}',
-      GeoHitKind.city => [h.region?.name, h.country.name].whereType<String>().join(', '),
-      GeoHitKind.region => h.country.name,
-      GeoHitKind.country => 'Any city',
+      GeoHitKind.asn => 'AS${h.asn!.asn} · ${tr(h.country.name)}',
+      GeoHitKind.city => [h.region?.name, tr(h.country.name)].whereType<String>().join(', '),
+      GeoHitKind.region => tr(h.country.name),
+      GeoHitKind.country => tr('Any city'),
     };
     final (label, icon) = switch (h.kind) {
-      GeoHitKind.country => ('Country', SfIcons.globe),
-      GeoHitKind.region => ('State', SfIcons.map),
-      GeoHitKind.city => ('City', SfIcons.pin),
-      GeoHitKind.asn => ('ISP', SfIcons.network),
+      GeoHitKind.country => (tr('Country'), SfIcons.globe),
+      GeoHitKind.region => (tr('State'), SfIcons.map),
+      GeoHitKind.city => (tr('City'), SfIcons.pin),
+      GeoHitKind.asn => (tr('ISP'), SfIcons.network),
     };
     return SfRow(
       leading: SfFlag(h.country.code),
@@ -494,7 +495,7 @@ class _TabLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(mainAxisSize: MainAxisSize.min, children: [
-      Text(text),
+      Text(tr(text)),
       if (count != null) ...[const SizedBox(width: 6), Text('$count', style: SfText.mono.copyWith(fontSize: 11.5, color: Sf.textMuted))],
     ]);
   }
@@ -502,11 +503,13 @@ class _TabLabel extends StatelessWidget {
 
 class _NoneHere extends StatelessWidget {
   const _NoneHere(this.what);
+
+  /// English catalog key, e.g. 'No cities match your search.'
   final String what;
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 12),
-        child: Text('No $what match your search.', textAlign: TextAlign.center, style: SfText.small.copyWith(color: Sf.textMuted)),
+        child: Text(tr(what), textAlign: TextAlign.center, style: SfText.small.copyWith(color: Sf.textMuted)),
       );
 }
 
@@ -548,7 +551,7 @@ class _SelectionBar extends StatelessWidget {
     if (draft.country != null) {
       chips.add((
         'country',
-        Row(mainAxisSize: MainAxisSize.min, children: [SfFlag(draft.country!.code, width: 16), const SizedBox(width: 6), Text(draft.country!.name)]),
+        Row(mainAxisSize: MainAxisSize.min, children: [SfFlag(draft.country!.code, width: 16), const SizedBox(width: 6), Text(tr(draft.country!.name))]),
         () => onChange(ResidentialTarget.worldwide),
       ));
     }
@@ -577,7 +580,7 @@ class _SelectionBar extends StatelessWidget {
                   ? Row(mainAxisSize: MainAxisSize.min, children: [
                       const SfFlag(null, width: 18),
                       const SizedBox(width: 8),
-                      Text('Random location worldwide', style: SfText.small),
+                      Text(tr('Random location worldwide'), style: SfText.small),
                     ])
                   : Wrap(spacing: 6, runSpacing: 6, crossAxisAlignment: WrapCrossAlignment.center, children: [
                       for (final (i, (key, label, clear)) in chips.indexed) ...[
@@ -593,7 +596,7 @@ class _SelectionBar extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         SfButton(
-          label: Text(unchanged ? 'Keep this location' : 'Use this location'),
+          label: Text(unchanged ? tr('Keep this location') : tr('Use this location')),
           trailing: const SfIcon(SfIcons.arrowRight, size: 16, color: Colors.white, strokeWidth: 2.2),
           expand: true,
           onPressed: onApply,
@@ -619,7 +622,7 @@ class _Chip extends StatelessWidget {
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         DefaultTextStyle(style: SfText.small.copyWith(color: Sf.textPrimary, fontWeight: FontWeight.w500), child: label),
-        SfIconButton(icon: SfIcons.x, size: 26, iconSize: 12, tooltip: 'Remove', onTap: onClear),
+        SfIconButton(icon: SfIcons.x, size: 26, iconSize: 12, tooltip: tr('Remove'), onTap: onClear),
       ]),
     );
   }
