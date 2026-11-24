@@ -30,7 +30,7 @@ class DataUseScreen extends StatelessWidget {
       (
         SfIcons.lock,
         tr('Encrypted by default'),
-        tr('All traffic between this device and Shifter is encrypted.'),
+        tr('All traffic between this device and Shifter is encrypted, on Wi-Fi and mobile data.'),
       ),
       (
         SfIcons.key,
@@ -61,33 +61,42 @@ class DataUseScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        // Layout B: the content is centred in the space above
+                        // the button, so tall phones have no gap in the middle.
+                        const Spacer(),
                         const Align(
                           alignment: Alignment.centerLeft,
-                          child: Glyph(size: 30),
+                          child: Glyph(size: 44),
                         ),
-                        const SizedBox(height: 18),
-                        Text(tr('Before you connect'), style: SfText.title),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 22),
+                        Text(
+                          tr('Before you connect'),
+                          style: SfText.display.copyWith(
+                            fontSize: 32,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
                         Text(
                           ios
                               ? tr('Shifter adds a VPN configuration to this device so your apps reach the internet through your Shifter plan.')
                               : tr("Shifter uses Android's VPN service so your apps reach the internet through your Shifter plan."),
                           style: SfText.bodyMuted.copyWith(
-                            fontSize: 14.5,
+                            fontSize: 17,
                             color: Sf.textSecondary,
                           ),
                         ),
-                        const SizedBox(height: 22),
+                        const SizedBox(height: 30),
                         for (final (icon, title, body) in points)
                           Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
+                            padding: const EdgeInsets.only(bottom: 14),
                             child: SfCard(
-                              padding: const EdgeInsets.all(14),
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
                               child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  IconTile(icon, size: 36),
-                                  const SizedBox(width: 12),
+                                  IconTile(icon, size: 44),
+                                  const SizedBox(width: 14),
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment:
@@ -96,15 +105,15 @@ class DataUseScreen extends StatelessWidget {
                                         Text(
                                           title,
                                           style: SfText.bodyStrong.copyWith(
-                                            fontSize: 14,
+                                            fontSize: 16,
                                           ),
                                         ),
-                                        const SizedBox(height: 2),
+                                        const SizedBox(height: 3),
                                         Text(
                                           body,
                                           style: SfText.small.copyWith(
-                                            fontSize: 13,
-                                            height: 1.5,
+                                            fontSize: 14.5,
+                                            height: 1.45,
                                           ),
                                         ),
                                       ],
@@ -115,17 +124,18 @@ class DataUseScreen extends StatelessWidget {
                             ),
                           ),
                         const Spacer(),
-                        const SizedBox(height: 22),
+                        const SizedBox(height: 16),
                         SfButton(
                           label: Text(tr('Allow and connect')),
                           expand: true,
                           large: true,
                           onPressed: onAccept,
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 16),
                         Center(
                           child: SfLinkButton(
                             text: tr('Privacy policy'),
+                            fontSize: 15,
                             onTap: () =>
                                 openExternal(context, ShifterUrls.privacy),
                           ),
@@ -136,7 +146,7 @@ class DataUseScreen extends StatelessWidget {
                               ? tr('Next, iOS asks to add the VPN configuration. Tap Allow.')
                               : tr('Next, Android asks to allow the connection request. Tap OK.'),
                           textAlign: TextAlign.center,
-                          style: SfText.micro.copyWith(fontSize: 12),
+                          style: SfText.micro.copyWith(fontSize: 13),
                         ),
                       ],
                     ),

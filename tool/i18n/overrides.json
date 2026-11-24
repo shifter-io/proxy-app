@@ -9,7 +9,11 @@
     "Expires {when}": "Caduca {when}",
     "Add": "Añadir",
     "MEMBERSHIP": "MEMBRESÍA",
-    "Sticky": "Fija"
+    "Sticky": "Fija",
+    "All traffic between this device and Shifter is encrypted, on Wi-Fi and mobile data.": "Todo el tráfico entre tu dispositivo y Shifter va cifrado, por Wi-Fi o móvil.",
+    "Kept in the Keychain on this device and sent only to Shifter, to load your plans.": "Se guarda en el Keychain y solo se envía a Shifter para cargar tus planes.",
+    "Kept encrypted on this device and sent only to Shifter, to load your plans.": "Se guarda cifrada en el dispositivo y solo se envía a Shifter para cargar tus planes.",
+    "Shifter does not sell or share your traffic, or use it for anything else.": "Shifter no vende ni comparte tu tráfico, ni lo usa para ninguna otra cosa."
   },
   "zh-Hans": {
     "today": "今天",
@@ -34,7 +38,11 @@
     "Add": "Hinzufügen",
     "States": "Bundesstaaten",
     "Sticky or rotating IPs": "Sticky- oder rotierende IPs",
-    "Suspended": "Ausgesetzt"
+    "Suspended": "Ausgesetzt",
+    "All traffic between this device and Shifter is encrypted, on Wi-Fi and mobile data.": "Ihr Datenverkehr zu Shifter ist immer verschlüsselt, per Wi-Fi und Mobilfunk.",
+    "Kept in the Keychain on this device and sent only to Shifter, to load your plans.": "Wird im Keychain gespeichert und nur an Shifter gesendet, um Pläne zu laden.",
+    "Kept encrypted on this device and sent only to Shifter, to load your plans.": "Wird verschlüsselt gespeichert und nur an Shifter gesendet, um Pläne zu laden.",
+    "Shifter does not sell or share your traffic, or use it for anything else.": "Shifter verkauft, teilt oder nutzt Ihren Datenverkehr nicht anderweitig."
   },
   "fr": {
     "today": "aujourd'hui",
@@ -44,7 +52,11 @@
     "{n} days ago": "il y a {n} jours",
     "Renews {when}": "Se renouvelle {when}",
     "Expires {when}": "Expire {when}",
-    "Add": "Ajouter"
+    "Add": "Ajouter",
+    "All traffic between this device and Shifter is encrypted, on Wi-Fi and mobile data.": "Trafic chiffré entre cet appareil et Shifter, en Wi-Fi et données mobiles.",
+    "Kept in the Keychain on this device and sent only to Shifter, to load your plans.": "Dans le Keychain, envoyée uniquement à Shifter pour charger vos forfaits.",
+    "Kept encrypted on this device and sent only to Shifter, to load your plans.": "Chiffrée sur l'appareil, envoyée uniquement à Shifter pour charger vos forfaits.",
+    "Shifter does not sell or share your traffic, or use it for anything else.": "Shifter ne vend ni ne partage votre trafic, et ne l'utilise à aucune autre fin."
   },
   "ja": {
     "today": "今日",
@@ -74,6 +86,10 @@
     "{n} days ago": "há {n} dias",
     "Renews {when}": "Renova {when}",
     "Expires {when}": "Expira {when}",
-    "MEMBERSHIP": "ASSINATURA"
+    "MEMBERSHIP": "ASSINATURA",
+    "All traffic between this device and Shifter is encrypted, on Wi-Fi and mobile data.": "Todo tráfego do aparelho com a Shifter é criptografado, no Wi-Fi e dados móveis.",
+    "Kept in the Keychain on this device and sent only to Shifter, to load your plans.": "Fica no Keychain do aparelho, enviada só à Shifter para carregar seus planos.",
+    "Kept encrypted on this device and sent only to Shifter, to load your plans.": "Fica criptografada no aparelho, enviada só à Shifter para carregar seus planos.",
+    "Shifter does not sell or share your traffic, or use it for anything else.": "A Shifter não vende nem compartilha seu tráfego, nem o usa para mais nada."
   }
 }
