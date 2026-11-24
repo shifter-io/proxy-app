@@ -24,6 +24,7 @@ Source: "{#StageDir}\ShifterService.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#StageDir}\Shifter-Velopack-Setup.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall
 Source: "user-install.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "service-install.ps1"; DestDir: "{app}"; Flags: ignoreversion
+Source: "tray-run.ps1"; DestDir: "{app}"; Flags: ignoreversion
 
 [Code]
 var

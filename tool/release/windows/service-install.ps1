@@ -15,8 +15,9 @@ if ($Remove) {
         & $sc delete $name
         if ($LASTEXITCODE -ne 0) { throw 'Could not deregister the Shifter service.' }
     }
+    $monitorArgument = ' -File "' + (Join-Path $PSScriptRoot 'tray-run.ps1') + '"'
     Get-ScheduledTask -TaskName 'Shifter.Tray.*' -ErrorAction SilentlyContinue |
-        Where-Object { $_.Actions.Execute -like '*\Shifter.ProxyApp\current\shifter_app.exe' } |
+        Where-Object { $_.Actions.Arguments -like ('*' + $monitorArgument) } |
         Unregister-ScheduledTask -Confirm:$false
     return
 }
