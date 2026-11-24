@@ -102,7 +102,7 @@ class _WideLogin extends StatelessWidget {
                 for (final (i, (icon, title, body)) in const [
                   (SfIcons.globe, 'Precise targeting', 'Country, state, city and ISP on Full Geo plans.'),
                   (SfIcons.clock, 'Sticky or rotating IPs', 'Keep one IP for a session or get a new one per request.'),
-                  (SfIcons.shieldCheck, 'No leaks', 'DNS resolves at your exit; UDP is blocked so WebRTC can’t expose you.'),
+                  (SfIcons.shieldCheck, 'System proxy', 'Apps that honor the system proxy use Shifter. WebRTC over UDP can go directly.'),
                 ].indexed)
                   FadeSlideIn(
                     delay: Duration(milliseconds: 180 + 70 * i),

@@ -138,6 +138,18 @@ void main() {
     });
   }
 
+  testWidgets('connected uptime advances without another app event', (tester) async {
+    await _pumpDevice(tester, deviceById('iphone-15'), demoKey: _single, connected: true);
+    final uptime = find.textContaining(RegExp(r'^· \d{2}:\d{2}:\d{2}$'));
+    final initial = tester.widget<Text>(uptime).data;
+
+    // The timer is driven by the widget test clock, but uptime uses wall time.
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 1100)));
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(tester.widget<Text>(uptime).data, isNot(initial));
+  });
+
   testWidgets('landscape phone', (tester) async {
     final b = await _pumpDevice(tester, deviceById('iphone-15'), demoKey: _single, connected: true, landscape: true);
     await _shot(tester, b, 'iphone-15_landscape');

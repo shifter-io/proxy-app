@@ -287,10 +287,17 @@ class _Uptime extends StatefulWidget {
 }
 
 class _UptimeState extends State<_Uptime> {
-  late final Timer _t = Timer.periodic(const Duration(seconds: 1), (_) => setState(() {}));
+  late final Timer _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) => setState(() {}));
+  }
+
   @override
   void dispose() {
-    _t.cancel();
+    _timer.cancel();
     super.dispose();
   }
 

@@ -129,6 +129,23 @@ void main() {
     });
   }
 
+  testWidgets('applying a docked location shows confirmation', (tester) async {
+    final app = await _show(tester, const Size(1440, 900), GlobalKey());
+    await app.selectMembership('team');
+    await _settle(tester);
+
+    await tester.tap(find.text('Germany').hitTestable());
+    await _settle(tester);
+    await tester.tap(find.text('Use this location'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(tester.takeException(), isNull);
+    final confirmation = find.byType(SnackBar);
+    expect(find.descendant(of: confirmation, matching: find.text('Germany')), findsOneWidget);
+    expect((app.targetFor('team') as ResidentialTarget).country?.code, 'de');
+  });
+
   testWidgets('long workspace names and enlarged text at 320px', (tester) async {
     final key = GlobalKey();
     final app = await _show(tester, const Size(320, 720), key, scale: 1.3);
