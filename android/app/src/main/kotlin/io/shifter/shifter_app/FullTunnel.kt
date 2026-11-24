@@ -50,11 +50,13 @@ object FullTunnel {
     fun configure(builder: VpnService.Builder): VpnService.Builder {
         builder.setMtu(MTU)
             .addAddress(IPV4, 32)
-            .addAddress(IPV6, 128)
             // DNS goes through the tunnel as UDP over SOCKS5, never to the ISP.
             .addDnsServer("1.1.1.1")
             .addDnsServer("8.8.8.8")
-            // IPv6 also enters the tunnel, so nothing leaves around the proxy.
+            // IPv6 is routed into the tunnel so nothing leaves around the
+            // proxy, but the tunnel has no IPv6 address: the gateway reaches
+            // IPv4 only, so apps see no IPv6 and use IPv4 at once instead of
+            // trying IPv6 connections that would be reset.
             .addRoute("::", 0)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             builder.addRoute("0.0.0.0", 0)
