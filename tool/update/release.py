@@ -109,6 +109,13 @@ def validate(payload):
         if not 0 <= release['rolloutPercentage'] <= 100 or len(release['notes'].encode()) > 8192:
             raise ValueError('Invalid rollout or release notes')
         if payload['distribution'] in ('desktop', 'direct'):
+            if 'automaticInstall' in release and type(release['automaticInstall']) is not bool:
+                raise ValueError('Invalid automatic install setting')
+            if 'manualDownloadPath' in release:
+                path = release['manualDownloadPath']
+                if payload['platform'] != 'linux' or not isinstance(path, str) or not path.endswith('.AppImage'):
+                    raise ValueError('Invalid manual download')
+                safe_path(path)
             artifact = release['artifact']
             safe_path(artifact['relativePath'])
             if not artifact['expectedSigner'] or (payload['distribution'] == 'direct' and not re.fullmatch('[a-f0-9]{64}', artifact['expectedSigner'])):

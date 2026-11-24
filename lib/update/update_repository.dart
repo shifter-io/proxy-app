@@ -156,6 +156,12 @@ class UpdateRepository {
       if (r.applicationId != identity.applicationId || !ids.add(r.id)) {
         throw const UpdateFailure('Invalid release identity.');
       }
+      if (r.manualDownloadPath case final path?) {
+        if (identity.platform != 'linux' || !path.endsWith('.AppImage')) {
+          throw const UpdateFailure('Invalid manual download.');
+        }
+        config.resolve(path);
+      }
       if (identity.distribution == Distribution.desktop ||
           identity.distribution == Distribution.direct) {
         final a = r.artifact;

@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shifter_app/update/adapters/update_adapter.dart';
 import 'package:shifter_app/update/update_config.dart';
@@ -61,13 +63,14 @@ class FakeRepository extends UpdateRepository {
   Completer<void>? pending;
   bool withdrawn = false;
   bool fail = false;
+  Map<String, dynamic> candidate = releaseJson();
   @override
   Future<VerifiedFeed> fetch() async {
     checks++;
     await pending?.future;
     if (fail) throw const UpdateFailure('Network unavailable');
     return VerifiedFeed(
-      withdrawn ? [] : [Release(releaseJson())],
+      withdrawn ? [] : [Release(candidate)],
       DateTime.now().add(const Duration(hours: 1)),
       checks,
       '$checks',
@@ -238,6 +241,79 @@ void main() {
     expect(adapter.installed, 0);
     expect(coordinator.phase, UpdatePhase.error);
   });
+  group('automatic desktop installation', () {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    const channel = MethodChannel('plugins.flutter.io/path_provider');
+    late Directory temporary;
+    var canApply = true;
+    var revokeDuringPreparation = false;
+
+    setUp(() async {
+      coordinator.dispose();
+      temporary = await Directory.systemTemp.createTemp('shifter-auto-test-');
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (_) async => temporary.path);
+      canApply = true;
+      revokeDuringPreparation = false;
+      repo.candidate['automaticInstall'] = true;
+      coordinator = UpdateCoordinator(
+        store: store,
+        adapter: adapter,
+        identity: const InstalledIdentity(
+          applicationId: 'io.shifter.test',
+          platform: 'windows',
+          architecture: 'x64',
+          distribution: Distribution.desktop,
+          version: '1.0.0',
+          build: 10,
+          osVersion: '10.0.0',
+        ),
+        repository: repo,
+        capabilities: const UpdateCapabilities(install: true),
+        canPrompt: () => true,
+        canAutomaticallyInstall: () => canApply,
+        prepareConnection: (handoff) => handoff(),
+        prepareAutomaticConnection: (handoff) async {
+          if (revokeDuringPreparation)
+            repo.candidate['automaticInstall'] = false;
+          await handoff();
+        },
+      );
+      await coordinator.check();
+      coordinator.phase = UpdatePhase.ready;
+    });
+
+    tearDown(() async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+      await temporary.delete(recursive: true);
+    });
+
+    test('opt-in and disconnected runtime are required', () async {
+      await coordinator.install(automatic: true);
+      expect(adapter.installed, 0);
+      await coordinator.setAutomaticInstall(true);
+      canApply = false;
+      await coordinator.install(automatic: true);
+      expect(adapter.installed, 0);
+      canApply = true;
+      await coordinator.install(automatic: true);
+      expect(adapter.installed, 1);
+    });
+
+    test(
+      'removing automatic permission before handoff stops installation',
+      () async {
+        await coordinator.setAutomaticInstall(true);
+        revokeDuringPreparation = true;
+        await coordinator.install(automatic: true);
+        expect(adapter.installed, 0);
+        expect(coordinator.phase, UpdatePhase.ready);
+        expect(store.read('pending'), isNull);
+      },
+    );
+  });
+
   test('successful handoff journals target and suppresses reconnect', () async {
     await coordinator.check();
     coordinator.phase = UpdatePhase.ready;

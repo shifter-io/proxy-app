@@ -21,6 +21,14 @@ class AppUpdatesEntry extends StatelessWidget {
             'Version ${updates.identity.version} (${updates.identity.build})',
             style: SfText.small,
           ),
+        if (updates?.supportsAutomaticInstall == true)
+          SwitchListTile.adaptive(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Install eligible updates automatically'),
+            subtitle: const Text('Applies at startup while disconnected.'),
+            value: updates!.automaticInstallEnabled,
+            onChanged: updates.setAutomaticInstall,
+          ),
         TextButton(
           onPressed: scope?.open,
           child: const Text('Check for updates'),
@@ -110,6 +118,15 @@ class UpdatePanel extends StatelessWidget {
               child: Text(
                 'Shifter will disconnect before opening the installer. It will stay disconnected afterward.',
                 style: SfText.small,
+              ),
+            ),
+          if (u.manualDownload != null)
+            OutlinedButton(
+              onPressed: u.busy ? null : u.openManualDownload,
+              child: Text(
+                u.identity.platform == 'linux'
+                    ? 'Download AppImage'
+                    : 'Download APK',
               ),
             ),
           if (u.canDownload)

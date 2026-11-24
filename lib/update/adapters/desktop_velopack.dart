@@ -79,6 +79,11 @@ class DesktopVelopackAdapter implements UpdateAdapter {
               ?.group(0) ??
           os;
     }
+    if (Platform.isLinux) {
+      final kernel = await Process.run('uname', ['-r']);
+      os =
+          RegExp(r'^\d+\.\d+\.\d+').stringMatch(kernel.stdout.toString()) ?? os;
+    }
     _osVersion = os;
     return InstalledIdentity(
       applicationId: info.packageName,
@@ -108,7 +113,11 @@ class DesktopVelopackAdapter implements UpdateAdapter {
   );
   @override
   Future<bool> eligible(Release release, {required bool automatic}) async {
-    if (!_installed || !_installable) return false;
+    if (Platform.isLinux) {
+      if (release.manualDownloadPath == null) return false;
+    } else if (!_installed || !_installable) {
+      return false;
+    }
     List<int> parts(String value) => value.split('.').map(int.parse).toList();
     final current = parts(_osVersion), minimum = parts(release.minimumOs);
     for (var i = 0; i < minimum.length; i++) {

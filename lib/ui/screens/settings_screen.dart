@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../analytics/analytics_controls.dart';
 import '../../data/format.dart';
 import '../../data/models.dart';
 import '../../proxy/bypass.dart';
@@ -158,6 +159,7 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ])),
               section(const AppUpdatesEntry()),
+              const AnalyticsControl(),
             ]),
           ),
         ],

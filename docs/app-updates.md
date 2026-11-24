@@ -30,7 +30,7 @@ The feed path is `/<distribution>/<platform>/<architecture>/stable.json`. Distri
 
 Automatic checks start after app startup and run on foreground return when six hours have elapsed. Manual checks share any active transaction. Automatic prompts require a disconnected app with no other Navigator dialog and appear at most once per 24 hours. **Later** suppresses automatic prompts for seven days.
 
-Downloads and installer handoffs each require an explicit action. Direct APK downloads are canceled when the app is hidden; retries start from zero. Desktop downloads survive modal dismissal. Completed downloads persist separately from account data. The next startup checks the native version and reconciles native installation state.
+Manual downloads and installer handoffs each require an explicit action. On packaged Windows and macOS builds, a user can enable automatic installation for signed releases with `automaticInstall: true`. The coordinator applies an eligible release at disconnected startup and rechecks the signed policy, cohort, and network state before handoff. Direct APK downloads are canceled when the app is hidden; retries start from zero. Desktop downloads survive modal dismissal. Completed downloads persist separately from account data. The next startup checks the native version and reconciles native installation state.
 
 Installation holds the connection gate, restores OS proxy settings before stopping the listener, re-fetches authenticated metadata, revalidates the artifact and then invokes the native updater. Restoration failures keep backups and prevent handoff. Restart suppression does not change the user's Connect on launch preference; native version/build changes also suppress reconnection after externally initiated store upgrades.
 
@@ -56,7 +56,7 @@ Install the matching `vpk` CLI version through .NET tooling. Use the platform's 
 
 The native bridge receives only a locally authenticated package. It rehashes the source, generates a local feed, verifies cached destinations before reuse and after staging, and only then lets Velopack perform its handoff. Startup auto-apply is disabled; bootstrap uses a separate empty package directory. A Dart transaction lock and a native installer lock prevent concurrent desktop operations.
 
-**Linux automatic installation is deliberately disabled.** Velopack 1.2.161 can invoke privilege escalation; the approved no-elevation release gate is unresolved. Its runner/bridge integration exists, but a reviewed no-elevation solution and real AppImage qualification are required before enabling Linux installation. The UI explains that the AppImage must be updated manually.
+**Linux automatic installation is deliberately disabled.** Velopack 1.2.161 can invoke privilege escalation; the approved no-elevation release gate is unresolved. Its runner/bridge integration exists, but a reviewed no-elevation solution and real AppImage qualification are required before enabling Linux installation. The UI offers a verified feed's optional `manualDownloadPath` to an AppImage on the configured HTTPS origin. Host the AppImage at its immutable path before publishing the feed.
 
 ### Android
 
@@ -71,7 +71,7 @@ Only the direct source set includes `REQUEST_INSTALL_PACKAGES`, APK validation a
 
 If Android disallows installations from Shifter, the app opens the appropriate system settings and asks the user to retry installation afterward. It never uninstalls the existing app to work around a signing conflict. Session IDs and operation IDs persist across Activity/process recreation.
 
-The Play source set depends on Google's in-app update library and uses flexible updates. Google Play eligibility is checked afresh before starting. Download state is polled/reconciled; explicit completion occurs only after safe disconnect. The Play build has no direct APK fallback.
+The Play source set depends on Google's in-app update library and uses flexible updates. Google Play eligibility is checked afresh before starting. Download state is polled/reconciled; explicit completion occurs only after safe disconnect. The direct build can also open the signed feed's APK URL in the system browser. The Play build uses only its store-managed flow.
 
 Release signing fails closed unless all of these environment variables exist:
 
@@ -157,3 +157,7 @@ Local macOS/Android compilation and an iOS simulator build do not establish Wind
 - [Velopack Linux behavior](https://docs.velopack.io/packaging/operating-systems/linux)
 - [Google Play flexible updates](https://developer.android.com/guide/playcore/in-app-updates/kotlin-java)
 - [Android PackageInstaller](https://developer.android.com/reference/android/content/pm/PackageInstaller)
+
+## Desktop packaging and analytics
+
+See [Desktop release packaging](desktop-release.md) for the Windows Azure-signed service and installer, direct macOS distribution, Linux AppImage, and collector staging.

@@ -38,3 +38,9 @@ target_include_directories(${BINARY_NAME} PRIVATE "${CMAKE_SOURCE_DIR}")
 
 # Run the Flutter tool portions of the build. This must not be removed.
 add_dependencies(${BINARY_NAME} flutter_assemble)
+
+add_executable(ShifterService "service.cpp")
+apply_standard_settings(ShifterService)
+target_link_libraries(ShifterService PRIVATE "advapi32.lib")
+set_target_properties(ShifterService PROPERTIES
+  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/service/$<CONFIG>")

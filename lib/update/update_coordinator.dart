@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'adapters/update_adapter.dart';
 import 'update_models.dart';
@@ -19,6 +20,9 @@ class UpdateCoordinator extends ChangeNotifier {
     required this.repository,
     required this.prepareConnection,
     required this.canPrompt,
+    this.prepareAutomaticConnection,
+    this.canAutomaticallyInstall = _disabled,
+    this.didApplyUpdate,
     this.capabilities = const UpdateCapabilities(),
     DateTime Function()? clock,
   }) : clock = clock ?? DateTime.now;
@@ -28,6 +32,46 @@ class UpdateCoordinator extends ChangeNotifier {
   final UpdateRepository? repository;
   final Future<void> Function(Future<void> Function()) prepareConnection;
   final bool Function() canPrompt;
+  final Future<void> Function(Future<void> Function())?
+  prepareAutomaticConnection;
+  final bool Function() canAutomaticallyInstall;
+  final void Function(Release target, String previousVersion)? didApplyUpdate;
+
+  static bool _disabled() => false;
+  bool get supportsAutomaticInstall =>
+      repository != null &&
+      prepareAutomaticConnection != null &&
+      capabilities.install &&
+      identity.distribution == Distribution.desktop &&
+      (identity.platform == 'windows' || identity.platform == 'macos');
+  bool get automaticInstallEnabled => store.read('automaticInstall') == 'true';
+
+  Future<void> setAutomaticInstall(bool enabled) async {
+    await store.write('automaticInstall', enabled ? 'true' : null);
+    _notify();
+  }
+
+  Uri? get manualDownload {
+    final candidate = release;
+    if (candidate == null || repository == null) return null;
+    final path = identity.distribution == Distribution.direct
+        ? candidate.path
+        : candidate.manualDownloadPath;
+    return path == null ? null : repository!.config.resolve(path);
+  }
+
+  Future<void> openManualDownload() async {
+    final uri = manualDownload;
+    if (uri == null) return;
+    await _run(() async {
+      final current = await _revalidate(release!);
+      if (current.manualDownloadPath != release!.manualDownloadPath ||
+          !await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+        throw const UpdateFailure('The download link could not be opened.');
+      }
+    });
+  }
+
   final UpdateCapabilities capabilities;
   final DateTime Function() clock;
   UpdatePhase phase = UpdatePhase.idle;
@@ -141,6 +185,12 @@ class UpdateCoordinator extends ChangeNotifier {
         if (!identity.newer(target)) {
           await store.write('pending', null);
           await store.write('staged', null);
+          final previous = pending['previousVersion'];
+          if (previous is String &&
+              identity.version == target.version &&
+              identity.build == target.build) {
+            didApplyUpdate?.call(target, previous);
+          }
         } else {
           // The journal is a hint only; install still requires fresh signed metadata.
           release = target;
@@ -181,11 +231,36 @@ class UpdateCoordinator extends ChangeNotifier {
     });
     if (phase != UpdatePhase.ready &&
         phase != UpdatePhase.awaitingSystemConsent) {
-      await check(automatic: true);
+      await check(automatic: true, offer: false);
+    }
+    await _installOnStartup();
+    await considerPrompt();
+  }
+
+  Future<bool> _automaticCandidate() async {
+    final target = release;
+    if (_disposed ||
+        !supportsAutomaticInstall ||
+        !automaticInstallEnabled ||
+        !canAutomaticallyInstall() ||
+        target == null ||
+        !target.automaticInstall ||
+        (store.time('laterUntil')?.isAfter(clock()) ?? false)) {
+      return false;
+    }
+    final cohort = await store.cohort();
+    return identical(release, target) && cohort < target.rollout;
+  }
+
+  Future<void> _installOnStartup() async {
+    if (!await _automaticCandidate()) return;
+    if (canDownload) await download();
+    if (canInstall && await _automaticCandidate()) {
+      await install(automatic: true);
     }
   }
 
-  Future<void> check({bool automatic = false}) {
+  Future<void> check({bool automatic = false, bool offer = true}) {
     if (busy) return _operation!;
     if (phase == UpdatePhase.ready ||
         phase == UpdatePhase.downloading ||
@@ -251,7 +326,7 @@ class UpdateCoordinator extends ChangeNotifier {
           ? UpdatePhase.current
           : UpdatePhase.unavailable;
       if (identity.distribution == Distribution.play) await _reconcileNative();
-      if (automatic) await considerPrompt();
+      if (automatic && offer) await considerPrompt();
     });
   }
 
@@ -420,13 +495,29 @@ class UpdateCoordinator extends ChangeNotifier {
     });
   }
 
-  Future<void> install() {
-    if (!canInstall) return Future.value();
+  Future<void> install({bool automatic = false}) {
+    if (!canInstall || (automatic && !supportsAutomaticInstall)) {
+      return Future.value();
+    }
     return _run(() async {
       phase = UpdatePhase.preparingInstall;
       _notify();
-      await prepareConnection(() async {
+      if (automatic && !await _automaticCandidate()) {
+        phase = UpdatePhase.ready;
+        return;
+      }
+      final prepare = automatic
+          ? prepareAutomaticConnection!
+          : prepareConnection;
+      await prepare(() async {
         final selected = await _revalidate(release!);
+        if (automatic &&
+            (!selected.automaticInstall ||
+                !automaticInstallEnabled ||
+                await store.cohort() >= selected.rollout)) {
+          phase = UpdatePhase.ready;
+          return;
+        }
         if (capabilities.download) {
           if (_artifact == null) {
             throw const UpdateFailure('Download the update again.');
@@ -442,7 +533,11 @@ class UpdateCoordinator extends ChangeNotifier {
         }
         await store.write(
           'pending',
-          jsonEncode({'operationId': _operationId, 'release': selected.json}),
+          jsonEncode({
+            'operationId': _operationId,
+            'release': selected.json,
+            'previousVersion': identity.version,
+          }),
         );
         await store.write('suppressReconnect', 'true');
         await adapter.install(selected, _artifact?.path, _operationId!);

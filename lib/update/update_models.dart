@@ -111,6 +111,10 @@ class Release {
     if (json['build'] is! int ||
         build < 1 ||
         json['enabled'] is! bool ||
+        (json.containsKey('automaticInstall') &&
+            json['automaticInstall'] is! bool) ||
+        (json.containsKey('manualDownloadPath') &&
+            json['manualDownloadPath'] is! String) ||
         json['rolloutPercentage'] is! int ||
         rollout < 0 ||
         rollout > 100 ||
@@ -126,6 +130,8 @@ class Release {
   String get notes => json['notes'] as String;
   String get minimumOs => json['minimumOs'] as String;
   bool get enabled => json['enabled'] == true;
+  bool get automaticInstall => json['automaticInstall'] == true;
+  String? get manualDownloadPath => json['manualDownloadPath'] as String?;
   int get rollout => json['rolloutPercentage'] as int;
   Map<String, dynamic>? get artifact =>
       (json['artifact'] as Map?)?.cast<String, dynamic>();

@@ -352,7 +352,10 @@ class AppController extends ChangeNotifier {
 
   /// Holds the connection gate throughout revalidation and native handoff.
   /// No timeout outside this transaction may release the gate while cleanup runs.
-  Future<void> prepareForUpdate(Future<void> Function() handoff) async {
+  Future<void> prepareForUpdate(Future<void> Function() handoff, {bool automatic = false}) async {
+    if (automatic && connection.status != ConnectionStatus.disconnected) {
+      throw StateError('Automatic updates wait until Shifter is disconnected.');
+    }
     if (_updatePreparing) throw StateError('An update is already being prepared.');
     _updatePreparing = true;
     ++_generation;

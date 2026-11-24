@@ -2,17 +2,24 @@
 #define RUNNER_FLUTTER_WINDOW_H_
 
 #include <flutter/dart_project.h>
+#include <flutter/encodable_value.h>
+#include <flutter/method_channel.h>
 #include <flutter/flutter_view_controller.h>
 
 #include <memory>
 
 #include "win32_window.h"
 
-// A window that does nothing but host a Flutter view.
+#include <shellapi.h>
+
+inline constexpr wchar_t kShifterWindowClass[] = L"ShifterProxyAppWindow";
+inline constexpr wchar_t kShifterActivateMessage[] = L"io.shifter.desktop.activate";
+
+// Hosts the Flutter view and the user's notification-area icon.
 class FlutterWindow : public Win32Window {
  public:
   // Creates a new FlutterWindow hosting a Flutter view running |project|.
-  explicit FlutterWindow(const flutter::DartProject& project);
+  FlutterWindow(const flutter::DartProject& project, bool start_hidden);
   virtual ~FlutterWindow();
 
  protected:
@@ -23,6 +30,21 @@ class FlutterWindow : public Win32Window {
                          LPARAM const lparam) noexcept override;
 
  private:
+  void RestoreWindow(HWND hwnd);
+  void ShowTrayMenu(HWND hwnd);
+  void AddTrayIcon();
+  void RequestQuit(HWND hwnd);
+
+  bool start_hidden_;
+  bool tray_added_ = false;
+  bool can_connect_ = false;
+  bool quitting_ = false;
+  std::wstring connection_ = L"Starting";
+  NOTIFYICONDATAW tray_{};
+  const UINT taskbar_created_ = RegisterWindowMessageW(L"TaskbarCreated");
+  const UINT activate_message_ = RegisterWindowMessageW(kShifterActivateMessage);
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> desktop_;
+
   // The project to run.
   flutter::DartProject project_;
 

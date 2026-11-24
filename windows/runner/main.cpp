@@ -2,6 +2,9 @@
 #include <flutter/flutter_view_controller.h>
 #include <windows.h>
 
+#include <algorithm>
+#include <memory>
+
 #include "flutter_window.h"
 #include "utils.h"
 
@@ -32,9 +35,29 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   std::vector<std::string> command_line_arguments =
       GetCommandLineArguments();
 
+  const bool start_hidden = std::find(command_line_arguments.begin(),
+                                      command_line_arguments.end(),
+                                      "--background") != command_line_arguments.end();
+  const HANDLE handle = CreateMutexW(nullptr, FALSE, L"Local\\ShifterProxyApp");
+  const DWORD mutex_status = GetLastError();
+  if (!handle) return EXIT_FAILURE;
+  std::unique_ptr<void, decltype(&CloseHandle)> instance_lock(handle, CloseHandle);
+  if (mutex_status == ERROR_ALREADY_EXISTS) {
+    if (!start_hidden) {
+      for (int attempt = 0; attempt < 20; ++attempt) {
+        if (HWND existing = FindWindowW(kShifterWindowClass, nullptr)) {
+          PostMessageW(existing, RegisterWindowMessageW(kShifterActivateMessage), 0, 0);
+          break;
+        }
+        Sleep(50);
+      }
+    }
+    return EXIT_SUCCESS;
+  }
+
   project.set_dart_entrypoint_arguments(std::move(command_line_arguments));
 
-  FlutterWindow window(project);
+  FlutterWindow window(project, start_hidden);
   Win32Window::Point origin(10, 10);
   Win32Window::Size size(1280, 720);
   if (!window.Create(L"shifter_app", origin, size)) {

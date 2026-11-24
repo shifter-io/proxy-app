@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../analytics/installation_analytics.dart';
 import '../../data/models.dart';
 import '../../proxy/proxy_engine.dart';
 import '../../proxy/tunnel_proxy_engine.dart';
@@ -51,12 +52,14 @@ class UpdateHost extends StatefulWidget {
     required this.navigatorKey,
     required this.child,
     this.initialCoordinator,
+    this.analytics,
   });
   final AppController app;
   final bool enabled;
   final GlobalKey<NavigatorState> navigatorKey;
   final Widget child;
   final UpdateCoordinator? initialCoordinator;
+  final InstallationAnalytics? analytics;
   @override
   State<UpdateHost> createState() => _UpdateHostState();
 }
@@ -136,6 +139,7 @@ class _UpdateHostState extends State<UpdateHost> {
           ? NativeUpdateAdapter(config)
           : DesktopVelopackAdapter();
       final identity = await adapter.identity();
+      unawaited(widget.analytics?.initialize(identity));
       final capabilities = await adapter.capabilities();
       final store = await UpdateStore.open();
       final updates = UpdateCoordinator(
@@ -147,6 +151,18 @@ class _UpdateHostState extends State<UpdateHost> {
             ? null
             : UpdateRepository(config, identity, store, proxy: _proxy),
         prepareConnection: widget.app.prepareForUpdate,
+        didApplyUpdate: (_, previous) =>
+            unawaited(widget.analytics?.recordUpdate(previous)),
+        prepareAutomaticConnection: (handoff) =>
+            widget.app.prepareForUpdate(handoff, automatic: true),
+        canAutomaticallyInstall: () =>
+            mounted &&
+            _foreground &&
+            !_open &&
+            widget.app.phase != AuthPhase.booting &&
+            widget.app.connection.status == ConnectionStatus.disconnected &&
+            !widget.app.updatePreparing &&
+            !(widget.navigatorKey.currentState?.canPop() ?? true),
         canPrompt: () =>
             mounted &&
             _foreground &&
