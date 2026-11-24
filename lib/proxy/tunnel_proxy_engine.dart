@@ -15,8 +15,8 @@ import 'system_proxy.dart' show SystemProxyException;
 ///
 /// With a SOCKS5 login the tunnel instead runs in full-device mode: every
 /// packet, TCP and UDP, goes through the gateway (ios/ShifterTunnel/
-/// FullTunnel.swift). Until the production gateway exposes SOCKS5, that login
-/// comes only from a local test build's dart-defines ([_testSocks]).
+/// FullTunnel.swift). For now that login comes only from a local build's
+/// dart-defines ([_testSocks]).
 class TunnelProxyEngine implements ProxyEngine {
   TunnelProxyEngine({this.checkUrl = ipCheckUrl}) {
     _channel.setMethodCallHandler((call) async {

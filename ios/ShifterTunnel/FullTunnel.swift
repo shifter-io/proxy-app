@@ -52,8 +52,8 @@ final class FullTunnel {
         return settings
     }
 
-    /// Checks the login and pins the session to a UDP-capable exit before any
-    /// TCP flows (a first UDP request on a TCP-pinned session moves the exit).
+    /// Checks the login and opens UDP first, so TCP and UDP start on the
+    /// same exit.
     /// Throws `FullTunnel.Rejected` when the gateway refuses the login.
     func prepare(_ login: SocksLogin) async throws {
         try await SocksProbe(login).checkLoginAndWarmUDP()
