@@ -23,10 +23,13 @@ object FullTunnel {
     private const val IPV4 = "198.18.0.1"
     private const val IPV6 = "fc00::1"
 
-    /** Local networks stay direct (printers, casting, the router). */
+    /**
+     * Local networks stay direct (printers, casting, the router). Loopback
+     * never leaves the device, and Android rejects it in routes.
+     */
     private val localNetworks = listOf(
         "10.0.0.0" to 8, "172.16.0.0" to 12, "192.168.0.0" to 16, "169.254.0.0" to 16,
-        "224.0.0.0" to 4, "240.0.0.0" to 4, "127.0.0.0" to 8, "0.0.0.0" to 8,
+        "224.0.0.0" to 4, "240.0.0.0" to 4,
     )
 
     /** Before Android 13 (no excludeRoute): all IPv4 minus [localNetworks]. */
