@@ -8,7 +8,7 @@ import android.os.Build
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
-/** The gateway's SOCKS5 login (same username format as the HTTP gateway). */
+/** The plan's gateway login for full-device mode. */
 data class SocksLogin(val host: String, val port: Int, val username: String, val password: String)
 
 /**
@@ -47,6 +47,11 @@ object VpnBridge {
                             },
                         ),
                         result,
+                    )
+                    // Full-device mode: the local bridge port (the app's exit
+                    // check goes through it) and whether the gateway refused the login.
+                    "status" -> result.success(
+                        mapOf("port" to FullTunnel.bridgePort, "secret" to FullTunnel.bridgeSecret, "rejected" to FullTunnel.rejected),
                     )
                     "stop" -> {
                         ShifterVpnService.running?.shutdown(null)

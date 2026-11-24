@@ -4,19 +4,16 @@ import android.content.Context
 import android.net.IpPrefix
 import android.net.VpnService
 import android.os.Build
-import java.io.DataInputStream
 import java.io.File
-import java.net.DatagramPacket
-import java.net.DatagramSocket
 import java.net.InetAddress
-import java.net.InetSocketAddress
-import java.net.Socket
 
 /**
- * Full-device mode: the VPN routes every IPv4 and IPv6 packet, and
- * [HevTunnel] turns them back into SOCKS5 connections to the gateway, TCP as
- * CONNECT and UDP (QUIC, DNS, calls, games) as UDP ASSOCIATE. Shifter itself
- * is excluded from the VPN, so the engine reaches the gateway directly.
+ * Full-device mode: the VPN routes every IPv4 and IPv6 packet, [HevTunnel]
+ * turns them back into TCP connections, and [GatewayBridge] carries each one
+ * to the gateway over TLS as an HTTP CONNECT with the plan login. DNS is
+ * answered in the engine and resolved by name at the exit. UDP is refused
+ * for now (apps fall back to TCP). Shifter itself is excluded from the VPN,
+ * so the bridge reaches the gateway directly.
  */
 object FullTunnel {
     private const val MTU = 8500
@@ -73,91 +70,82 @@ object FullTunnel {
     }
 
     /**
-     * Checks the login and opens UDP first, so TCP and UDP start on the same
-     * exit. Network I/O: call off the main thread. Throws [Rejected] when the
-     * gateway refuses the login.
+     * Checks that the gateway answers and accepts the plan login, and returns
+     * the bridge to run with. Network I/O: call off the main thread. Throws
+     * [Rejected] when the gateway refuses the login.
      */
-    fun prepare(login: SocksLogin) {
-        Socket().use { control ->
-            control.soTimeout = 10_000
-            control.connect(InetSocketAddress(login.host, login.port), 10_000)
-            val out = control.getOutputStream()
-            val inp = DataInputStream(control.getInputStream())
-            out.write(byteArrayOf(5, 1, 2))
-            val method = ByteArray(2).also { inp.readFully(it) }
-            if (method[1].toInt() != 2) throw IllegalStateException("The Shifter gateway didn't accept the login method.")
-            val user = login.username.toByteArray()
-            val pass = login.password.toByteArray()
-            out.write(byteArrayOf(1, user.size.toByte()) + user + byteArrayOf(pass.size.toByte()) + pass)
-            val auth = ByteArray(2).also { inp.readFully(it) }
-            if (auth[1].toInt() != 0) throw Rejected()
-
-            // UDP ASSOCIATE from 0.0.0.0:0; the reply names the relay.
-            out.write(byteArrayOf(5, 3, 0, 1, 0, 0, 0, 0, 0, 0))
-            val head = ByteArray(4).also { inp.readFully(it) }
-            if (head[1].toInt() != 0) return // No UDP on this exit: TCP still works.
-            val relayHost = when (head[3].toInt()) {
-                1 -> InetAddress.getByAddress(ByteArray(4).also { inp.readFully(it) }).hostAddress!!
-                3 -> String(ByteArray(inp.readUnsignedByte()).also { inp.readFully(it) })
-                else -> return
-            }
-            val relayPort = inp.readUnsignedShort()
-            val relay = InetSocketAddress(if (relayHost == "0.0.0.0") login.host else relayHost, relayPort)
-            DatagramSocket().use { udp ->
-                udp.soTimeout = 3_000
-                // A DNS query for example.com to 1.1.1.1:53, in the SOCKS5 UDP header.
-                val query = byteArrayOf(0x12, 0x34, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 7) + "example".toByteArray() +
-                    byteArrayOf(3) + "com".toByteArray() + byteArrayOf(0, 0, 1, 0, 1)
-                val packet = byteArrayOf(0, 0, 0, 1, 1, 1, 1, 1, 0, 53) + query
-                udp.send(DatagramPacket(packet, packet.size, relay))
-                runCatching { udp.receive(DatagramPacket(ByteArray(1500), 1500)) }
-            }
+    fun prepare(login: SocksLogin): GatewayBridge {
+        val bridge = GatewayBridge(login)
+        if (!bridge.check()) {
+            bridge.stop()
+            throw if (bridge.rejected) Rejected() else IllegalStateException("Couldn't reach Shifter. Check your connection and try again.")
         }
+        return bridge
     }
 
-    /** Starts the engine on the VPN interface [fd]. */
-    fun start(context: Context, login: SocksLogin, fd: Int) {
+    /** Starts [bridge] and the engine on the VPN interface [fd]. */
+    fun start(context: Context, bridge: GatewayBridge, fd: Int) {
         stop()
+        bridge.start()
+        this.bridge = bridge
+        // A fresh placeholder range on every start: addresses apps cached
+        // from the previous run fail instead of reaching another host.
+        mappedRange = (mappedRange + 1) % MAPPED_RANGES.size
         // The engine reads its config from a file; it stays in app-private
         // storage and is removed on stop.
         val config = configFile(context)
-        config.writeText(yaml(login))
+        config.writeText(yaml(bridge.port, bridge.secret, MAPPED_RANGES[mappedRange]))
         config.setReadable(false, false)
         config.setReadable(true, true)
+        lastContext = context.applicationContext
         if (!HevTunnel.TProxyStartService(config.absolutePath, fd)) {
+            stop()
             throw IllegalStateException("Shifter couldn't open the connection. Try again.")
         }
-        lastContext = context.applicationContext
     }
 
-    /** Stops the engine; every connection closes (apps reconnect on the next exit). */
+    /** Stops the engine and the bridge; every connection closes (apps reconnect on the next exit). */
     fun stop() {
         if (HevTunnel.TProxyIsRunning()) HevTunnel.TProxyStopService()
+        bridge?.stop()
+        bridge = null
         lastContext?.let { configFile(it).delete() }
     }
 
+    /** The bridge's local port while connected (the app's exit check uses it). */
+    val bridgePort: Int? get() = bridge?.port
+
+    /** The bridge's per-session secret (the app's exit check presents it). */
+    val bridgeSecret: String? get() = bridge?.secret
+
+    /** True once the gateway refused the plan login while connected. */
+    val rejected: Boolean get() = bridge?.rejected == true
+
+    private var bridge: GatewayBridge? = null
     private var lastContext: Context? = null
+    private var mappedRange = 0
+
+    /** Placeholder ranges for mapped DNS, inside 100.64.0.0/10 (routed into the tunnel). */
+    private val MAPPED_RANGES = listOf("100.64.0.0", "100.80.0.0", "100.96.0.0", "100.112.0.0")
 
     private fun configFile(context: Context) = File(context.noBackupFilesDir, "tunnel.yml")
 
-    private fun quoted(s: String) = "'" + s.replace("'", "''") + "'"
-
-    private fun yaml(login: SocksLogin) = """
+    private fun yaml(bridgePort: Int, secret: String, mappedNetwork: String) = """
         tunnel:
           mtu: $MTU
           ipv4: $IPV4
           ipv6: '$IPV6'
         socks5:
-          address: ${quoted(login.host)}
-          port: ${login.port}
+          address: 127.0.0.1
+          port: $bridgePort
           udp: 'udp'
-          username: ${quoted(login.username)}
-          password: ${quoted(login.password)}
+          username: 'shifter'
+          password: '$secret'
         mapdns:
           address: $MAPPED_DNS
           port: 53
-          network: 100.64.0.0
-          netmask: 255.192.0.0
+          network: $mappedNetwork
+          netmask: 255.240.0.0
           cache-size: 10000
         misc:
           task-stack-size: 81920

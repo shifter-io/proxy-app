@@ -128,16 +128,21 @@ class LocalProxyEngine implements ProxyEngine {
 
 /// Asks the IP service at [url] for the exit address, through the local
 /// proxy on 127.0.0.1:[port].
-Future<ExitInfo> checkExitThrough(int port, String url) => _checkExit(url, 'PROXY 127.0.0.1:$port');
+/// With [secret], it answers the proxy's login challenge (Android's bridge).
+Future<ExitInfo> checkExitThrough(int port, String url, {String? secret}) =>
+    _checkExit(url, 'PROXY 127.0.0.1:$port', proxyLogin: secret == null ? null : (port, secret));
 
 /// Same, without a proxy: for when the whole device (this app included) is
 /// already routed through Shifter.
 Future<ExitInfo> checkExitDirect(String url) => _checkExit(url, 'DIRECT');
 
-Future<ExitInfo> _checkExit(String url, String route) async {
+Future<ExitInfo> _checkExit(String url, String route, {(int, String)? proxyLogin}) async {
   final client = HttpClient()
     ..findProxy = ((_) => route)
     ..connectionTimeout = _ipCheckTimeout;
+  if (proxyLogin case (final port, final secret)) {
+    client.addProxyCredentials('127.0.0.1', port, 'Shifter', HttpClientBasicCredentials('shifter', secret));
+  }
   try {
     final req = await client.getUrl(Uri.parse(url)).timeout(_ipCheckTimeout);
     req.headers.set(HttpHeaders.cacheControlHeader, 'no-store');

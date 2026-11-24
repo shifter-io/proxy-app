@@ -107,6 +107,7 @@ class ShifterVpnService : VpnService() {
         Thread {
             val prepared = runCatching { FullTunnel.prepare(login) }
             main.post {
+                val bridge = prepared.getOrNull()
                 val error = prepared.exceptionOrNull()?.let { it.message ?: "Could not reach Shifter." } ?: try {
                     if (!full || tun == null) {
                         val pfd = FullTunnel.configure(Builder())
@@ -121,10 +122,11 @@ class ShifterVpnService : VpnService() {
                         full = true
                     }
                     // New location or New IP: restart the engine so every app reconnects on the new exit.
-                    FullTunnel.start(this, login, tun!!.fd)
+                    FullTunnel.start(this, bridge!!, tun!!.fd)
                     goForeground()
                     null
                 } catch (e: Exception) {
+                    bridge?.stop()
                     e.message ?: "Could not start the connection."
                 }
                 VpnBridge.started(error)
