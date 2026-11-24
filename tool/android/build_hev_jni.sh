@@ -38,6 +38,7 @@ done
 mkdir -p "$ROOT/android/app/src/main/jniLibs/licenses"
 cp LICENSE "$ROOT/android/app/src/main/jniLibs/licenses/LICENSE-hev-socks5-tunnel"
 cp third-part/lwip/LICENSE "$ROOT/android/app/src/main/jniLibs/licenses/LICENSE-lwip"
-cp third-part/yaml/LICENSE "$ROOT/android/app/src/main/jniLibs/licenses/LICENSE-libyaml"
+# The fork's LICENSE omits the original libyaml authors; keep their notice.
+{ printf 'Copyright (c) 2017-2020 Ingy d\303\266t Net\nCopyright (c) 2006-2016 Kirill Simonov\n'; cat third-part/yaml/LICENSE; } > "$ROOT/android/app/src/main/jniLibs/licenses/LICENSE-libyaml"
 cp third-part/hev-task-system/LICENSE "$ROOT/android/app/src/main/jniLibs/licenses/LICENSE-hev-task-system"
 echo "Built hev-socks5-tunnel $HEV_COMMIT for $ABIS"

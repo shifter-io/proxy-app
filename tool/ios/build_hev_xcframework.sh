@@ -52,6 +52,7 @@ xcodebuild -create-xcframework \
   -output "$OUT" >/dev/null
 cp LICENSE "$OUT/LICENSE-hev-socks5-tunnel"
 cp third-part/lwip/LICENSE "$OUT/LICENSE-lwip"
-cp third-part/yaml/LICENSE "$OUT/LICENSE-libyaml"
+# The fork's LICENSE omits the original libyaml authors; keep their notice.
+{ printf 'Copyright (c) 2017-2020 Ingy d\303\266t Net\nCopyright (c) 2006-2016 Kirill Simonov\n'; cat third-part/yaml/LICENSE; } > "$OUT/LICENSE-libyaml"
 cp third-part/hev-task-system/LICENSE "$OUT/LICENSE-hev-task-system"
 echo "Built $OUT ($HEV_COMMIT)"
