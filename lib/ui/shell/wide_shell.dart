@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/format.dart';
 import '../../data/models.dart';
+import '../../i18n/i18n.dart';
 import '../../state/app_controller.dart';
 import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
@@ -86,13 +87,13 @@ class _ConnectSection extends StatelessWidget {
         Positioned.fill(child: Atmosphere(connected: connected)),
         Column(children: [
           SfTopBar(
-            title: m.teamName == null ? 'Connect' : null,
+            title: m.teamName == null ? tr('Connect') : null,
             leading: m.teamName == null ? null : Align(
               alignment: Alignment.centerLeft,
               child: MembershipTitle(m, style: SfText.title),
             ),
             large: true,
-            actions: [SfPill(m.type == ProductType.isp ? 'ISP' : 'Residential', tone: m.type == ProductType.isp ? SfTone.neutral : SfTone.info, xs: false)],
+            actions: [SfPill(m.type == ProductType.isp ? 'ISP' : tr('Residential'), tone: m.type == ProductType.isp ? SfTone.neutral : SfTone.info, xs: false)],
           ),
           Expanded(
             child: LayoutBuilder(builder: (context, inner) {
@@ -155,11 +156,11 @@ class _ConnectSection extends StatelessWidget {
 
 // ── Navigation ──────────────────────────────────────────────────────────
 
-const _nav = [
-  (Section.connect, SfIcons.power, 'Connect'),
-  (Section.plans, SfIcons.layers, 'Plans'),
-  (Section.settings, SfIcons.settings, 'Settings'),
-];
+List<(Section, SfIcons, String)> get _nav => [
+      (Section.connect, SfIcons.power, tr('Connect')),
+      (Section.plans, SfIcons.layers, tr('Plans')),
+      (Section.settings, SfIcons.settings, tr('Settings')),
+    ];
 
 class _Sidebar extends StatelessWidget {
   const _Sidebar({required this.section, required this.onSelect});
@@ -263,9 +264,9 @@ class _PlanMiniCard extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Row(children: [
-          Text('MEMBERSHIP', style: SfText.label.copyWith(fontSize: 9.5)),
+          Text(tr('Membership').toUpperCase(), style: SfText.label.copyWith(fontSize: 9.5)),
           const Spacer(),
-          if (onTap != null) Text('Switch', style: SfText.micro.copyWith(color: Sf.accentLight, fontWeight: FontWeight.w500)),
+          if (onTap != null) Text(tr('Switch'), style: SfText.micro.copyWith(color: Sf.accentLight, fontWeight: FontWeight.w500)),
         ]),
         const SizedBox(height: 8),
         SfSwitcher(
@@ -281,11 +282,11 @@ class _PlanMiniCard extends StatelessWidget {
           if (trafficLeft(mm) case final t?) ...[
             SfProgressBar(key: ValueKey('bar${m.id}'), ratio: t.ratio, height: 4),
             const SizedBox(height: 7),
-            Text('${formatBytes(t.left)} left of ${formatBytes(t.total, digits: 0)}', style: SfText.micro.copyWith(fontSize: 12)),
+            Text(trf('{left} left of {total}', {'left': formatBytes(t.left), 'total': formatBytes(t.total, digits: 0)}), style: SfText.micro.copyWith(fontSize: 12)),
           ] else
-            Text('Traffic usage not available yet', style: SfText.micro.copyWith(fontSize: 12))
+            Text(tr('Traffic usage not available yet'), style: SfText.micro.copyWith(fontSize: 12))
         else
-          Text('${(mm as IspMembership).ipCount} static IPs · unlimited', style: SfText.micro.copyWith(fontSize: 12)),
+          Text(trf('{n} static IPs · unlimited', {'n': (mm as IspMembership).ipCount}), style: SfText.micro.copyWith(fontSize: 12)),
       ]),
     );
   }
@@ -301,10 +302,10 @@ class _StatusChip extends StatelessWidget {
     final app = AppScope.of(context);
     final c = app.connection;
     final (color, label) = switch (c.status) {
-      ConnectionStatus.connected => (Sf.success, 'Connected'),
-      ConnectionStatus.connecting => (Sf.accentLight, 'Connecting…'),
-      ConnectionStatus.error => (Sf.danger, 'Failed'),
-      ConnectionStatus.disconnected => (Sf.textMuted, 'Not connected'),
+      ConnectionStatus.connected => (Sf.success, tr('Connected')),
+      ConnectionStatus.connecting => (Sf.accentLight, tr('Connecting…')),
+      ConnectionStatus.error => (Sf.danger, tr('Failed')),
+      ConnectionStatus.disconnected => (Sf.textMuted, tr('Not connected')),
     };
     final dot = AnimatedContainer(
       duration: Sf.medium,

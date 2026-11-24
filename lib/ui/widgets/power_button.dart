@@ -7,6 +7,7 @@ import '../../data/models.dart';
 import '../../theme/tokens.dart';
 import 'icons.dart';
 import 'ambient_motion.dart';
+import '../../i18n/i18n.dart';
 
 /// The big connect button. Blue at rest, an orbiting arc while connecting,
 /// green with expanding rings once connected (`sf-ring`).
@@ -68,7 +69,7 @@ class _PowerButtonState extends State<PowerButton> with TickerProviderStateMixin
 
     return Semantics(
       button: true,
-      label: connected || connecting ? 'Disconnect' : 'Connect',
+      label: connected || connecting ? tr('Disconnect') : tr('Connect'),
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
         child: GestureDetector(

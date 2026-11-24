@@ -12,6 +12,8 @@ dependencies:
   ffi: ^2.2.0
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   flutter_secure_storage: ^11.2.0
   flutter_svg: ^2.0.17
   package_info_plus: ^10.2.2
@@ -33,6 +35,7 @@ flutter:
     - assets/brand/
     - assets/flags/
     - assets/geo/
+    - assets/i18n/
   fonts:
     - family: Geist
       fonts:

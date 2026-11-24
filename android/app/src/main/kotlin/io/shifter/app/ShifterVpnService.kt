@@ -169,13 +169,13 @@ class ShifterVpnService : VpnService() {
     private fun goForeground() {
         val manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(
-            NotificationChannel(NOTIFICATION_CHANNEL, "Connection", NotificationManager.IMPORTANCE_LOW),
+            NotificationChannel(NOTIFICATION_CHANNEL, getString(R.string.notification_channel), NotificationManager.IMPORTANCE_LOW),
         )
         val notification = Notification.Builder(this, NOTIFICATION_CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_shifter)
-            .setContentTitle("Connected through Shifter")
+            .setContentTitle(getString(R.string.notification_title))
             .setContentText(
-                if (full) "All apps go through your Shifter location." else "Apps that use the system proxy go through your Shifter location.",
+                getString(if (full) R.string.notification_text_full else R.string.notification_text_proxy),
             )
             .setContentIntent(openApp())
             .setOngoing(true)

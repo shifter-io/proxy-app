@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../../data/format.dart';
 import '../../../data/models.dart';
+import '../../../i18n/i18n.dart';
 import '../../../state/app_controller.dart';
 import '../../../theme/tokens.dart';
 import '../../widgets/icons.dart';
@@ -44,22 +45,22 @@ class _IspPickerState extends State<IspPicker> {
       background: widget.embedded ? Colors.transparent : Sf.bgDeepest,
       header: Column(children: [
         SfTopBar(
-          title: 'Choose an IP',
+          title: tr('Choose an IP'),
           onBack: widget.onBack,
           border: false,
-          actions: [Padding(padding: const EdgeInsets.only(right: 6), child: SfPill('${widget.m.ipCount} IPs'))],
+          actions: [Padding(padding: const EdgeInsets.only(right: 6), child: SfPill(trf('{n} IPs', {'n': widget.m.ipCount})))],
         ),
         Padding(
           padding: EdgeInsets.fromLTRB(pad, 4, pad, 10),
           child: Column(children: [
-            SfSearchField(value: query, onChanged: (v) => setState(() => query = v), hint: 'Search city, carrier or ASN'),
+            SfSearchField(value: query, onChanged: (v) => setState(() => query = v), hint: tr('Search city, carrier or ASN')),
             if (widget.m.countries.length > 1) ...[
               const SizedBox(height: 10),
               SfSegmented<String>(
                 value: country,
                 onChanged: (c) => setState(() => country = c),
                 options: [
-                  ('all', const Text('All')),
+                  ('all', Text(tr('All'))),
                   for (final c in widget.m.countries)
                     (c, Row(mainAxisSize: MainAxisSize.min, children: [SfFlag(c, width: 16), const SizedBox(width: 6), Text(c.toUpperCase())])),
                 ],
@@ -82,7 +83,7 @@ class _IspPickerState extends State<IspPicker> {
             groups.putIfAbsent('${ip.country}|${ip.city ?? ''}', () => []).add(ip);
           }
           if (groups.isEmpty) {
-            return ListView(children: const [EmptyState(icon: SfIcons.search, title: 'No IPs match', body: 'Try a different city, carrier or ASN.')]);
+            return ListView(children: [EmptyState(icon: SfIcons.search, title: tr('No IPs match'), body: tr('Try a different city, carrier or ASN.'))]);
           }
           var i = 0;
           return ListView(

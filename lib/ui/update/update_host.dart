@@ -16,6 +16,7 @@ import '../../update/update_models.dart';
 import '../../update/update_repository.dart';
 import '../../update/update_store.dart';
 import 'update_panel.dart';
+import '../../i18n/i18n.dart';
 
 class UpdateScope extends InheritedWidget {
   const UpdateScope({
@@ -89,7 +90,7 @@ class _UpdateHostState extends State<UpdateHost> {
     } else if (widget.enabled) {
       unawaited(_initialize());
     } else {
-      _problem = 'Updates are available in installed Shifter releases.';
+      _problem = tr('Updates are available in installed Shifter releases.');
     }
     _lifecycle = AppLifecycleListener(
       onResume: () {
@@ -110,8 +111,8 @@ class _UpdateHostState extends State<UpdateHost> {
     if (app.phase == AuthPhase.booting ||
         app.isConnecting ||
         app.connection.status == ConnectionStatus.error) {
-      throw const UpdateFailure(
-        'Wait for the connection to settle before checking for updates.',
+      throw UpdateFailure(
+        tr('Wait for the connection to settle before checking for updates.'),
       );
     }
     if (!app.isConnected) return 'DIRECT';
@@ -122,8 +123,8 @@ class _UpdateHostState extends State<UpdateHost> {
         ? engine.port
         : null;
     if (port == null) {
-      throw const UpdateFailure(
-        'The active proxy is unavailable. Retry after disconnecting.',
+      throw UpdateFailure(
+        tr('The active proxy is unavailable. Retry after disconnecting.'),
       );
     }
     return 'PROXY 127.0.0.1:$port';
@@ -182,7 +183,7 @@ class _UpdateHostState extends State<UpdateHost> {
     } catch (_) {
       if (mounted) {
         setState(() {
-          _problem = 'Update information is unavailable for this build.';
+          _problem = tr('Update information is unavailable for this build.');
         });
       }
     }
@@ -277,7 +278,7 @@ class _UpdateHostState extends State<UpdateHost> {
             dismissible:
                 !_required && _updates?.phase != UpdatePhase.preparingInstall,
             onDismiss: _required ? null : _close,
-            semanticsLabel: _required ? null : 'Close app updates',
+            semanticsLabel: _required ? null : tr('Close app updates'),
           ),
           SafeArea(
             child: Center(
@@ -300,7 +301,7 @@ class _UpdateHostState extends State<UpdateHost> {
                     child: Semantics(
                       scopesRoute: true,
                       namesRoute: true,
-                      label: _required ? 'Update required' : 'App updates',
+                      label: _required ? tr('Update required') : tr('App updates'),
                       explicitChildNodes: true,
                       child: Dialog(
                         backgroundColor: Sf.bgElevated,

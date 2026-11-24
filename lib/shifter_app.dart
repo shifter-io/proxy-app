@@ -4,10 +4,12 @@ import 'dart:ui' show AppExitResponse;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'data/http_api.dart';
 import 'data/models.dart';
 import 'data/store.dart';
+import 'i18n/i18n.dart';
 import 'proxy/proxy_engine.dart';
 import 'state/app_controller.dart';
 import 'theme/theme.dart';
@@ -40,9 +42,18 @@ class ShifterApp extends StatefulWidget {
   State<ShifterApp> createState() => _ShifterAppState();
 }
 
-class _ShifterAppState extends State<ShifterApp> {
+class _ShifterAppState extends State<ShifterApp> with WidgetsBindingObserver {
   late final AppController controller = _create();
   AppLifecycleListener? _lifecycle;
+
+  /// The device language changed: load that catalog and rebuild every screen.
+  @override
+  void didChangeLocales(List<Locale>? locales) {
+    if (locales == null) return;
+    I18n.load(preferred: locales).then((changed) {
+      if (changed && mounted) setState(() {});
+    });
+  }
   bool get _desktopUpdates =>
       Platform.isWindows || Platform.isMacOS || Platform.isLinux;
   static const _desktop = MethodChannel('io.shifter.desktop');
@@ -51,10 +62,10 @@ class _ShifterAppState extends State<ShifterApp> {
 
   void _sendConnectionState() {
     final status = switch (controller.connection.status) {
-      ConnectionStatus.connected => 'Connected',
-      ConnectionStatus.connecting => 'Connecting',
-      ConnectionStatus.disconnected => 'Disconnected',
-      ConnectionStatus.error => 'Connection error',
+      ConnectionStatus.connected => tr('Connected'),
+      ConnectionStatus.connecting => tr('Connecting'),
+      ConnectionStatus.disconnected => tr('Disconnected'),
+      ConnectionStatus.error => tr('Connection error'),
     };
     unawaited(
       _desktop
@@ -91,6 +102,7 @@ class _ShifterAppState extends State<ShifterApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     if (_desktopEnabled) {
       _desktop.setMethodCallHandler((call) async {
         switch (call.method) {
@@ -129,6 +141,7 @@ class _ShifterAppState extends State<ShifterApp> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     if (_desktopEnabled) {
       controller.removeListener(_sendConnectionState);
       _desktop.setMethodCallHandler(null);
@@ -145,7 +158,12 @@ class _ShifterAppState extends State<ShifterApp> {
     return AppScope(
       controller: controller,
       child: MaterialApp(
+        // A new key per language rebuilds every screen with the new strings.
+        key: ValueKey(I18n.code),
         title: 'Shifter',
+        locale: I18n.locale,
+        supportedLocales: I18n.supportedLocales,
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
         navigatorKey: _navigatorKey,
         debugShowCheckedModeBanner: false,
         theme: buildShifterTheme(),

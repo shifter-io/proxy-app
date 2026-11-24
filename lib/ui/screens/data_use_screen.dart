@@ -7,6 +7,7 @@ import '../../theme/tokens.dart';
 import '../links.dart';
 import '../widgets/icons.dart';
 import '../widgets/primitives.dart';
+import '../../i18n/i18n.dart';
 
 /// Shown once on a phone, the first time the user taps Connect, before the
 /// system asks to add the VPN configuration. App Store guideline 5.4 and
@@ -28,20 +29,20 @@ class DataUseScreen extends StatelessWidget {
     final points = <(SfIcons, String, String)>[
       (
         SfIcons.lock,
-        'Encrypted by default',
-        'All traffic between this device and Shifter is encrypted.',
+        tr('Encrypted by default'),
+        tr('All traffic between this device and Shifter is encrypted.'),
       ),
       (
         SfIcons.key,
-        'Only your API key',
+        tr('Only your API key'),
         ios
-            ? 'Kept in the Keychain on this device and sent only to Shifter, to load your plans.'
-            : 'Kept encrypted on this device and sent only to Shifter, to load your plans.',
+            ? tr('Kept in the Keychain on this device and sent only to Shifter, to load your plans.')
+            : tr('Kept encrypted on this device and sent only to Shifter, to load your plans.'),
       ),
       (
         SfIcons.shieldCheck,
-        'Never sold or shared',
-        'Shifter does not sell or share your traffic, or use it for anything else.',
+        tr('Never sold or shared'),
+        tr('Shifter does not sell or share your traffic, or use it for anything else.'),
       ),
     ];
     return Scaffold(
@@ -65,12 +66,12 @@ class DataUseScreen extends StatelessWidget {
                           child: Glyph(size: 30),
                         ),
                         const SizedBox(height: 18),
-                        Text('Before you connect', style: SfText.title),
+                        Text(tr('Before you connect'), style: SfText.title),
                         const SizedBox(height: 10),
                         Text(
                           ios
-                              ? 'Shifter adds a VPN configuration to this device so your apps reach the internet through your Shifter plan.'
-                              : "Shifter uses Android's VPN service so your apps reach the internet through your Shifter plan.",
+                              ? tr('Shifter adds a VPN configuration to this device so your apps reach the internet through your Shifter plan.')
+                              : tr("Shifter uses Android's VPN service so your apps reach the internet through your Shifter plan."),
                           style: SfText.bodyMuted.copyWith(
                             fontSize: 14.5,
                             color: Sf.textSecondary,
@@ -116,7 +117,7 @@ class DataUseScreen extends StatelessWidget {
                         const Spacer(),
                         const SizedBox(height: 22),
                         SfButton(
-                          label: const Text('Allow and connect'),
+                          label: Text(tr('Allow and connect')),
                           expand: true,
                           large: true,
                           onPressed: onAccept,
@@ -124,7 +125,7 @@ class DataUseScreen extends StatelessWidget {
                         const SizedBox(height: 12),
                         Center(
                           child: SfLinkButton(
-                            text: 'Privacy policy',
+                            text: tr('Privacy policy'),
                             onTap: () =>
                                 openExternal(context, ShifterUrls.privacy),
                           ),
@@ -132,8 +133,8 @@ class DataUseScreen extends StatelessWidget {
                         const SizedBox(height: 10),
                         Text(
                           ios
-                              ? 'Next, iOS asks to add the VPN configuration. Tap Allow.'
-                              : 'Next, Android asks to allow the connection request. Tap OK.',
+                              ? tr('Next, iOS asks to add the VPN configuration. Tap Allow.')
+                              : tr('Next, Android asks to allow the connection request. Tap OK.'),
                           textAlign: TextAlign.center,
                           style: SfText.micro.copyWith(fontSize: 12),
                         ),

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../data/api.dart';
+import '../../i18n/i18n.dart';
 import '../../state/app_controller.dart';
 import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
@@ -78,13 +79,13 @@ class _WideLogin extends StatelessWidget {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 const Wordmark(height: 28),
                 const Spacer(),
-                const FadeSlideIn(child: SfEyebrow('Proxy & VPN')),
+                FadeSlideIn(child: SfEyebrow(tr('Proxy & VPN'))),
                 const SizedBox(height: 22),
                 FadeSlideIn(
                   delay: const Duration(milliseconds: 60),
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 520),
-                    child: Text('Browse from anywhere with your Shifter proxies', style: SfText.display.copyWith(fontSize: 40, height: 1.1, letterSpacing: -1.2)),
+                    child: Text(tr('Browse from anywhere with your Shifter proxies'), style: SfText.display.copyWith(fontSize: 40, height: 1.1, letterSpacing: -1.2)),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -93,16 +94,16 @@ class _WideLogin extends StatelessWidget {
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 480),
                     child: Text(
-                      'Route this device through your Residential and ISP plans. Pick a country, state, city or carrier and connect in one tap.',
+                      tr('Route this device through your Residential and ISP plans. Pick a country, state, city or carrier and connect in one tap.'),
                       style: SfText.bodyMuted.copyWith(fontSize: 15.5),
                     ),
                   ),
                 ),
                 const SizedBox(height: 34),
-                for (final (i, (icon, title, body)) in const [
-                  (SfIcons.globe, 'Precise targeting', 'Country, state, city and ISP on Full Geo plans.'),
-                  (SfIcons.clock, 'Sticky or rotating IPs', 'Keep one IP for a session or get a new one per request.'),
-                  (SfIcons.shieldCheck, 'No leaks', 'DNS resolves at your exit; UDP is blocked so WebRTC can’t expose you.'),
+                for (final (i, (icon, title, body)) in [
+                  (SfIcons.globe, tr('Precise targeting'), tr('Country, state, city and ISP on Full Geo plans.')),
+                  (SfIcons.clock, tr('Sticky or rotating IPs'), tr('Keep one IP for a session or get a new one per request.')),
+                  (SfIcons.shieldCheck, tr('No leaks'), tr('DNS resolves at your exit; UDP is blocked so WebRTC can’t expose you.')),
                 ].indexed)
                   FadeSlideIn(
                     delay: Duration(milliseconds: 180 + 70 * i),
@@ -190,9 +191,9 @@ class _LoginFormState extends State<_LoginForm> with SingleTickerProviderStateMi
 
   Future<void> _verify(String raw) async {
     final value = raw.trim();
-    if (value.isEmpty) return _fail('Paste your API key to continue.');
+    if (value.isEmpty) return _fail(tr('Paste your API key to continue.'));
     if (!apiKeyPattern.hasMatch(value)) {
-      return _fail("That doesn't look like a Shifter API key. Copy it again from your dashboard.");
+      return _fail(tr("That doesn't look like a Shifter API key. Copy it again from your dashboard."));
     }
     FocusScope.of(context).unfocus();
     setState(() {
@@ -211,7 +212,7 @@ class _LoginFormState extends State<_LoginForm> with SingleTickerProviderStateMi
       if (!mounted) return;
       setState(() => _phase = _Phase.idle);
       _fail(e.unauthorized
-          ? 'This API key is not valid. It may have been regenerated. Copy the current one from your dashboard.'
+          ? tr('This API key is not valid. It may have been regenerated. Copy the current one from your dashboard.')
           : e.message);
     }
   }
@@ -238,11 +239,11 @@ class _LoginFormState extends State<_LoginForm> with SingleTickerProviderStateMi
       FadeSlideIn(
         delay: const Duration(milliseconds: 60),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const SfEyebrow('Proxy & VPN'),
+          SfEyebrow(tr('Proxy & VPN')),
           const SizedBox(height: 18),
-          Text('Connect your Shifter account', style: SfText.title.copyWith(fontSize: context.isNarrow ? 21 : 24)),
+          Text(tr('Connect your Shifter account'), style: SfText.title.copyWith(fontSize: context.isNarrow ? 21 : 24)),
           const SizedBox(height: 10),
-          Text('Paste your API key to load your Residential and ISP plans.', style: SfText.bodyMuted),
+          Text(tr('Paste your API key to load your Residential and ISP plans.'), style: SfText.bodyMuted),
         ]),
       ),
       const SizedBox(height: 28),
@@ -285,16 +286,16 @@ class _LoginFormState extends State<_LoginForm> with SingleTickerProviderStateMi
                     _lastLen = v.length;
                   },
                   style: SfText.mono.copyWith(fontSize: 14.5, letterSpacing: _reveal ? 0 : 1.5),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     isDense: true,
                     border: InputBorder.none,
-                    hintText: 'Enter your API key',
-                    hintStyle: TextStyle(fontFamily: kSans, fontSize: 15, color: Color(0x59FFFFFF), letterSpacing: 0),
+                    hintText: tr('Enter your API key'),
+                    hintStyle: const TextStyle(fontFamily: kSans, fontSize: 15, color: Color(0x59FFFFFF), letterSpacing: 0),
                   ),
                 ),
               ),
-              SfIconButton(icon: _reveal ? SfIcons.eyeOff : SfIcons.eye, tooltip: _reveal ? 'Hide key' : 'Show key', size: 38, iconSize: 17, onTap: busy ? null : () => setState(() => _reveal = !_reveal)),
-              SfIconButton(icon: SfIcons.clipboard, tooltip: 'Paste from clipboard', size: 38, iconSize: 17, onTap: busy ? null : _paste),
+              SfIconButton(icon: _reveal ? SfIcons.eyeOff : SfIcons.eye, tooltip: _reveal ? tr('Hide key') : tr('Show key'), size: 38, iconSize: 17, onTap: busy ? null : () => setState(() => _reveal = !_reveal)),
+              SfIconButton(icon: SfIcons.clipboard, tooltip: tr('Paste from clipboard'), size: 38, iconSize: 17, onTap: busy ? null : _paste),
               const SizedBox(width: 6),
             ]),
           ),
@@ -314,7 +315,7 @@ class _LoginFormState extends State<_LoginForm> with SingleTickerProviderStateMi
                   ),
           ),
         ),
-        SfLinkButton(text: 'Where do I find it?', onTap: () => openExternal(context, ShifterUrls.apiKey), fontSize: 13),
+        SfLinkButton(text: tr('Where do I find it?'), onTap: () => openExternal(context, ShifterUrls.apiKey), fontSize: 13),
       ]),
       const SizedBox(height: 14),
       SfButton(
@@ -325,20 +326,20 @@ class _LoginFormState extends State<_LoginForm> with SingleTickerProviderStateMi
         label: SfSwitcher(
           duration: const Duration(milliseconds: 220),
           child: switch (_phase) {
-            _Phase.idle => const Row(key: ValueKey('i'), mainAxisSize: MainAxisSize.min, children: [
-                Text('Continue'),
-                SizedBox(width: 8),
-                SfIcon(SfIcons.arrowRight, size: 16, color: Colors.white, strokeWidth: 2.2),
+            _Phase.idle => Row(key: const ValueKey('i'), mainAxisSize: MainAxisSize.min, children: [
+                Text(tr('Continue')),
+                const SizedBox(width: 8),
+                const SfIcon(SfIcons.arrowRight, size: 16, color: Colors.white, strokeWidth: 2.2),
               ]),
-            _Phase.verifying => const Row(key: ValueKey('v'), mainAxisSize: MainAxisSize.min, children: [
-                Text('Verifying key'),
-                SizedBox(width: 10),
-                SfSpinner(size: 15, color: Colors.white),
+            _Phase.verifying => Row(key: const ValueKey('v'), mainAxisSize: MainAxisSize.min, children: [
+                Text(tr('Verifying key')),
+                const SizedBox(width: 10),
+                const SfSpinner(size: 15, color: Colors.white),
               ]),
-            _Phase.verified => const Row(key: ValueKey('ok'), mainAxisSize: MainAxisSize.min, children: [
-                PopIn(child: SfIcon(SfIcons.check, size: 17, color: Colors.white, strokeWidth: 3)),
-                SizedBox(width: 8),
-                Text('Verified'),
+            _Phase.verified => Row(key: const ValueKey('ok'), mainAxisSize: MainAxisSize.min, children: [
+                const PopIn(child: SfIcon(SfIcons.check, size: 17, color: Colors.white, strokeWidth: 3)),
+                const SizedBox(width: 8),
+                Text(tr('Verified')),
               ]),
           },
         ),
@@ -349,33 +350,33 @@ class _LoginFormState extends State<_LoginForm> with SingleTickerProviderStateMi
         const Expanded(child: Divider(color: Sf.borderSubtle, height: 1)),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Text('NEW TO SHIFTER?', style: SfText.label.copyWith(fontSize: 10, letterSpacing: 2)),
+          child: Text(tr('New to Shifter?').toUpperCase(), style: SfText.label.copyWith(fontSize: 10, letterSpacing: 2)),
         ),
         const Expanded(child: Divider(color: Sf.borderSubtle, height: 1)),
       ]),
       const SizedBox(height: 22),
       SfButton(
-        label: const Text('Create a free account'),
+        label: Text(tr('Create a free account')),
         trailing: const SfIcon(SfIcons.external, size: 15, color: Sf.textTertiary),
         variant: SfButtonVariant.ghost,
         expand: true,
         onPressed: () => openExternal(context, ShifterUrls.register),
       ),
       const SizedBox(height: 12),
-      Text('Sign up, then copy your key from Profile → API Key.', textAlign: TextAlign.center, style: SfText.micro.copyWith(fontSize: 12.5)),
+      Text(tr('Sign up, then copy your key from Profile → API Key.'), textAlign: TextAlign.center, style: SfText.micro.copyWith(fontSize: 12.5)),
       ],
       const SizedBox(height: 10),
       if (widget.showWordmark) const Spacer(),
       const SizedBox(height: 24),
       if (UpdateScope.of(context) case final updates?)
-        TextButton(onPressed: updates.open, child: const Text('About / App updates')),
+        TextButton(onPressed: updates.open, child: Text(tr('About / App updates'))),
       Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         const SfIcon(SfIcons.lock, size: 13, color: Sf.textMuted),
         const SizedBox(width: 6),
-        Flexible(child: Text('Your key is stored only on this device.', style: SfText.micro)),
+        Flexible(child: Text(tr('Your key is stored only on this device.'), style: SfText.micro)),
       ]),
       const SizedBox(height: 6),
-      SfLinkButton(text: 'Privacy policy', onTap: () => openExternal(context, ShifterUrls.privacy), fontSize: 12.5),
+      SfLinkButton(text: tr('Privacy policy'), onTap: () => openExternal(context, ShifterUrls.privacy), fontSize: 12.5),
     ]);
   }
 

@@ -1,0 +1,87 @@
+# Catalog keys that are not a literal tr('...') call: text shown through
+# tr(variable). Keep this list in sync when these texts change.
+
+# Android and iOS connection errors (shown through SystemProxyException).
+Shifter refused the plan login. Check the plan in your Shifter account.
+Couldn't reach Shifter. Check your connection and try again.
+Shifter couldn't open the connection. Try again.
+Shifter isn't allowed to connect. Tap Connect and choose OK.
+Could not start the connection.
+Could not reach Shifter.
+Connecting needs Android 10 or newer.
+Open Shifter to allow the connection.
+Cancelled.
+Shifter needs your permission to route other apps. Tap Connect and choose OK.
+Could not set up the connection.
+Open Shifter and tap Connect.
+Shifter needs your permission to add a VPN configuration. Tap Connect and choose Allow.
+The connection didn't start. Try again.
+The connection has not stopped. Retry before installing an update.
+
+# Month names in formatDate (lib/data/format.dart).
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+
+# System proxy errors (lib/proxy/), shown through tr(message).
+Could not confirm restored proxy bypass settings.
+Could not confirm restored proxy settings.
+Could not remove proxy setting.
+No active network connection found.
+This Linux desktop has no GNOME proxy settings (gsettings).
+
+# Desktop update capability reasons (lib/update/adapters/desktop_velopack.dart).
+Install a packaged Shifter release to enable updates.
+Move Shifter to a writable folder or download a newer AppImage.
+
+# Update errors (UpdateFailure messages in lib/update/).
+Could not secure update staging.
+Download canceled.
+Download the update again.
+Invalid manual download.
+Invalid release identity.
+Invalid release metadata.
+Invalid required update policy.
+Invalid stable release version.
+Invalid update artifact.
+Invalid update sequence.
+Required update policy is too large.
+Required updates need an HTTPS policy URL.
+The download link could not be opened.
+The update download destination is occupied.
+The update download is incomplete.
+The update exceeds its declared size.
+The update publisher is not trusted.
+The update signature is invalid.
+The update size is incorrect.
+This release was withdrawn.
+Unexpected update origin.
+Unsafe update artifact path.
+Unsafe update lock.
+Unsafe update staging directory.
+Update metadata is too large.
+Update signing keys are not configured.
+Updates require a configured HTTPS origin.
+
+# Passed to helpers that call tr() themselves (location picker labels) and
+# fallbacks inside tr(x ?? '...').
+Recent
+Popular
+All countries
+States
+Cities
+ISP
+No states match your search.
+No cities match your search.
+No ISPs match your search.
+Update information is loading…
+Could not check for updates. Please retry.
