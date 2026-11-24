@@ -34,7 +34,8 @@ final class FullTunnel {
     ]
 
     static func settings(for login: SocksLogin) -> NEPacketTunnelNetworkSettings {
-        let settings = NEPacketTunnelNetworkSettings(tunnelRemoteAddress: login.host)
+        // iOS wants an IP address here, not a host name.
+        let settings = NEPacketTunnelNetworkSettings(tunnelRemoteAddress: ipv4Address(of: login.host) ?? "127.0.0.1")
         settings.mtu = NSNumber(value: mtu)
         let ipv4 = NEIPv4Settings(addresses: [tunnelIPv4], subnetMasks: ["255.255.255.0"])
         ipv4.includedRoutes = [NEIPv4Route.default()]
@@ -126,6 +127,19 @@ final class FullTunnel {
     }
 
     private static func yaml(_ s: String) -> String { s.replacingOccurrences(of: "'", with: "''") }
+
+    /// The gateway's first IPv4 address (the host itself when it already is one).
+    private static func ipv4Address(of host: String) -> String? {
+        var hints = addrinfo(ai_flags: 0, ai_family: AF_INET, ai_socktype: SOCK_STREAM, ai_protocol: 0,
+                             ai_addrlen: 0, ai_canonname: nil, ai_addr: nil, ai_next: nil)
+        var result: UnsafeMutablePointer<addrinfo>?
+        guard getaddrinfo(host, nil, &hints, &result) == 0, let first = result else { return nil }
+        defer { freeaddrinfo(result) }
+        var addr = first.pointee.ai_addr.withMemoryRebound(to: sockaddr_in.self, capacity: 1) { $0.pointee.sin_addr }
+        var buf = [CChar](repeating: 0, count: Int(INET_ADDRSTRLEN))
+        guard inet_ntop(AF_INET, &addr, &buf, socklen_t(INET_ADDRSTRLEN)) != nil else { return nil }
+        return String(cString: buf)
+    }
 
     // ── The utun file descriptor ─────────────────────────────────────────
 
