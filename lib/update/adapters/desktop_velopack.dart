@@ -5,6 +5,7 @@ import 'dart:isolate';
 
 import 'package:ffi/ffi.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:win32/win32.dart' show OsVersion;
 
 import '../update_models.dart';
 import 'update_adapter.dart';
@@ -73,11 +74,8 @@ class DesktopVelopackAdapter implements UpdateAdapter {
       ])).stdout.toString().trim();
     }
     if (Platform.isWindows) {
-      os =
-          RegExp(r'\d+\.\d+\.\d+')
-              .firstMatch(Platform.operatingSystemVersion)
-              ?.group(0) ??
-          os;
+      final windowsVersion = OsVersion.current;
+      os = '${windowsVersion.major}.${windowsVersion.minor}.${windowsVersion.build}';
     }
     if (Platform.isLinux) {
       final kernel = await Process.run('uname', ['-r']);
