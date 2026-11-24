@@ -165,10 +165,13 @@ final class FullTunnel {
     }
 
     /// sys/kern_control.h, which the iOS SDK doesn't ship.
+    /// 100 bytes, 4-byte aligned, exactly like the C struct (an 8-byte field
+    /// here would add padding and break the ioctl).
     private struct CtlInfo {
         var id: UInt32 = 0
-        var name: (UInt64, UInt64, UInt64, UInt64, UInt64, UInt64, UInt64, UInt64, UInt64, UInt64, UInt64, UInt64) =
-            (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) // char[96]
+        var name: (UInt32, UInt32, UInt32, UInt32, UInt32, UInt32, UInt32, UInt32, UInt32, UInt32, UInt32, UInt32,
+                   UInt32, UInt32, UInt32, UInt32, UInt32, UInt32, UInt32, UInt32, UInt32, UInt32, UInt32, UInt32) =
+            (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) // char[96]
     }
     private struct SockaddrCtl {
         var len: UInt8 = 0
