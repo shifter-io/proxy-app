@@ -15,9 +15,6 @@ import re
 import shutil
 import subprocess
 import tempfile
-import time
-import urllib.parse
-import urllib.request
 
 
 def strict_load(data):
@@ -93,28 +90,33 @@ def atomic_write(path, data):
 def validate(payload):
     if payload.get('schemaVersion') != 1 or payload.get('environment') != 'production' or payload.get('channel') != 'stable':
         raise ValueError('Unsupported schema, environment or channel')
-    if payload['distribution'] not in ('desktop', 'direct', 'play', 'appStore'):
-        raise ValueError('Invalid distribution')
-    for dimension in ('distribution', 'platform', 'architecture'):
-        safe_path(payload[dimension])
+    if (payload['distribution'] != 'desktop'
+            or payload['platform'] not in ('windows', 'macos', 'linux')
+            or payload['architecture'] not in ('x64', 'arm64')):
+        raise ValueError('Expected a desktop platform and architecture')
     ids = set()
     for release in payload['releases']:
         if release['releaseId'] in ids:
             raise ValueError('Duplicate release ID')
         ids.add(release['releaseId'])
-        if not re.fullmatch(r'(0|[1-9][0-9]*)(\.(0|[1-9][0-9]*)){0,2}' if payload['distribution'] == 'appStore' else r'(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)', release['displayVersion']):
+        if not re.fullmatch(r'(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)', release['displayVersion']):
             raise ValueError('Stable semantic version required')
         if type(release['build']) is not int or release['build'] < 1 or type(release['enabled']) is not bool:
             raise ValueError('Invalid build or enabled flag')
         if not 0 <= release['rolloutPercentage'] <= 100 or len(release['notes'].encode()) > 8192:
             raise ValueError('Invalid rollout or release notes')
-        if payload['distribution'] in ('desktop', 'direct'):
-            artifact = release['artifact']
-            safe_path(artifact['relativePath'])
-            if not artifact['expectedSigner'] or (payload['distribution'] == 'direct' and not re.fullmatch('[a-f0-9]{64}', artifact['expectedSigner'])):
-                raise ValueError('Production signing identity is required')
-            if artifact['format'] != ('apk' if payload['distribution'] == 'direct' else 'nupkg'):
-                raise ValueError('Wrong artifact format')
+        if 'automaticInstall' in release and type(release['automaticInstall']) is not bool:
+            raise ValueError('Invalid automatic install setting')
+        if 'manualDownloadPath' in release:
+            path = safe_path(release['manualDownloadPath'])
+            if payload['platform'] != 'linux' or not path.endswith('.AppImage'):
+                raise ValueError('Invalid manual download')
+        artifact = release['artifact']
+        safe_path(artifact['relativePath'])
+        if not artifact['expectedSigner']:
+            raise ValueError('Production signing identity is required')
+        if artifact['format'] != 'nupkg':
+            raise ValueError('Wrong artifact format')
 
 
 def publish(args):
@@ -140,20 +142,12 @@ def publish(args):
             envelope = strict_load(feed.read_bytes())
             previous = strict_load(base64.b64decode(envelope['payloadBase64']))['feedSequence']
         if args.sequence <= previous:
-            raise ValueError('Feed sequence must increase on publish, refresh, withdrawal and observation updates')
+            raise ValueError('Feed sequence must increase on every publication')
         now = dt.datetime.now(dt.timezone.utc)
         payload.update(feedSequence=args.sequence, generatedAt=now.isoformat(), expiresAt=(now + dt.timedelta(hours=48)).isoformat())
-        observations_file = getattr(args, 'observations', None)
-        if observations_file:
-            observations = strict_load(Path(observations_file).read_bytes())
-            for release in payload['releases']:
-                if payload['distribution'] == 'appStore':
-                    release['store']['observations'] = observations
         sources = dict(item.split('=', 1) for item in args.artifact)
         for release in payload['releases']:
-            artifact = release.get('artifact')
-            if not artifact:
-                continue
+            artifact = release['artifact']
             destination = output / safe_path(artifact['relativePath'])
             if output not in destination.resolve().parents:
                 raise ValueError('Artifact destination escapes staging root')
@@ -194,27 +188,6 @@ def publish(args):
         lock.unlink()
 
 
-def observe(args):
-    # Explicit mapping: ISO alpha-3 StoreKit value -> Apple lookup alpha-2 value.
-    mapping = strict_load(Path(args.storefronts).read_bytes())
-    observations = []
-    for index, (storefront, country) in enumerate(mapping.items()):
-        if not re.fullmatch('[A-Z]{3}', storefront) or not re.fullmatch('[a-z]{2}', country):
-            raise ValueError('Storefront mappings must be explicit ISO alpha-3/alpha-2 codes')
-        if index:
-            time.sleep(6.1)  # <=10 requests per minute
-        url = 'https://itunes.apple.com/lookup?' + urllib.parse.urlencode({'id': args.product_id, 'country': country})
-        with urllib.request.urlopen(url, timeout=20) as response:
-            raw = response.read(262145)
-            if len(raw) > 262144:
-                raise ValueError('Oversized store response')
-        for app in strict_load(raw).get('results', []):
-            if str(app.get('trackId')) == args.product_id and app.get('bundleId') == args.application_id:
-                observations.append({'storefront': storefront, 'applicationId': args.application_id, 'version': app['version'],
-                                     'minimumOs': app.get('minimumOsVersion'), 'observedAt': dt.datetime.now(dt.timezone.utc).isoformat()})
-    atomic_write(Path(args.output), json.dumps(observations, indent=2).encode())
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest='command', required=True)
@@ -222,16 +195,8 @@ def main():
     for name in ('template', 'key', 'key-id', 'trusted-keys', 'output', 'scratch'):
         p.add_argument('--' + name, required=True)
     p.add_argument('--sequence', type=int, required=True)
-    p.add_argument('--observations', help='Fresh observe-ios output to include in the signed feed')
     p.add_argument('--artifact', action='append', default=[], metavar='RELEASE_ID=PATH')
-    o = commands.add_parser('observe-ios')
-    for name in ('product-id', 'application-id', 'storefronts', 'output'):
-        o.add_argument('--' + name, required=True)
-    args = parser.parse_args()
-    if args.command == 'publish':
-        publish(args)
-    else:
-        observe(args)
+    publish(parser.parse_args())
 
 
 if __name__ == '__main__':

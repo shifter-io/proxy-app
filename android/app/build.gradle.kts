@@ -29,12 +29,6 @@ android {
         versionName = flutter.versionName
     }
 
-    buildFeatures { buildConfig = true }
-    flavorDimensions += "distribution"
-    productFlavors {
-        create("play") { dimension = "distribution" }
-        create("direct") { dimension = "distribution" }
-    }
     signingConfigs {
         create("production") {
             val file = System.getenv("SHIFTER_ANDROID_KEYSTORE")
@@ -70,7 +64,4 @@ tasks.configureEach {
             }
         }
     }
-}
-dependencies {
-    "playImplementation"("com.google.android.play:app-update:2.1.0")
 }

@@ -16,6 +16,113 @@ import 'update_coordinator_test.dart' show FakeAdapter, FakeRepository;
 import 'update_security_test.dart' show identity, releaseJson;
 
 void main() {
+  testWidgets('required update blocks Escape, Back and the app underneath', (
+    tester,
+  ) async {
+    final screenshot = Platform.environment['SHIFTER_UPDATE_SCREENSHOT'];
+    if (screenshot != null) {
+      await tester.runAsync(() async {
+        for (final entry in {
+          'Geist': [
+            'assets/fonts/Geist-Regular.ttf',
+            'assets/fonts/Geist-Medium.ttf',
+            'assets/fonts/Geist-SemiBold.ttf',
+          ],
+          'GeistMono': ['assets/fonts/GeistMono-Regular.ttf'],
+          'MaterialIcons': ['fonts/MaterialIcons-Regular.otf'],
+        }.entries) {
+          final loader = FontLoader(entry.key);
+          for (final asset in entry.value) {
+            loader.addFont(rootBundle.load(asset));
+          }
+          await loader.load();
+        }
+      });
+    }
+    await tester.binding.setSurfaceSize(const Size(900, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final app = AppController();
+    final store = UpdateStore(null);
+    await store.write('minimumVersion', '1.1.0');
+    final updates =
+        UpdateCoordinator(
+            store: store,
+            adapter: FakeAdapter(),
+            identity: identity,
+            repository: FakeRepository(store),
+            prepareConnection: app.prepareForUpdate,
+            canPrompt: () => false,
+            capabilities: const UpdateCapabilities(
+              download: true,
+              install: true,
+            ),
+          )
+          ..release = Release(releaseJson())
+          ..phase = UpdatePhase.available;
+    final navigator = GlobalKey<NavigatorState>();
+    final boundary = GlobalKey();
+    var taps = 0;
+    await tester.pumpWidget(
+      AppScope(
+        controller: app,
+        child: MaterialApp(
+          navigatorKey: navigator,
+          theme: buildShifterTheme(),
+          builder: (context, child) => RepaintBoundary(
+            key: boundary,
+            child: UpdateHost(
+              app: app,
+              enabled: false,
+              navigatorKey: navigator,
+              initialCoordinator: updates,
+              child: child!,
+            ),
+          ),
+          home: UpdateBackGuard(
+            child: Scaffold(
+              body: Align(
+                alignment: Alignment.topLeft,
+                child: TextButton(
+                  onPressed: () => taps++,
+                  child: const Text('Use Shifter'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.binding.handlePopRoute();
+    await tester.tapAt(tester.getCenter(find.text('Use Shifter')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Update required'), findsOneWidget);
+    expect(find.text('Update now'), findsOneWidget);
+    expect(find.text('Later'), findsNothing);
+    expect(app.canConnect, isFalse);
+    expect(taps, 0);
+    expect(tester.takeException(), isNull);
+    if (screenshot != null) {
+      await tester.runAsync(() async {
+        final render =
+            boundary.currentContext!.findRenderObject()!
+                as RenderRepaintBoundary;
+        final image = await render.toImage();
+        final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+        final file = File(screenshot);
+        await file.parent.create(recursive: true);
+        await file.writeAsBytes(bytes!.buffer.asUint8List());
+        image.dispose();
+      });
+    }
+    await tester.pumpWidget(const SizedBox.shrink());
+    app.dispose();
+  });
+
   for (final width in [280.0, 393.0, 1100.0]) {
     testWidgets(
       'update modal survives navigation at width $width and enlarged text',

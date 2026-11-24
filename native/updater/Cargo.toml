@@ -8,7 +8,7 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
-velopack = "=1.2.161"
+velopack = { version = "=1.2.161", features = ["public-utils"] }
 serde_json = "1"
 sha2 = "0.10"
 fs2 = "0.4"

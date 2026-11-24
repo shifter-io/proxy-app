@@ -1,23 +1,23 @@
 {
   "schemaVersion": 1,
   "environment": "production",
-  "distribution": "direct",
-  "platform": "android",
-  "architecture": "universal",
+  "distribution": "desktop",
+  "platform": "windows",
+  "architecture": "x64",
   "channel": "stable",
   "releases": [{
-    "releaseId": "android-0.2.0-2",
+    "releaseId": "windows-0.2.0-2",
     "applicationId": "io.shifter.shifter_app",
     "displayVersion": "0.2.0",
     "build": 2,
-    "minimumOs": "29",
+    "minimumOs": "10.0.19041",
     "notes": "Describe the changes for users.",
     "enabled": true,
     "rolloutPercentage": 5,
     "artifact": {
-      "relativePath": "releases/android/0.2.0-2/Shifter.apk",
-      "format": "apk",
-      "expectedSigner": "REPLACE_WITH_LOWERCASE_SHA256_OF_PRODUCTION_SIGNING_CERTIFICATE"
+      "relativePath": "releases/windows/0.2.0-2/Shifter.ProxyApp-0.2.0-full.nupkg",
+      "format": "nupkg",
+      "expectedSigner": "REPLACE_WITH_EXPECTED_AUTHENTICODE_PUBLISHER"
     }
   }]
 }

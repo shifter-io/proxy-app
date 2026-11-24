@@ -5,6 +5,7 @@ import 'dart:isolate';
 
 import 'package:ffi/ffi.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:win32/win32.dart' show OsVersion;
 
 import '../update_models.dart';
 import 'update_adapter.dart';
@@ -73,11 +74,14 @@ class DesktopVelopackAdapter implements UpdateAdapter {
       ])).stdout.toString().trim();
     }
     if (Platform.isWindows) {
+      final windowsVersion = OsVersion.current;
       os =
-          RegExp(r'\d+\.\d+\.\d+')
-              .firstMatch(Platform.operatingSystemVersion)
-              ?.group(0) ??
-          os;
+          '${windowsVersion.major}.${windowsVersion.minor}.${windowsVersion.build}';
+    }
+    if (Platform.isLinux) {
+      final kernel = await Process.run('uname', ['-r']);
+      os =
+          RegExp(r'^\d+\.\d+\.\d+').stringMatch(kernel.stdout.toString()) ?? os;
     }
     _osVersion = os;
     return InstalledIdentity(
@@ -88,7 +92,6 @@ class DesktopVelopackAdapter implements UpdateAdapter {
           : abi.contains('x64')
           ? 'x64'
           : 'unsupported',
-      distribution: Distribution.desktop,
       version: version,
       build: int.tryParse(info.buildNumber) ?? 0,
       osVersion: os,
@@ -103,12 +106,17 @@ class DesktopVelopackAdapter implements UpdateAdapter {
     reason: !_installed
         ? 'Install a packaged Shifter release to enable updates.'
         : !_installable
-        ? 'Automatic updates are not yet qualified for this Linux installation. Install a newer AppImage manually.'
+        ? 'Move Shifter to a writable folder or download a newer AppImage.'
         : null,
   );
   @override
   Future<bool> eligible(Release release, {required bool automatic}) async {
-    if (!_installed || !_installable) return false;
+    if (!_installable &&
+        (automatic ||
+            !Platform.isLinux ||
+            release.manualDownloadPath == null)) {
+      return false;
+    }
     List<int> parts(String value) => value.split('.').map(int.parse).toList();
     final current = parts(_osVersion), minimum = parts(release.minimumOs);
     for (var i = 0; i < minimum.length; i++) {
@@ -124,25 +132,7 @@ class DesktopVelopackAdapter implements UpdateAdapter {
   }
 
   @override
-  Future<void> install(
-    Release release,
-    String? path,
-    String operationId,
-  ) async {
-    await _native({
-      'method': 'install',
-      'release': release.json,
-      'path': path,
-      'operationId': operationId,
-    });
+  Future<void> install(Release release, String? path) async {
+    await _native({'method': 'install', 'release': release.json, 'path': path});
   }
-
-  @override
-  Future<Map<String, dynamic>> reconcile() async => {};
-  @override
-  Future<void> openStore() async =>
-      throw const UpdateFailure('This installation does not use an app store.');
-  @override
-  Future<void> startStoreDownload(String operationId, Release release) =>
-      openStore();
 }
