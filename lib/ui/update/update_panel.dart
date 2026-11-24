@@ -22,12 +22,15 @@ class AppUpdatesEntry extends StatelessWidget {
             style: SfText.small,
           ),
         if (updates?.supportsAutomaticInstall == true)
-          SwitchListTile.adaptive(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Install eligible updates automatically'),
-            subtitle: const Text('Applies at startup while disconnected.'),
-            value: updates!.automaticInstallEnabled,
-            onChanged: updates.setAutomaticInstall,
+          ListenableBuilder(
+            listenable: updates!,
+            builder: (context, _) => SwitchListTile.adaptive(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Install eligible updates automatically'),
+              subtitle: const Text('Applies at startup while disconnected.'),
+              value: updates.automaticInstallEnabled,
+              onChanged: updates.setAutomaticInstall,
+            ),
           ),
         TextButton(
           onPressed: scope?.open,

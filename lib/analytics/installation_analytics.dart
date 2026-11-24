@@ -292,7 +292,9 @@ class InstallationAnalytics extends ChangeNotifier {
     request.headers.contentType = ContentType.json;
     request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $token');
     request.headers.set('X-Shifter-Installation', id);
-    request.write(jsonEncode(body));
+    final payload = utf8.encode(jsonEncode(body));
+    request.contentLength = payload.length;
+    request.add(payload);
     final response = await request.close().timeout(const Duration(seconds: 8));
     if (response.statusCode != 204) {
       throw const HttpException('Analytics delivery failed');
