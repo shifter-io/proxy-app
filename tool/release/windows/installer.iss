@@ -26,6 +26,9 @@ Source: "user-install.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "service-install.ps1"; DestDir: "{app}"; Flags: ignoreversion
 
 [Code]
+var
+  InstallationError: String;
+
 function PowerShell(): String;
 begin
   Result := ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe');
@@ -66,10 +69,25 @@ begin
   Params := ExpandConstant('-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "{app}\user-install.ps1" -Setup "{tmp}\Shifter-Velopack-Setup.exe"');
   if DownloadToken() <> '' then Params := Params + ' -Attribution ' + DownloadToken();
   if not ExecAsOriginalUser(PowerShell(), Params, '', SW_HIDE, ewWaitUntilTerminated, ExitCode) or (ExitCode <> 0) then
-    RaiseException('Shifter could not install the per-user app. Run Setup from a normal Windows desktop and quit any running Shifter app first.');
-  if not Exec(PowerShell(), ExpandConstant('-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "{app}\service-install.ps1"'), '',
-      SW_HIDE, ewWaitUntilTerminated, ExitCode) or (ExitCode <> 0) then
-    RaiseException('Shifter installed the app but could not start its background service. Run Setup again to repair it.');
+    InstallationError := 'Shifter could not install the per-user app. Run Setup from a normal Windows desktop and quit any running Shifter app first.';
+  if (InstallationError = '') and (not Exec(PowerShell(), ExpandConstant('-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "{app}\service-install.ps1"'), '',
+      SW_HIDE, ewWaitUntilTerminated, ExitCode) or (ExitCode <> 0)) then
+    InstallationError := 'Shifter installed the app but could not start its background service. Run Setup again to repair it.';
+  if InstallationError <> '' then Log(InstallationError);
+end;
+
+procedure CurPageChanged(CurPageID: Integer);
+begin
+  if (CurPageID = wpFinished) and (InstallationError <> '') then begin
+    WizardForm.FinishedHeadingLabel.Caption := 'Shifter setup needs repair';
+    WizardForm.FinishedLabel.Caption := InstallationError;
+  end;
+end;
+
+function GetCustomSetupExitCode(): Integer;
+begin
+  Result := 0;
+  if InstallationError <> '' then Result := 10;
 end;
 
 function InitializeUninstall(): Boolean;

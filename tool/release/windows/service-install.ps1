@@ -16,7 +16,7 @@ if ($Remove) {
         if ($LASTEXITCODE -ne 0) { throw 'Could not deregister the Shifter service.' }
     }
     Get-ScheduledTask -TaskName 'Shifter.Tray.*' -ErrorAction SilentlyContinue |
-        Where-Object { $_.Actions.Execute -like '*\Shifter.ProxyApp\shifter_app.exe' } |
+        Where-Object { $_.Actions.Execute -like '*\Shifter.ProxyApp\Shifter.exe' } |
         Unregister-ScheduledTask -Confirm:$false
     return
 }

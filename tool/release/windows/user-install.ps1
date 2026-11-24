@@ -16,7 +16,7 @@ if (Get-Process shifter_app -ErrorAction SilentlyContinue | Where-Object Session
 
 $result = Start-Process -FilePath $Setup -ArgumentList '--silent' -PassThru -Wait
 if ($result.ExitCode -ne 0) { throw "Velopack Setup exited with code $($result.ExitCode)." }
-$launcher = Join-Path $env:LOCALAPPDATA 'Shifter.ProxyApp\shifter_app.exe'
+$launcher = Join-Path $env:LOCALAPPDATA 'Shifter.ProxyApp\Shifter.exe'
 if (-not (Test-Path -LiteralPath $launcher -PathType Leaf)) { throw 'The per-user launcher was not installed.' }
 
 if ($Attribution) {

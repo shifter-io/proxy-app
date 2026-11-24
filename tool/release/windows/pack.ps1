@@ -76,7 +76,7 @@ Assert-Signed $inner[0].FullName
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $inspection = Join-Path $stage 'inspection'
 [IO.Compression.ZipFile]::ExtractToDirectory($full[0].FullName, $inspection)
-foreach ($name in @('shifter_app.exe','shifter_updater.dll','Squirrel.exe')) {
+foreach ($name in @('shifter_app.exe','shifter_updater.dll','Shifter_ExecutionStub.exe','Squirrel.exe')) {
     $entry = @(Get-ChildItem -LiteralPath $inspection -Recurse -File -Filter $name)
     if ($entry.Count -ne 1) { throw "Expected one packaged $name." }
     Assert-Signed $entry[0].FullName
