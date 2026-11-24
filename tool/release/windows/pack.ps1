@@ -35,7 +35,9 @@ $SignTool = (Resolve-Path -LiteralPath $SignTool).Path
 $AzureDlib = (Resolve-Path -LiteralPath $AzureDlib).Path
 $InnoCompiler = (Resolve-Path -LiteralPath $InnoCompiler).Path
 $runner = Join-Path $Bundle 'shifter_app.exe'
-if ((Get-Item -LiteralPath $runner).VersionInfo.ProductVersion -notmatch ('^' + [regex]::Escape($Version) + '(\.|$)')) {
+$runnerVersion = (Get-Item -LiteralPath $runner).VersionInfo
+$productVersion = '{0}.{1}.{2}' -f $runnerVersion.ProductMajorPart, $runnerVersion.ProductMinorPart, $runnerVersion.ProductBuildPart
+if ($productVersion -ne $Version) {
     throw 'The Flutter runner version does not match the Velopack release version.'
 }
 if ((& $Vpk --help | Out-String) -notmatch '\b1\.2\.161\b') { throw 'Use Velopack CLI 1.2.161.' }
