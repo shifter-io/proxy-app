@@ -5,6 +5,8 @@ plugins {
 }
 
 android {
+    // Kotlin package and JNI names (the tunnel engine is bound to
+    // io.shifter.shifter_app.HevTunnel); the store ID is applicationId below.
     namespace = "io.shifter.shifter_app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
@@ -16,7 +18,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "io.shifter.shifter_app"
+        applicationId = "io.shifter.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
