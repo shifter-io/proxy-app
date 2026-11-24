@@ -13,7 +13,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Before you connect'), findsOneWidget);
       expect(find.text('Encrypted by default'), findsOneWidget);
-      expect(find.text('All traffic between this device and Shifter is encrypted.'), findsOneWidget);
+      expect(find.text('All traffic between this device and Shifter is encrypted, on Wi-Fi and mobile data.'), findsOneWidget);
       expect(find.text('Only your API key'), findsOneWidget);
       expect(find.text('Never sold or shared'), findsOneWidget);
       expect(find.text('Privacy policy'), findsOneWidget);
