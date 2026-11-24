@@ -382,9 +382,15 @@ class UpdateCoordinator extends ChangeNotifier {
     return dir;
   }
 
-  Future<File> _file(Release r, {required bool partial}) async => File(
-    '${(await _directory()).path}/${r.sha256}.${partial ? 'partial' : r.artifact!['format']}',
-  );
+  Future<File> _file(Release r, {required bool partial}) async {
+    final format = r.artifact!['format'];
+    // Android's archive parser expects an APK file name even during staging.
+    final extension = partial
+        ? (format == 'apk' ? 'partial.apk' : 'partial')
+        : format;
+    return File('${(await _directory()).path}/${r.sha256}.$extension');
+  }
+
   Future<void> _cleanup() async {
     if (!capabilities.download) return;
     final dir = await _directory();

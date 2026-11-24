@@ -274,8 +274,9 @@ void main() {
         canAutomaticallyInstall: () => canApply,
         prepareConnection: (handoff) => handoff(),
         prepareAutomaticConnection: (handoff) async {
-          if (revokeDuringPreparation)
+          if (revokeDuringPreparation) {
             repo.candidate['automaticInstall'] = false;
+          }
           await handoff();
         },
       );

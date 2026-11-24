@@ -33,7 +33,10 @@ fn private_dir(path: &Path) -> Result<()> {
 }
 fn config() -> Result<VelopackLocatorConfig> {
     let l = auto_locate_app_manifest(LocationContext::FromCurrentExe)?;
+    #[cfg(not(target_os = "linux"))]
     let root = l.get_root_dir();
+    #[cfg(target_os = "linux")]
+    let root = l.get_appimage_path();
     let bins = l.get_current_bin_dir();
     let mut manifest = bins.join("sq.version");
     if !manifest.exists() {
