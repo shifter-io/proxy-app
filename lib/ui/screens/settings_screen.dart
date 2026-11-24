@@ -8,8 +8,8 @@ import '../../state/app_controller.dart';
 import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
 import '../links.dart';
-import '../update/update_panel.dart';
 import '../update/update_host.dart';
+import '../update/update_panel.dart';
 import '../widgets/icons.dart';
 import '../widgets/layout.dart';
 import '../widgets/primitives.dart';
@@ -157,7 +157,7 @@ class SettingsScreen extends StatelessWidget {
                   onPressed: () => _confirmSignOut(context, app),
                 ),
               ])),
-              section(const AppUpdatesEntry()),
+              if (UpdateScope.of(context) != null) section(const AppUpdatesEntry()),
             ]),
           ),
         ],

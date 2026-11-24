@@ -10,12 +10,9 @@ enum UpdatePhase {
   verifying,
   ready,
   preparingInstall,
-  awaitingSystemConsent,
   handingOff,
   error,
 }
-
-enum Distribution { desktop, play, direct, appStore, development }
 
 class UpdateFailure implements Exception {
   const UpdateFailure(this.message);
@@ -24,7 +21,7 @@ class UpdateFailure implements Exception {
   String toString() => message;
 }
 
-/// Stable releases only. Android builds are compared separately as integers.
+/// Compare the three numeric components of a stable release.
 int compareVersions(String a, String b) {
   List<int> parts(String s) {
     if (!RegExp(r'^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$')
@@ -42,44 +39,19 @@ int compareVersions(String a, String b) {
   return 0;
 }
 
-/// Apple's public marketing version can omit trailing zero components.
-int comparePublicVersions(String a, String b) {
-  String normalize(String value) {
-    if (!RegExp(r'^(0|[1-9][0-9]*)(\.(0|[1-9][0-9]*)){0,2}$').hasMatch(value)) {
-      throw const UpdateFailure('Invalid public release version.');
-    }
-    return [
-      ...value.split('.'),
-      ...List.filled(3 - value.split('.').length, '0'),
-    ].join('.');
-  }
-
-  return compareVersions(normalize(a), normalize(b));
-}
-
 class InstalledIdentity {
   const InstalledIdentity({
     required this.applicationId,
     required this.platform,
     required this.architecture,
-    required this.distribution,
     required this.version,
     required this.build,
     required this.osVersion,
-    this.storefront,
   });
   final String applicationId, platform, architecture, version, osVersion;
   final int build;
-  final Distribution distribution;
-  final String? storefront;
-  String get feedPath =>
-      '${distribution.name}/$platform/$architecture/stable.json';
-  bool newer(Release release) => platform == 'android'
-      ? release.build > build
-      : (platform == 'ios'
-                ? comparePublicVersions(release.version, version)
-                : compareVersions(release.version, version)) >
-            0;
+  String get feedPath => 'desktop/$platform/$architecture/stable.json';
+  bool newer(Release release) => compareVersions(release.version, version) > 0;
 }
 
 class UpdateCapabilities {
@@ -87,10 +59,9 @@ class UpdateCapabilities {
     this.download = false,
     this.cancel = false,
     this.install = false,
-    this.store = false,
     this.reason,
   });
-  final bool download, cancel, install, store;
+  final bool download, cancel, install;
   final String? reason;
 }
 
@@ -107,10 +78,14 @@ class Release {
         throw const UpdateFailure('Invalid release metadata.');
       }
     }
-    comparePublicVersions(version, version);
+    compareVersions(version, version);
     if (json['build'] is! int ||
         build < 1 ||
         json['enabled'] is! bool ||
+        (json.containsKey('automaticInstall') &&
+            json['automaticInstall'] is! bool) ||
+        (json.containsKey('manualDownloadPath') &&
+            json['manualDownloadPath'] is! String) ||
         json['rolloutPercentage'] is! int ||
         rollout < 0 ||
         rollout > 100 ||
@@ -126,11 +101,11 @@ class Release {
   String get notes => json['notes'] as String;
   String get minimumOs => json['minimumOs'] as String;
   bool get enabled => json['enabled'] == true;
+  bool get automaticInstall => json['automaticInstall'] == true;
+  String? get manualDownloadPath => json['manualDownloadPath'] as String?;
   int get rollout => json['rolloutPercentage'] as int;
   Map<String, dynamic>? get artifact =>
       (json['artifact'] as Map?)?.cast<String, dynamic>();
-  Map<String, dynamic>? get store =>
-      (json['store'] as Map?)?.cast<String, dynamic>();
   String get path => artifact!['relativePath'] as String;
   String get sha256 => artifact!['sha256'] as String;
   int get byteLength => artifact!['byteLength'] as int;

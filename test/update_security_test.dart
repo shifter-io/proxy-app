@@ -12,25 +12,24 @@ import 'package:shifter_app/update/update_store.dart';
 
 const identity = InstalledIdentity(
   applicationId: 'io.shifter.test',
-  platform: 'android',
-  architecture: 'universal',
-  distribution: Distribution.direct,
+  platform: 'linux',
+  architecture: 'x64',
   version: '1.0.0',
   build: 10,
-  osVersion: '35',
+  osVersion: '6.8.0',
 );
 Map<String, dynamic> releaseJson() => {
   'releaseId': 'release-11',
   'applicationId': identity.applicationId,
   'displayVersion': '1.1.0',
   'build': 11,
-  'minimumOs': '29',
+  'minimumOs': '5.0.0',
   'notes': 'A release',
   'enabled': true,
   'rolloutPercentage': 100,
   'artifact': {
-    'relativePath': 'releases/11/Shifter.apk',
-    'format': 'apk',
+    'relativePath': 'releases/11/Shifter-full.nupkg',
+    'format': 'nupkg',
     'expectedSigner': 'a' * 64,
     'byteLength': 3,
     'sha256': hashes.sha256.convert(utf8.encode('abc')).toString(),
@@ -70,10 +69,10 @@ void main() {
       'feedSequence': 1,
       'generatedAt': now.toIso8601String(),
       'expiresAt': now.add(const Duration(hours: 48)).toIso8601String(),
-      'distribution': 'direct',
+      'distribution': 'desktop',
       'channel': 'stable',
-      'platform': 'android',
-      'architecture': 'universal',
+      'platform': 'linux',
+      'architecture': 'x64',
       'releases': [releaseJson()],
     };
   });
@@ -171,16 +170,35 @@ void main() {
   test(
     'native version comparisons reject downgrades and malformed versions',
     () {
-      expect(identity.newer(Release(releaseJson()..['build'] = 9)), isFalse);
+      expect(
+        identity.newer(Release(releaseJson()..['displayVersion'] = '0.9.0')),
+        isFalse,
+      );
       expect(compareVersions('1.10.0', '1.9.9'), greaterThan(0));
-      expect(comparePublicVersions('1.2', '1.2.0'), 0);
-      expect(comparePublicVersions('1.3', '1.2.9'), greaterThan(0));
       expect(
         () => compareVersions('1.0.0-beta', '1.0.0'),
         throwsA(isA<UpdateFailure>()),
       );
     },
   );
+  test('required policy accepts only a valid version string', () {
+    expect(
+      UpdateRepository.parseRequiredVersion('{"version":"1.10.0"}'),
+      '1.10.0',
+    );
+    for (final body in [
+      '<html>Missing</html>',
+      '{"version":2}',
+      '{"version":"1.2"}',
+      '{"version":"1.2.0","version":"9.0.0"}',
+    ]) {
+      expect(
+        () => UpdateRepository.parseRequiredVersion(body),
+        throwsException,
+      );
+    }
+  });
+
   test('file verification rejects corruption, truncation and symlinks', () async {
     final base = Directory(
       '${Platform.environment['HOME']}/Library/Caches/shifter-vpn/build/application-updates/security-tests',

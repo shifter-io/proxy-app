@@ -1,7 +1,7 @@
 import Cocoa
 import FlutterMacOS
 
-class MainFlutterWindow: NSWindow {
+class MainFlutterWindow: NSWindow, NSWindowDelegate {
   override func awakeFromNib() {
     let launchColor = NSColor(srgbRed: 11 / 255, green: 14 / 255, blue: 23 / 255, alpha: 1)
     self.backgroundColor = launchColor
@@ -22,5 +22,11 @@ class MainFlutterWindow: NSWindow {
     RegisterGeneratedPlugins(registry: flutterViewController)
 
     super.awakeFromNib()
+    delegate = self
+  }
+
+  func windowShouldClose(_ sender: NSWindow) -> Bool {
+    sender.orderOut(nil)
+    return false
   }
 }
