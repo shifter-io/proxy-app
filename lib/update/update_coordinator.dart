@@ -495,9 +495,7 @@ class UpdateCoordinator extends ChangeNotifier {
       );
       await adapter.startStoreDownload(_operationId!, release!);
       phase = UpdatePhase.downloading;
-      _nativePoll ??= Timer.periodic(const Duration(seconds: 2), (_) {
-        if (!busy) unawaited(resume());
-      });
+      _pollNative();
     });
   }
 
@@ -547,9 +545,12 @@ class UpdateCoordinator extends ChangeNotifier {
         );
         await store.write('suppressReconnect', 'true');
         await adapter.install(selected, _artifact?.path, _operationId!);
-        phase = identity.distribution == Distribution.direct
-            ? UpdatePhase.awaitingSystemConsent
-            : UpdatePhase.handingOff;
+        if (identity.distribution == Distribution.direct) {
+          phase = UpdatePhase.awaitingSystemConsent;
+          _pollNative();
+        } else {
+          phase = UpdatePhase.handingOff;
+        }
       });
     });
   }
@@ -560,6 +561,12 @@ class UpdateCoordinator extends ChangeNotifier {
       await adapter.openStore();
     });
   });
+  void _pollNative() {
+    _nativePoll ??= Timer.periodic(const Duration(seconds: 2), (_) {
+      if (!busy && !_disposed) unawaited(resume());
+    });
+  }
+
   Future<void> _reconcileNative() async {
     if (identity.distribution != Distribution.play &&
         identity.distribution != Distribution.direct) {
@@ -581,23 +588,24 @@ class UpdateCoordinator extends ChangeNotifier {
     }
     if (native['state'] == 'downloading') {
       phase = UpdatePhase.downloading;
-      _nativePoll ??= Timer.periodic(const Duration(seconds: 2), (_) {
-        if (!busy) unawaited(resume());
-      });
+      _pollNative();
       progress = (native['progress'] as num?)?.toDouble();
     }
-    if ((native['state'] == 'failed' || native['state'] == 'canceled') &&
+    if (const {'failed', 'canceled', 'blocked'}.contains(native['state']) &&
         store.object('pending') != null) {
       _nativePoll?.cancel();
       _nativePoll = null;
       await store.write('pending', null);
-      throw const UpdateFailure(
-        'Installation did not complete. You can retry the update.',
+      throw UpdateFailure(
+        native['state'] == 'blocked'
+            ? 'Android blocked this installation during verification.'
+            : 'Installation did not complete. You can retry the update.',
       );
     }
     if (native['state'] == 'awaitingSystemConsent' &&
         store.object('pending') != null) {
       phase = UpdatePhase.awaitingSystemConsent;
+      _pollNative();
     }
   }
 

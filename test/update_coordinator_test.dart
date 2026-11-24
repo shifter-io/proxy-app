@@ -315,6 +315,20 @@ void main() {
     );
   });
 
+  test('Android verification rejection clears the pending handoff', () async {
+    await coordinator.check();
+    coordinator.phase = UpdatePhase.ready;
+    await coordinator.install();
+    expect(coordinator.phase, UpdatePhase.awaitingSystemConsent);
+    adapter.nativeState = {
+      'state': 'blocked',
+      'operationId': adapter.installOperationId,
+    };
+    await coordinator.resume();
+    expect(coordinator.phase, UpdatePhase.error);
+    expect(coordinator.error, contains('Android blocked'));
+    expect(store.read('pending'), isNull);
+  });
   test('successful handoff journals target and suppresses reconnect', () async {
     await coordinator.check();
     coordinator.phase = UpdatePhase.ready;

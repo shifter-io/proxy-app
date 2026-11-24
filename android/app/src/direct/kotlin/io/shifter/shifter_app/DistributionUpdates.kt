@@ -127,7 +127,14 @@ class UpdateInstallReceiver : BroadcastReceiver() {
             }
             PackageInstaller.STATUS_SUCCESS -> prefs.edit().putString("state", "installed").remove("sessionId").commit()
             PackageInstaller.STATUS_FAILURE_ABORTED -> prefs.edit().putString("state", "canceled").remove("sessionId").commit()
-            else -> prefs.edit().putString("state", "failed").remove("sessionId").commit()
+            PackageInstaller.STATUS_FAILURE_BLOCKED ->
+                prefs.edit().putString("state", "blocked").remove("sessionId").commit()
+            else -> {
+                val verificationRejected = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)
+                    ?.startsWith("INSTALL_FAILED_VERIFICATION_FAILURE") == true
+                prefs.edit().putString("state", if (verificationRejected) "blocked" else "failed")
+                    .remove("sessionId").commit()
+            }
         }
     }
 }
