@@ -4,9 +4,11 @@ import 'dart:io';
 import 'dart:math';
 
 import '../data/store.dart';
+import 'android_full_engine.dart';
 import 'bypass.dart';
 import 'local_proxy.dart' show GatewayEndpoint;
 import 'proxy_isolate.dart';
+import 'socks_login.dart';
 import 'system_proxy.dart';
 import 'tunnel_proxy_engine.dart';
 
@@ -28,7 +30,11 @@ const _ipCheckTimeout = Duration(seconds: 12);
 abstract class ProxyEngine {
   /// The real engine for this device: the packet tunnel on iOS, the local
   /// proxy plus the OS proxy (or Android's VPN slot) everywhere else.
-  static ProxyEngine forPlatform(Store store) => Platform.isIOS ? TunnelProxyEngine() : LocalProxyEngine(store);
+  static ProxyEngine forPlatform(Store store) => Platform.isIOS
+      ? TunnelProxyEngine()
+      : Platform.isAndroid && socksConfigured
+          ? AndroidFullEngine()
+          : LocalProxyEngine(store);
 
   /// False where the app can't route other apps yet (phones, tablets).
   bool get supported;

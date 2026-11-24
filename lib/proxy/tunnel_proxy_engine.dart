@@ -1,10 +1,10 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter/services.dart';
 
 import 'bypass.dart';
 import 'proxy_engine.dart';
+import 'socks_login.dart';
 import 'system_proxy.dart' show SystemProxyException;
 
 /// iOS: the local proxy can't live in the app (iOS suspends it in the
@@ -15,8 +15,7 @@ import 'system_proxy.dart' show SystemProxyException;
 ///
 /// With a SOCKS5 login the tunnel instead runs in full-device mode: every
 /// packet, TCP and UDP, goes through the gateway (ios/ShifterTunnel/
-/// FullTunnel.swift). For now that login comes only from a local build's
-/// dart-defines ([_testSocks]).
+/// FullTunnel.swift); see [socksLogin].
 class TunnelProxyEngine implements ProxyEngine {
   TunnelProxyEngine({this.checkUrl = ipCheckUrl}) {
     _channel.setMethodCallHandler((call) async {
@@ -53,7 +52,7 @@ class TunnelProxyEngine implements ProxyEngine {
         'username': endpoint.username,
         'password': endpoint.password,
         'bypass': expandedBypassList(endpoint.bypassList),
-        if (_testSocks(endpoint) case final socks?) 'socks': socks,
+        if (socksLogin(endpoint) case final socks?) 'socks': socks,
       });
       _port = status?['port'] as int?;
       _full = status?['full'] == true;
@@ -79,20 +78,4 @@ class TunnelProxyEngine implements ProxyEngine {
     if (status?['full'] == true || _full) return checkExitDirect(checkUrl);
     return checkExitThrough(port, checkUrl);
   }
-}
-
-/// Local test builds only: the SOCKS5 gateway from
-/// `--dart-define-from-file=<private env file>` (SOCKS_HOST, SOCKS_PORT,
-/// SOCKS_USER, SOCKS_PASS). The values end up inside that build, so never
-/// share it. Session: the plan login's `-sid-` value, so New IP still gives a
-/// new exit; rotating plans get one session per connect.
-Map<String, Object>? _testSocks(GatewayEndpoint endpoint) {
-  const host = String.fromEnvironment('SOCKS_HOST');
-  const port = int.fromEnvironment('SOCKS_PORT');
-  const user = String.fromEnvironment('SOCKS_USER');
-  const pass = String.fromEnvironment('SOCKS_PASS');
-  if (host.isEmpty || port == 0 || user.isEmpty) return null;
-  final sid = RegExp(r'-sid-([A-Za-z0-9]+)').firstMatch(endpoint.username)?.group(1) ??
-      List.generate(10, (_) => 'abcdefghijklmnopqrstuvwxyz0123456789'[Random.secure().nextInt(36)]).join();
-  return {'host': host, 'port': port, 'username': '$user-session-$sid', 'password': pass};
 }

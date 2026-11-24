@@ -8,8 +8,14 @@ import android.os.Build
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
-/** The connection settings Dart hands over: where the local proxy listens. */
-data class ProxyTarget(val host: String, val port: Int, val bypass: List<String>)
+/** The gateway's SOCKS5 login (same username format as the HTTP gateway). */
+data class SocksLogin(val host: String, val port: Int, val username: String, val password: String)
+
+/**
+ * The connection settings Dart hands over: where the local proxy listens, or
+ * with [socks], the gateway login for full-device mode ([FullTunnel]).
+ */
+data class ProxyTarget(val host: String, val port: Int, val bypass: List<String>, val socks: SocksLogin? = null)
 
 /**
  * `shifter/vpn` channel (lib/proxy/android_system_proxy.dart): asks for the
@@ -32,7 +38,14 @@ object VpnBridge {
             setMethodCallHandler { call, result ->
                 when (call.method) {
                     "start" -> start(
-                        ProxyTarget(call.argument("host")!!, call.argument("port")!!, call.argument("bypass")!!),
+                        ProxyTarget(
+                            call.argument("host")!!,
+                            call.argument("port")!!,
+                            call.argument("bypass")!!,
+                            call.argument<Map<String, Any>>("socks")?.let {
+                                SocksLogin(it["host"] as String, (it["port"] as Number).toInt(), it["username"] as String, it["password"] as String)
+                            },
+                        ),
                         result,
                     )
                     "stop" -> {

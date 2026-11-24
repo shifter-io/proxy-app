@@ -10,15 +10,21 @@ import android.content.pm.ServiceInfo
 import android.net.ProxyInfo
 import android.net.VpnService
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.ParcelFileDescriptor
 import android.util.Log
 
 /**
- * Android's only way to give other apps a proxy: a VPN network whose link
- * carries an HTTP proxy (the local Shifter proxy in this app). It has no
- * routes, so no packets ever enter it; apps that follow the proxy talk to
- * the local proxy, everything else goes direct (like the desktop system
- * proxy). Shifter itself is excluded so its own gateway traffic never loops.
+ * The Shifter VPN slot, in one of two modes:
+ *
+ * - Full device (target has `socks`): every packet, TCP and UDP, goes through
+ *   the gateway's SOCKS5 ([FullTunnel]).
+ * - Proxy settings: the VPN network carries an HTTP proxy (the local Shifter
+ *   proxy in this app) and has no routes, so no packets enter it; apps that
+ *   follow the proxy go through Shifter, everything else goes direct.
+ *
+ * Shifter itself is excluded so its own gateway traffic never loops.
  */
 class ShifterVpnService : VpnService() {
     companion object {
@@ -36,12 +42,18 @@ class ShifterVpnService : VpnService() {
                     .setAction(ACTION_START)
                     .putExtra("host", target.host)
                     .putExtra("port", target.port)
-                    .putStringArrayListExtra("bypass", ArrayList(target.bypass)),
+                    .putStringArrayListExtra("bypass", ArrayList(target.bypass))
+                    .putExtra("socksHost", target.socks?.host)
+                    .putExtra("socksPort", target.socks?.port ?: 0)
+                    .putExtra("socksUser", target.socks?.username)
+                    .putExtra("socksPass", target.socks?.password),
             )
         }
     }
 
     private var tun: ParcelFileDescriptor? = null
+    private var full = false
+    private val main = Handler(Looper.getMainLooper())
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_START) {
@@ -51,6 +63,9 @@ class ShifterVpnService : VpnService() {
                     intent.getStringExtra("host")!!,
                     intent.getIntExtra("port", 0),
                     intent.getStringArrayListExtra("bypass") ?: emptyList(),
+                    intent.getStringExtra("socksHost")?.let {
+                        SocksLogin(it, intent.getIntExtra("socksPort", 0), intent.getStringExtra("socksUser")!!, intent.getStringExtra("socksPass")!!)
+                    },
                 ),
             )
         } else if (tun == null) {
@@ -62,6 +77,11 @@ class ShifterVpnService : VpnService() {
     }
 
     fun apply(target: ProxyTarget) {
+        target.socks?.let { return applyFull(it) }
+        if (full) {
+            FullTunnel.stop()
+            full = false
+        }
         val error = try {
             val pfd = Builder()
                 .setSession("Shifter")
@@ -82,9 +102,42 @@ class ShifterVpnService : VpnService() {
         if (error != null && tun == null) shutdown(null)
     }
 
+    /** Full-device mode: check the login off the main thread, then route everything. */
+    private fun applyFull(login: SocksLogin) {
+        Thread {
+            val prepared = runCatching { FullTunnel.prepare(login) }
+            main.post {
+                val error = prepared.exceptionOrNull()?.let { it.message ?: "Could not reach Shifter." } ?: try {
+                    if (!full || tun == null) {
+                        val pfd = FullTunnel.configure(Builder())
+                            .setSession("Shifter")
+                            .addDisallowedApplication(packageName)
+                            .setMetered(false)
+                            .setConfigureIntent(openApp())
+                            .establish() ?: throw IllegalStateException("Shifter isn't allowed to connect. Tap Connect and choose OK.")
+                        FullTunnel.stop()
+                        tun?.close()
+                        tun = pfd
+                        full = true
+                    }
+                    // New location or New IP: restart the engine so every app reconnects on the new exit.
+                    FullTunnel.start(this, login, tun!!.fd)
+                    goForeground()
+                    null
+                } catch (e: Exception) {
+                    e.message ?: "Could not start the connection."
+                }
+                VpnBridge.started(error)
+                if (error != null && tun == null) shutdown(null)
+            }
+        }.start()
+    }
+
     /** Close the VPN slot; [reason] tells Dart when the app didn't ask for it. */
     fun shutdown(reason: String?) {
         if (running === this) running = null
+        FullTunnel.stop()
+        full = false
         tun?.close()
         tun = null
         stopForeground(STOP_FOREGROUND_REMOVE)
@@ -97,6 +150,7 @@ class ShifterVpnService : VpnService() {
 
     override fun onDestroy() {
         if (running === this) running = null
+        FullTunnel.stop()
         tun?.close()
         tun = null
         super.onDestroy()
@@ -118,7 +172,9 @@ class ShifterVpnService : VpnService() {
         val notification = Notification.Builder(this, NOTIFICATION_CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_shifter)
             .setContentTitle("Connected through Shifter")
-            .setContentText("Apps that use the system proxy go through your Shifter location.")
+            .setContentText(
+                if (full) "All apps go through your Shifter location." else "Apps that use the system proxy go through your Shifter location.",
+            )
             .setContentIntent(openApp())
             .setOngoing(true)
             .build()
