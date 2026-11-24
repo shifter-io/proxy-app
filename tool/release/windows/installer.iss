@@ -1,13 +1,12 @@
-; The elevated bootstrapper owns the service. Velopack still owns the per-user application.
+; Velopack owns the per-user application and its uninstaller.
 [Setup]
-AppId=ShifterBackground
-AppName=Shifter Proxy App and Background Service
+AppId=Shifter.ProxyApp
+AppName=Shifter Proxy App
 AppVersion={#ReleaseVersion}
 AppPublisher=Shifter
-DefaultDirName={autopf}\Shifter
-DisableDirPage=yes
-DisableProgramGroupPage=yes
-PrivilegesRequired=admin
+CreateAppDir=no
+Uninstallable=no
+PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir={#OutputDir}
@@ -15,16 +14,15 @@ OutputBaseFilename=Shifter-Setup-win-x64
 SolidCompression=yes
 Compression=lzma2
 SignTool=Azure
-SignedUninstaller=yes
 CloseApplications=no
 RestartApplications=no
 
 [Files]
-Source: "{#StageDir}\ShifterService.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#StageDir}\Shifter-Velopack-Setup.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall
-Source: "user-install.ps1"; DestDir: "{app}"; Flags: ignoreversion
-Source: "service-install.ps1"; DestDir: "{app}"; Flags: ignoreversion
-Source: "tray-run.ps1"; DestDir: "{app}"; Flags: ignoreversion
+Source: "user-install.ps1"; DestDir: "{tmp}"; Flags: deleteafterinstall
+
+[Run]
+Filename: "{localappdata}\Shifter.ProxyApp\Shifter.exe"; Description: "Launch Shifter"; Flags: nowait postinstall skipifsilent; Check: InstallationSucceeded
 
 [Code]
 var
@@ -51,14 +49,9 @@ begin
   Result := Token;
 end;
 
-function PrepareToInstall(var NeedsRestart: Boolean): String;
-var
-  ExitCode: Integer;
+function InstallationSucceeded(): Boolean;
 begin
-  Result := '';
-  if not Exec(PowerShell(), '-NoProfile -NonInteractive -Command "if (Get-Service ShifterBackground -ErrorAction SilentlyContinue) { Stop-Service ShifterBackground -ErrorAction Stop }"', '',
-      SW_HIDE, ewWaitUntilTerminated, ExitCode) or (ExitCode <> 0) then
-    Result := 'Shifter could not stop its background service. Close the app and retry.';
+  Result := InstallationError = '';
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
@@ -67,13 +60,10 @@ var
   Params: String;
 begin
   if CurStep <> ssPostInstall then Exit;
-  Params := ExpandConstant('-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "{app}\user-install.ps1" -Setup "{tmp}\Shifter-Velopack-Setup.exe"');
+  Params := ExpandConstant('-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "{tmp}\user-install.ps1" -Setup "{tmp}\Shifter-Velopack-Setup.exe"');
   if DownloadToken() <> '' then Params := Params + ' -Attribution ' + DownloadToken();
-  if not ExecAsOriginalUser(PowerShell(), Params, '', SW_HIDE, ewWaitUntilTerminated, ExitCode) or (ExitCode <> 0) then
+  if not Exec(PowerShell(), Params, '', SW_HIDE, ewWaitUntilTerminated, ExitCode) or (ExitCode <> 0) then
     InstallationError := 'Shifter could not install the per-user app. Run Setup from a normal Windows desktop and quit any running Shifter app first.';
-  if (InstallationError = '') and (not Exec(PowerShell(), ExpandConstant('-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "{app}\service-install.ps1"'), '',
-      SW_HIDE, ewWaitUntilTerminated, ExitCode) or (ExitCode <> 0)) then
-    InstallationError := 'Shifter installed the app but could not start its background service. Run Setup again to repair it.';
   if InstallationError <> '' then Log(InstallationError);
 end;
 
@@ -89,13 +79,4 @@ function GetCustomSetupExitCode(): Integer;
 begin
   Result := 0;
   if InstallationError <> '' then Result := 10;
-end;
-
-function InitializeUninstall(): Boolean;
-var
-  ExitCode: Integer;
-begin
-  Result := Exec(PowerShell(), ExpandConstant('-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "{app}\service-install.ps1" -Remove'), '',
-      SW_HIDE, ewWaitUntilTerminated, ExitCode) and (ExitCode = 0);
-  if not Result then MsgBox('The Shifter background service could not be removed. Close Shifter and retry.', mbError, MB_OK);
 end;

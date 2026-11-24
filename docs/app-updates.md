@@ -160,4 +160,4 @@ Local macOS/Android compilation and an iOS simulator build do not establish Wind
 
 ## Desktop packaging and analytics
 
-See [Desktop release packaging](desktop-release.md) for the Windows Azure-signed service and installer, direct macOS distribution, Linux AppImage, and collector staging.
+See [Desktop release packaging](desktop-release.md) for the Windows Azure-signed installer, direct macOS distribution, Linux AppImage, and collector staging.

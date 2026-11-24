@@ -1,7 +1,6 @@
 param(
     [Parameter(Mandatory)][string] $Bundle,
     [Parameter(Mandatory)][string] $BuildRoot,
-    [Parameter(Mandatory)][string] $ServiceBinary,
     [Parameter(Mandatory)][string] $Output,
     [Parameter(Mandatory)][ValidatePattern('^\d+\.\d+\.\d+$')][string] $Version,
     [Parameter(Mandatory)][string] $AzureMetadata,
@@ -56,14 +55,6 @@ $env:CARGO_TARGET_DIR = Join-Path $BuildRoot 'rust'
 Invoke-Tool 'cargo' @('build','--locked','--release','--target','x86_64-pc-windows-msvc',
     '--manifest-path',(Join-Path $repo 'native\updater\Cargo.toml'))
 Copy-Item -LiteralPath (Join-Path $env:CARGO_TARGET_DIR 'x86_64-pc-windows-msvc\release\shifter_updater.dll') -Destination $Bundle -Force
-$serviceSource = (Resolve-Path -LiteralPath $ServiceBinary).Path
-$service = Join-Path $stage 'ShifterService.exe'
-Copy-Item -LiteralPath $serviceSource -Destination $service
-$timestamp = 'http://timestamp.acs.microsoft.com'
-Invoke-Tool $SignTool @('sign','/fd','SHA256','/td','SHA256','/tr',$timestamp,
-    '/dlib',$AzureDlib,'/dmdf',$AzureMetadata,$service)
-Assert-Signed $service
-
 Invoke-Tool $Vpk @('pack','--packId','Shifter.ProxyApp','--packTitle','Shifter',
     '--packVersion',$Version,'--packDir',$Bundle,'--mainExe','shifter_app.exe',
     '--runtime','win-x64','--channel','stable','--delta','None','--outputDir',$stage,
@@ -83,6 +74,7 @@ foreach ($name in @('shifter_app.exe','shifter_updater.dll','Shifter_ExecutionSt
 }
 
 Move-Item -LiteralPath $inner[0].FullName -Destination (Join-Path $stage 'Shifter-Velopack-Setup.exe')
+$timestamp = 'http://timestamp.acs.microsoft.com'
 $template = '$q' + $SignTool + '$q sign /fd SHA256 /td SHA256 /tr ' + $timestamp +
     ' /dlib $q' + $AzureDlib + '$q /dmdf $q' + $AzureMetadata + '$q $f'
 Invoke-Tool $InnoCompiler @(('/SAzure=' + $template), ('/DStageDir=' + $stage),

@@ -16,8 +16,8 @@ constexpr UINT kToggle = 2;
 constexpr UINT kQuit = 3;
 }  // namespace
 
-FlutterWindow::FlutterWindow(const flutter::DartProject& project, bool start_hidden)
-    : start_hidden_(start_hidden), project_(project) {}
+FlutterWindow::FlutterWindow(const flutter::DartProject& project)
+    : project_(project) {}
 
 FlutterWindow::~FlutterWindow() {}
 
@@ -75,9 +75,7 @@ bool FlutterWindow::OnCreate() {
   wcscpy_s(tray_.szTip, L"Shifter");
   AddTrayIcon();
 
-  flutter_controller_->engine()->SetNextFrameCallback([this]() {
-    if (!start_hidden_ || !tray_added_) Show();
-  });
+  flutter_controller_->engine()->SetNextFrameCallback([this]() { Show(); });
 
   // Flutter can complete the first frame before the "show window" callback is
   // registered. The following call ensures a frame is pending to ensure the

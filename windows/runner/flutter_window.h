@@ -19,7 +19,7 @@ inline constexpr wchar_t kShifterActivateMessage[] = L"io.shifter.desktop.activa
 class FlutterWindow : public Win32Window {
  public:
   // Creates a new FlutterWindow hosting a Flutter view running |project|.
-  FlutterWindow(const flutter::DartProject& project, bool start_hidden);
+  explicit FlutterWindow(const flutter::DartProject& project);
   virtual ~FlutterWindow();
 
  protected:
@@ -35,7 +35,6 @@ class FlutterWindow : public Win32Window {
   void AddTrayIcon();
   void RequestQuit(HWND hwnd);
 
-  bool start_hidden_;
   bool tray_added_ = false;
   bool can_connect_ = false;
   bool quitting_ = false;

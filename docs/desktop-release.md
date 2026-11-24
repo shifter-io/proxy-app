@@ -4,21 +4,20 @@ Start with a clean release checkout and use the same version and build number ac
 
 ## Windows
 
-Build the Windows x64 Flutter app and the native SCM service on the signing PC.
+Build the Windows x64 Flutter app on the signing PC.
 
 ```powershell
 flutter build windows --release --build-name 0.2.0 --build-number 2
 .\tool\release\windows\pack.ps1 -Bundle .\build\windows\x64\runner\Release `
-  -ServiceBinary .\build\windows\x64\service\Release\ShifterService.exe `
   -BuildRoot C:\BuildCache\Shifter -Output C:\BuildCache\Shifter\release-0.2.0 `
   -Version 0.2.0 -AzureMetadata <local-metadata.json> -SignTool <signtool.exe> `
   -AzureDlib <Azure.CodeSigning.Dlib.dll> -Publisher '<expected-publisher>' `
   -InnoCompiler <ISCC.exe> -Vpk <vpk.exe>
 ```
 
-Use the existing Azure Artifact Signing account and profile on the PC. If the available Azure signing profile uses Key Vault rather than Artifact Signing, qualify that provider with a Velopack signing template before switching the script. The Windows loader, .NET runtime, and Azure Dlib must match the SignTool architecture. The pack script verifies signatures and timestamps on the service, inner Setup, installed application payload, and public Setup before recording artifact SHA-256. Keep signing credentials off the checkout. [Velopack signing](https://docs.velopack.io/packaging/signing) · [Azure Artifact Signing](https://learn.microsoft.com/en-us/azure/artifact-signing/how-to-signing-integrations)
+Use the existing Azure Artifact Signing account and profile on the PC. If the available Azure signing profile uses Key Vault rather than Artifact Signing, qualify that provider with a Velopack signing template before switching the script. The Windows loader, .NET runtime, and Azure Dlib must match the SignTool architecture. The pack script verifies signatures and timestamps on the inner Setup, packaged application binaries, and public Setup before recording artifact SHA-256. Keep signing credentials off the checkout. [Velopack signing](https://docs.velopack.io/packaging/signing) · [Azure Artifact Signing](https://learn.microsoft.com/en-us/azure/artifact-signing/how-to-signing-integrations)
 
-Run public Setup from the interactive desktop and accept the service installation prompt. The public signed installer places the LocalService background executable in Program Files and installs the Velopack app as the original user. Task Scheduler starts a per-user monitor at logon. The monitor retries unexpected tray exits and follows the process Velopack launches after an update. **Close window** hides Shifter to the notification area. **Quit Shifter** asks the app to restore the user's proxy settings and exits the tray process. The machine service handles its SCM lifecycle separately. Use the public Setup's removal entry to deregister the machine service. The Velopack per-user removal entry owns the app files. When changing the service binary, qualify and distribute a new public signed Setup.
+Run the signed **Shifter Proxy App** Setup from a normal Windows desktop. It installs the app for the current user and offers to launch Shifter when Setup finishes. Velopack owns the installed app and its Windows removal entry. **Close window** hides Shifter to the notification area. **Quit Shifter** restores the previous proxy configuration and exits Shifter. For a lab machine with the earlier QA service install, use that build's machine uninstaller to remove its service and logon task before testing this package.
 
 ## macOS and Linux
 

@@ -7,8 +7,6 @@ $principal = [Security.Principal.WindowsPrincipal] [Security.Principal.WindowsId
 if ($principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     throw 'Run Setup from a non-elevated Windows desktop.'
 }
-$sid = $principal.Identity.User.Value
-$taskName = "Shifter.Tray.$sid"
 $currentSession = (Get-Process -Id $PID).SessionId
 if (Get-Process shifter_app -ErrorAction SilentlyContinue | Where-Object SessionId -eq $currentSession) {
     throw 'Quit Shifter from the notification area before running Setup.'
@@ -33,17 +31,3 @@ if ($Attribution) {
         if (-not (Test-Path -LiteralPath $attributionFile)) { throw }
     }
 }
-
-$monitor = Join-Path $PSScriptRoot 'tray-run.ps1'
-$powerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
-$action = New-ScheduledTaskAction -Execute $powerShell `
-    -Argument ('-NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File "' + $monitor + '"')
-$trigger = New-ScheduledTaskTrigger -AtLogOn -User $principal.Identity.Name
-$user = New-ScheduledTaskPrincipal -UserId $sid -LogonType Interactive -RunLevel Limited
-$settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) `
-    -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
-Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Principal $user `
-    -Settings $settings -Force | Out-Null
-# Let Task Scheduler own the process even on the initial install. A normal
-# Start-menu launch sends activation to this instance.
-Start-ScheduledTask -TaskName $taskName
