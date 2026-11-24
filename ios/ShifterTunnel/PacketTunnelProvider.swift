@@ -2,8 +2,8 @@ import NetworkExtension
 
 /// The Shifter packet tunnel. Two modes, chosen by the login the app sends:
 ///
-/// - Full device (login has `socks`): every packet, TCP and UDP, goes through
-///   the gateway's SOCKS5 ([FullTunnel]).
+/// - Full device (login has `socks`): every packet goes through the gateway,
+///   encrypted ([FullTunnel], [GatewayBridge]).
 /// - Proxy settings (no `socks`): the tunnel routes no packets; its network
 ///   settings carry an HTTP proxy ([TunnelProxy] on 127.0.0.1 in this
 ///   extension), and apps that follow it go through Shifter.
@@ -36,9 +36,9 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
     private func startFull(_ socks: SocksLogin, _ completionHandler: @escaping (Error?) -> Void) {
         Task {
             do {
-                try await full.prepare(socks)
+                let bridge = try await full.prepare(socks)
                 try await setTunnelNetworkSettings(FullTunnel.settings(for: socks))
-                try full.start(socks)
+                try await full.start(bridge)
                 completionHandler(nil)
             } catch {
                 completionHandler(error)
@@ -72,12 +72,12 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
             // A new exit for every app: restart the engine on the new login.
             Task {
                 do {
-                    try await full.prepare(socks)
+                    let bridge = try await full.prepare(socks)
                     if previous?.socks == nil {
                         proxy.stop()
                         try await setTunnelNetworkSettings(FullTunnel.settings(for: socks))
                     }
-                    try full.start(socks)
+                    try await full.start(bridge)
                 } catch is FullTunnel.Rejected {
                     full.markRejected()
                 } catch {}
