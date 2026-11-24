@@ -286,7 +286,7 @@ class _PlanMiniCard extends StatelessWidget {
           ] else
             Text(tr('Traffic usage not available yet'), style: SfText.micro.copyWith(fontSize: 12))
         else
-          Text(trf('{n} static IPs · unlimited', {'n': (mm as IspMembership).ipCount}), style: SfText.micro.copyWith(fontSize: 12)),
+          Text(trf('{n} ISP proxies · unlimited', {'n': (mm as IspMembership).ipCount}), style: SfText.micro.copyWith(fontSize: 12)),
       ]),
     );
   }

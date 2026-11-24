@@ -9,11 +9,13 @@
     "Expires {when}": "Caduca {when}",
     "Add": "Añadir",
     "MEMBERSHIP": "MEMBRESÍA",
-    "Sticky": "Fija",
+    "Sticky": "Persistente",
     "All traffic between this device and Shifter is encrypted, on Wi-Fi and mobile data.": "Todo el tráfico entre tu dispositivo y Shifter va cifrado, por Wi-Fi o móvil.",
     "Kept in the Keychain on this device and sent only to Shifter, to load your plans.": "Se guarda en el Keychain y solo se envía a Shifter para cargar tus planes.",
     "Kept encrypted on this device and sent only to Shifter, to load your plans.": "Se guarda cifrada en el dispositivo y solo se envía a Shifter para cargar tus planes.",
-    "Shifter does not sell or share your traffic, or use it for anything else.": "Shifter no vende ni comparte tu tráfico, ni lo usa para ninguna otra cosa."
+    "Shifter does not sell or share your traffic, or use it for anything else.": "Shifter no vende ni comparte tu tráfico, ni lo usa para ninguna otra cosa.",
+    "Sticky IP": "IP persistente",
+    "Sticky or rotating IPs": "IPs persistentes o rotativas"
   },
   "zh-Hans": {
     "today": "今天",
@@ -25,7 +27,10 @@
     "Expires {when}": "{when}到期",
     "Add": "添加",
     "MEMBERSHIP": "会员资格",
-    "Inactive": "未激活"
+    "Inactive": "未激活",
+    "Sticky": "粘性",
+    "Sticky IP": "粘性 IP",
+    "Sticky or rotating IPs": "粘性或轮换 IP"
   },
   "de": {
     "today": "heute",
@@ -56,7 +61,9 @@
     "All traffic between this device and Shifter is encrypted, on Wi-Fi and mobile data.": "Trafic chiffré entre cet appareil et Shifter, en Wi-Fi et données mobiles.",
     "Kept in the Keychain on this device and sent only to Shifter, to load your plans.": "Dans le Keychain, envoyée uniquement à Shifter pour charger vos forfaits.",
     "Kept encrypted on this device and sent only to Shifter, to load your plans.": "Chiffrée sur l'appareil, envoyée uniquement à Shifter pour charger vos forfaits.",
-    "Shifter does not sell or share your traffic, or use it for anything else.": "Shifter ne vend ni ne partage votre trafic, et ne l'utilise à aucune autre fin."
+    "Shifter does not sell or share your traffic, or use it for anything else.": "Shifter ne vend ni ne partage votre trafic, et ne l'utilise à aucune autre fin.",
+    "Sticky": "Persistant",
+    "Sticky or rotating IPs": "IP persistantes ou rotatives"
   },
   "ja": {
     "today": "今日",
@@ -65,7 +72,9 @@
     "in {n} days": "{n}日後",
     "{n} days ago": "{n}日前",
     "Renews {when}": "{when}に更新",
-    "Expires {when}": "{when}に期限切れ"
+    "Expires {when}": "{when}に期限切れ",
+    "Sticky": "スティッキー",
+    "Sticky or rotating IPs": "スティッキーまたはローテーションIP"
   },
   "ko": {
     "today": "오늘",
@@ -76,7 +85,10 @@
     "Renews {when}": "{when} 갱신",
     "Expires {when}": "{when} 만료",
     "State": "주/도",
-    "Verifying update…": "업데이트 검증 중…"
+    "Verifying update…": "업데이트 검증 중…",
+    "Sticky": "스티키",
+    "Sticky IP": "스티키 IP",
+    "Sticky or rotating IPs": "스티키 또는 로테이팅 IP"
   },
   "pt-BR": {
     "today": "hoje",
@@ -90,6 +102,9 @@
     "All traffic between this device and Shifter is encrypted, on Wi-Fi and mobile data.": "Todo tráfego do aparelho com a Shifter é criptografado, no Wi-Fi e dados móveis.",
     "Kept in the Keychain on this device and sent only to Shifter, to load your plans.": "Fica no Keychain do aparelho, enviada só à Shifter para carregar seus planos.",
     "Kept encrypted on this device and sent only to Shifter, to load your plans.": "Fica criptografada no aparelho, enviada só à Shifter para carregar seus planos.",
-    "Shifter does not sell or share your traffic, or use it for anything else.": "A Shifter não vende nem compartilha seu tráfego, nem o usa para mais nada."
+    "Shifter does not sell or share your traffic, or use it for anything else.": "A Shifter não vende nem compartilha seu tráfego, nem o usa para mais nada.",
+    "Sticky": "Persistente",
+    "Sticky IP": "IP persistente",
+    "Sticky or rotating IPs": "IPs persistentes ou rotativos"
   }
 }

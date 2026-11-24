@@ -334,7 +334,7 @@ class LocationCard extends StatelessWidget {
     if (locked) {
       d = (title: tr('Random location'), subtitle: tr('Worldwide · Non-Geo plan'));
     } else if (mm is IspMembership && t == null) {
-      d = (title: tr('Choose an IP'), subtitle: trf('{n} static ISP IPs on this plan', {'n': mm.ipCount}));
+      d = (title: tr('Choose an IP'), subtitle: trf('{n} ISP proxies on this plan', {'n': mm.ipCount}));
     } else if (mm is ResidentialMembership && !poolTargeting(mm.pool).subCountry && t is ResidentialTarget && t.country != null) {
       d = (title: tr(t.country!.name), subtitle: tr('Country-level · Country Geo plan'));
     } else {
@@ -368,7 +368,7 @@ class LocationCard extends StatelessWidget {
         const SizedBox(width: 14),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(mm is IspMembership ? tr('STATIC IP') : tr('LOCATION'), style: SfText.label.copyWith(fontSize: 9.5)),
+            Text(mm is IspMembership ? tr('ISP PROXY') : tr('LOCATION'), style: SfText.label.copyWith(fontSize: 9.5)),
             const SizedBox(height: 4),
             SfSwitcher(
               axis: Axis.horizontal,
@@ -428,7 +428,7 @@ class StatsCard extends StatelessWidget {
             ? _Stat(label: tr('Traffic left'), value: const Text('—'), sub: Text(tr('Usage not available yet')))
             : _Stat(label: tr('Bandwidth'), value: Text(tr('Unlimited')), sub: Text(tr('No traffic cap')));
     final session = mm is IspMembership
-        ? _Stat(label: 'IP', value: Text(tr('Static')), sub: Text(tr('Same IP every time')))
+        ? _Stat(label: 'IP', value: Text(tr('Sticky')), sub: Text(tr('Same City and ASN')))
         : _Stat(
             label: tr('Session'),
             value: Text(settings.sessionMode == SessionMode.sticky ? formatDuration(settings.ttlSeconds) : tr('Rotating')),

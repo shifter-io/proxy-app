@@ -185,6 +185,7 @@
   "Hungary": "Ungarn",
   "IP session": "IP-Sitzung",
   "ISP": "ISP",
+  "ISP PROXY": "ISP-PROXY",
   "ISPs available in {place}. Pick one to only get IPs from that provider.": "ISPs verfügbar in {place}. Wählen Sie einen aus, um nur IPs von diesem Anbieter zu erhalten.",
   "Iceland": "Island",
   "Inactive": "Inaktiv",
@@ -339,8 +340,7 @@
   "Russia": "Russland",
   "Rwanda": "Ruanda",
   "Réunion": "Réunion",
-  "STATIC IP": "STATIC IP",
-  "Same IP every time": "Immer dieselbe IP",
+  "Same City and ASN": "Gleiche Stadt und ASN",
   "Saudi Arabia": "Saudi-Arabien",
   "Search city, carrier or ASN": "Stadt, Anbieter oder ASN suchen",
   "Search countries": "Länder suchen",
@@ -386,7 +386,6 @@
   "State": "Bundesland",
   "State-level · {country}": "Bundesland-Ebene · {country}",
   "States": "Bundesstaaten",
-  "Static": "Statisch",
   "Sticky": "Sticky",
   "Sticky IP": "Sticky IP",
   "Sticky or rotating IPs": "Sticky- oder rotierende IPs",
@@ -497,7 +496,7 @@
   "{left} left of {total}": "{left} von {total} verbleibend",
   "{month} {day}, {year}": "{day}. {month} {year}",
   "{n} IPs": "{n} IPs",
-  "{n} days ago": "vor {n} Tagen",
-  "{n} static IPs · unlimited": "{n} statische IPs · unbegrenzt",
-  "{n} static ISP IPs on this plan": "{n} statische ISP-IPs in diesem Plan"
+  "{n} ISP proxies on this plan": "{n} ISP-Proxys in diesem Tarif",
+  "{n} ISP proxies · unlimited": "{n} ISP-Proxys · unbegrenzt",
+  "{n} days ago": "vor {n} Tagen"
 }

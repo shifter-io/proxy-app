@@ -178,7 +178,8 @@ class IspMembership extends Membership {
     required this.countries,
   });
 
-  /// ISP is unlimited bandwidth; targeting = pick one of the assigned static IPs.
+  /// ISP is unlimited bandwidth; targeting = pick one of the assigned ISP
+  /// proxies, each sticky to its city and ISP (ASN).
   final int ipCount;
   final List<String> countries;
 
