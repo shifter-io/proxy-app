@@ -333,6 +333,15 @@ class AppController extends ChangeNotifier {
   /// VpnService policy). Desktop sets a system proxy and needs no screen.
   bool get needsDataUse => (Platform.isIOS || Platform.isAndroid) && !settings.dataUseAccepted;
 
+  /// Settings > Language: [code] is an I18n code, null follows the device.
+  /// Takes effect at once, with no reconnect.
+  Future<void> setLanguage(String? code) async {
+    settings = settings.copyWith(language: () => code);
+    await store.writeSettings(settings);
+    await I18n.load(code: code);
+    _notify();
+  }
+
   Future<void> acceptDataUse() async {
     settings = settings.copyWith(dataUseAccepted: true);
     _notify();
