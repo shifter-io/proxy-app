@@ -5,9 +5,9 @@ plugins {
 }
 
 android {
-    // Kotlin package and JNI names (the tunnel engine is bound to
-    // io.shifter.shifter_app.HevTunnel); the store ID is applicationId below.
-    namespace = "io.shifter.shifter_app"
+    // Kotlin package; the tunnel engine (jniLibs) is bound to
+    // io.shifter.app.HevTunnel, see tool/android/build_hev_jni.sh.
+    namespace = "io.shifter.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
