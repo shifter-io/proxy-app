@@ -8,7 +8,9 @@ The bundled fonts in `assets/fonts/` are distributed under SIL Open Font License
 
 ## Flag images
 
-The 247 PNG files in `assets/flags/` match the files distributed with Shifter Proxy Extension byte for byte. That project's asset audit identifies them as the [famfamfam flag distribution](https://github.com/legacy-icons/famfamfam-flags), released with a public-domain dedication. They retain that status.
+The PNG files in `assets/flags/` are rendered from [flag-icons](https://github.com/lipis/flag-icons) (`flags/4x3`) by `tool/generate_flags.py`. flag-icons is MIT licensed, copyright 2013 Panayiotis Lipiridis. The license is in `docs/licenses/flag-icons-MIT.txt`.
+
+Three files with no flag-icons source (`an.png`, `cs.png`, `fam.png`) are still the originals from the [famfamfam flag distribution](https://github.com/legacy-icons/famfamfam-flags), shared with Shifter Proxy Extension and released with a public-domain dedication.
 
 ## Interface icons
 
