@@ -3,6 +3,6 @@
 <resources>
     <string name="notification_channel">连接</string>
     <string name="notification_title">已通过 Shifter 连接</string>
-    <string name="notification_text_full">所有应用都通过您的 Shifter 位置。</string>
-    <string name="notification_text_proxy">使用系统代理的应用都通过您的 Shifter 位置。</string>
+    <string name="notification_text_full">所有应用都会通过您的 Shifter 位置。</string>
+    <string name="notification_text_proxy">使用系统代理的应用会通过您的 Shifter 位置。</string>
 </resources>

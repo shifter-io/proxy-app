@@ -1,0 +1,79 @@
+{
+  "es": {
+    "today": "hoy",
+    "tomorrow": "mañana",
+    "yesterday": "ayer",
+    "in {n} days": "en {n} días",
+    "{n} days ago": "hace {n} días",
+    "Renews {when}": "Se renueva {when}",
+    "Expires {when}": "Caduca {when}",
+    "Add": "Añadir",
+    "MEMBERSHIP": "MEMBRESÍA",
+    "Sticky": "Fija"
+  },
+  "zh-Hans": {
+    "today": "今天",
+    "tomorrow": "明天",
+    "yesterday": "昨天",
+    "in {n} days": "{n} 天后",
+    "{n} days ago": "{n} 天前",
+    "Renews {when}": "{when}续费",
+    "Expires {when}": "{when}到期",
+    "Add": "添加",
+    "MEMBERSHIP": "会员资格",
+    "Inactive": "未激活"
+  },
+  "de": {
+    "today": "heute",
+    "tomorrow": "morgen",
+    "yesterday": "gestern",
+    "in {n} days": "in {n} Tagen",
+    "{n} days ago": "vor {n} Tagen",
+    "Renews {when}": "Verlängert sich {when}",
+    "Expires {when}": "Läuft {when} ab",
+    "Add": "Hinzufügen",
+    "States": "Bundesstaaten",
+    "Sticky or rotating IPs": "Sticky- oder rotierende IPs",
+    "Suspended": "Ausgesetzt"
+  },
+  "fr": {
+    "today": "aujourd'hui",
+    "tomorrow": "demain",
+    "yesterday": "hier",
+    "in {n} days": "dans {n} jours",
+    "{n} days ago": "il y a {n} jours",
+    "Renews {when}": "Se renouvelle {when}",
+    "Expires {when}": "Expire {when}",
+    "Add": "Ajouter"
+  },
+  "ja": {
+    "today": "今日",
+    "tomorrow": "明日",
+    "yesterday": "昨日",
+    "in {n} days": "{n}日後",
+    "{n} days ago": "{n}日前",
+    "Renews {when}": "{when}に更新",
+    "Expires {when}": "{when}に期限切れ"
+  },
+  "ko": {
+    "today": "오늘",
+    "tomorrow": "내일",
+    "yesterday": "어제",
+    "in {n} days": "{n}일 후",
+    "{n} days ago": "{n}일 전",
+    "Renews {when}": "{when} 갱신",
+    "Expires {when}": "{when} 만료",
+    "State": "주/도",
+    "Verifying update…": "업데이트 검증 중…"
+  },
+  "pt-BR": {
+    "today": "hoje",
+    "tomorrow": "amanhã",
+    "yesterday": "ontem",
+    "in {n} days": "em {n} dias",
+    "{n} days ago": "há {n} dias",
+    "Renews {when}": "Renova {when}",
+    "Expires {when}": "Expira {when}",
+    "MEMBERSHIP": "ASSINATURA"
+  }
+}
