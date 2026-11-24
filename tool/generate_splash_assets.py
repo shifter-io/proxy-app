@@ -20,7 +20,7 @@ def artwork(scale):
     # Render large, then downsample, so the glyph edges remain antialiased.
     s = 4
     image = Image.new("RGBA", (72 * s, 72 * s))
-    glyph_width = round(72 * 115 / 145 * s)
+    glyph_width = round(72 * 117 / 145 * s)
     glyph = Image.open(io.BytesIO(cairosvg.svg2png(
         url=str(ROOT / "assets/brand/shifter-glyph.svg"),
         output_width=glyph_width, output_height=72 * s,
