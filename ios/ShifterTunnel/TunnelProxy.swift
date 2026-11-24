@@ -9,6 +9,8 @@ struct GatewayLogin: Codable {
     var password: String
     /// Hosts that skip the gateway (lib/proxy/bypass.dart, already expanded).
     var bypass: [String]
+    /// Set: full-device mode through the gateway's SOCKS5 (FullTunnel).
+    var socks: SocksLogin?
 }
 
 /// Swift twin of lib/proxy/local_proxy.dart for the iOS packet tunnel, which

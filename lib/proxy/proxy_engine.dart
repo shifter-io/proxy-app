@@ -123,9 +123,15 @@ class LocalProxyEngine implements ProxyEngine {
 
 /// Asks the IP service at [url] for the exit address, through the local
 /// proxy on 127.0.0.1:[port].
-Future<ExitInfo> checkExitThrough(int port, String url) async {
+Future<ExitInfo> checkExitThrough(int port, String url) => _checkExit(url, 'PROXY 127.0.0.1:$port');
+
+/// Same, without a proxy: for when the whole device (this app included) is
+/// already routed through Shifter.
+Future<ExitInfo> checkExitDirect(String url) => _checkExit(url, 'DIRECT');
+
+Future<ExitInfo> _checkExit(String url, String route) async {
   final client = HttpClient()
-    ..findProxy = ((_) => 'PROXY 127.0.0.1:$port')
+    ..findProxy = ((_) => route)
     ..connectionTimeout = _ipCheckTimeout;
   try {
     final req = await client.getUrl(Uri.parse(url)).timeout(_ipCheckTimeout);
