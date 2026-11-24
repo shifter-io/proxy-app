@@ -2,22 +2,22 @@ import 'dart:math';
 
 import 'local_proxy.dart';
 
-/// The gateway's SOCKS5 login for full-device mode, or null when this build
-/// has none (then the app uses the proxy-settings mode).
+/// The SOCKS5 login for full-device mode: the plan's own gateway login.
+/// SOCKS5 and HTTP share the gateway's host, port and username format
+/// (targeting and session in the username).
 ///
-/// For now it comes only from a local build's
-/// `--dart-define-from-file=<private env file>` (SOCKS_HOST, SOCKS_PORT,
-/// SOCKS_USER, SOCKS_PASS). The values end up inside that build, so never
-/// share it. Session: the plan login's `-sid-` value, so New IP still gives a
-/// new exit; rotating plans get one session per connect.
-Map<String, Object>? socksLogin(GatewayEndpoint endpoint) {
-  if (!socksConfigured) return null;
+/// Development: `--dart-define-from-file=<private file>` with SOCKS_HOST,
+/// SOCKS_PORT, SOCKS_USER and SOCKS_PASS points the tunnel at another SOCKS5
+/// server, keeping the plan's session id. Those values end up inside that
+/// build, so never share it.
+Map<String, Object> socksLogin(GatewayEndpoint endpoint) {
+  if (_host.isEmpty || _port == 0 || _user.isEmpty) {
+    return {'host': endpoint.host, 'port': endpoint.port, 'username': endpoint.username, 'password': endpoint.password};
+  }
   final sid = RegExp(r'-sid-([A-Za-z0-9]+)').firstMatch(endpoint.username)?.group(1) ??
       List.generate(10, (_) => 'abcdefghijklmnopqrstuvwxyz0123456789'[Random.secure().nextInt(36)]).join();
   return {'host': _host, 'port': _port, 'username': '$_user-session-$sid', 'password': _pass};
 }
-
-bool get socksConfigured => _host.isNotEmpty && _port != 0 && _user.isNotEmpty;
 
 const _host = String.fromEnvironment('SOCKS_HOST');
 const _port = int.fromEnvironment('SOCKS_PORT');

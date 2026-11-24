@@ -24,7 +24,7 @@
 
 <p><strong>Shifter Proxy App</strong> is a desktop, mobile, and tablet proxy client for <a href="https://shifter.io/services/residential-proxies?utm_source=github&amp;utm_medium=referral&amp;utm_campaign=proxy_app&amp;utm_content=readme_intro_residential">Shifter Residential Proxies</a> and <a href="https://shifter.io/services/isp-proxies?utm_source=github&amp;utm_medium=referral&amp;utm_campaign=proxy_app&amp;utm_content=readme_intro_isp">ISP Proxies</a>. Connect a supported plan, choose a residential proxy location or an assigned ISP proxy, and check your exit IP from one interface. Manage rotating proxies, sticky sessions, and proxy bypass rules without entering gateway credentials into each compatible application.</p>
 <p>Built with Flutter for <strong>macOS, Windows, Linux, Android, iPhone, and iPad</strong>, with layouts that adapt to desktop windows, phones, tablets, and foldables. Platform verification varies; see <a href="#platform-support">platform support</a>.</p>
-<p><strong>Live proxy connections require a Shifter account, an API key, and an active supported proxy plan.</strong> The app configures an HTTP proxy for applications that honor the operating system's proxy settings. It does not tunnel all device traffic or provide a device-wide kill switch.</p>
+<p><strong>Live proxy connections require a Shifter account, an API key, and an active supported proxy plan.</strong> On iPhone, iPad and Android, all device traffic, TCP and UDP, goes through your Shifter proxy plan. On desktop, the app configures an HTTP proxy for applications that honor the operating system's proxy settings. There is no device-wide kill switch.</p>
 <h2 id="contents">Contents</h2>
 <ul>
 <li><a href="#why-shifter-proxy-app">Why Shifter Proxy App?</a></li>
@@ -192,21 +192,21 @@ flutter devices
 </tr>
 <tr>
 <td><strong>Android 10+</strong></td>
-<td>Android connection service advertises the local HTTP proxy.</td>
+<td>VPN service carries all device traffic, TCP and UDP, to the gateway over SOCKS5.</td>
 <td>End-to-end checks recorded on Android 10 and 16, including phone and tablet.</td>
 </tr>
 <tr>
 <td><strong>iPhone / iPad, iOS 15+</strong></td>
-<td>Network Extension supplies proxy settings and hosts the local proxy.</td>
+<td>Network Extension carries all device traffic, TCP and UDP, to the gateway over SOCKS5.</td>
 <td>Live connection check recorded on iPhone. iPad layout is included; physical iPad routing is not independently verified.</td>
 </tr>
 </tbody>
 </table></div>
 <p>These are existing project verification notes, not a claim that every platform was retested for this README. Release packaging, store distribution, and production signing are separate from running a source build.</p>
 <h2 id="how-proxy-routing-works">How proxy routing works</h2>
-<p>The app runs a local HTTP proxy that authenticates to the selected Shifter gateway. Compatible applications send HTTP requests and HTTPS CONNECT tunnels through it. Changing a location, session, or ISP selection updates gateway credentials and closes existing tunnels so the new selection can take effect.</p>
+<p>On desktop, the app runs a local HTTP proxy that authenticates to the selected Shifter gateway. Compatible applications send HTTP requests and HTTPS CONNECT tunnels through it. Changing a location, session, or ISP selection updates gateway credentials and closes existing tunnels so the new selection can take effect.</p>
 <p>On desktop, the app applies system proxy settings and saves the previous configuration for restoration on disconnect, sign-out, quit, or recovery after a crash. Applications with independent network settings may need their own proxy configuration or may bypass this integration entirely.</p>
-<p>Android uses <code>VpnService</code> to advertise proxy settings; iOS uses a Network Extension. These operating-system APIs can display a VPN permission prompt or indicator, but the app's routing is proxy based. UDP traffic, including many WebRTC and gaming connections, is not carried by the HTTP proxy. There is no device-wide kill switch.</p>
+<p>On Android (<code>VpnService</code>) and iOS (Network Extension), the app captures every app's traffic and sends it to the Shifter gateway over SOCKS5: TCP as connections and UDP (QUIC, WebRTC, calls, games, DNS) through UDP relay, all on your plan's location and session. Local networks such as printers and the router stay direct. The system shows a VPN permission prompt and indicator. Changing a location, session, or ISP selection reconnects every app on the new exit. There is no device-wide kill switch.</p>
 <p>macOS builds run outside App Sandbox because changing network proxy settings requires access blocked by the sandbox. Distribution uses Developer ID signing rather than the Mac App Store. See the <a href="development.html">development guide</a> for architecture details.</p>
 <h2 id="privacy-and-connection-settings">Privacy and connection settings</h2>
 <p>The API key is stored through <code>flutter_secure_storage</code> and sent to Shifter for authenticated account requests. Non-secret preferences, selected locations, and account display data are stored separately. Gateway credentials authenticate the proxy connection.</p>
@@ -319,7 +319,7 @@ python3 tool/render_docs.py
 <h3 id="is-this-a-free-proxy-app">Is this a free proxy app?</h3>
 <p>The source code is available under the MIT license. The app does not include free Residential or ISP proxy traffic. Live connections require an active supported Shifter plan. The preview studio runs without a paid plan and simulates connections for interface development.</p>
 <h3 id="is-shifter-proxy-app-a-vpn">Is Shifter Proxy App a VPN?</h3>
-<p>It is an HTTP proxy client. Android and iOS use system connection APIs that can show a VPN indicator, but the app does not tunnel all IP traffic. Applications that ignore proxy settings and UDP traffic can connect directly.</p>
+<p>It is a proxy app: every connection goes through your own Shifter proxy plan. On Android and iOS it uses the system VPN interface to send all apps' TCP and UDP traffic to the Shifter gateway. On desktop it sets the system HTTP proxy, so applications that ignore proxy settings, and UDP traffic, can connect directly.</p>
 <h3 id="can-i-use-rotating-proxies-or-keep-a-sticky-residential-session">Can I use rotating proxies or keep a sticky residential session?</h3>
 <p>Supported Residential plans offer rotating mode and sticky sessions with a chosen duration. New IP requests a fresh session. A sticky session cannot guarantee an exit remains available indefinitely.</p>
 <h3 id="does-a-mobile-proxy-app-provide-mobile-network-ips">Does a mobile proxy app provide mobile-network IPs?</h3>
@@ -332,4 +332,6 @@ python3 tool/render_docs.py
 <p>Report app bugs and propose improvements at <a href="https://github.com/shifter-io/proxy-app">shifter-io/proxy-app</a>. Include the platform, operating-system version, reproduction steps, and expected behavior. Run the relevant checks before submitting code changes.</p>
 <p>Use <a href="https://shifter.io/docs?utm_source=github&amp;utm_medium=referral&amp;utm_campaign=proxy_app&amp;utm_content=readme_support">Shifter's support resources</a> for account or service questions. Remove API keys, proxy passwords, account details, and browsing history from reports.</p>
 <h2 id="license">License</h2>
-<p>Project source is released under the <a href="third-party-notices.html#project-license">MIT License</a>. Third-party dependencies, fonts, and assets retain their own licenses. Shifter branding retains its respective rights. See <a href="third-party-notices.html">third-party asset notices</a>.</p><footer>Shifter Proxy App · Standalone documentation · <a href="https://github.com/shifter-io/proxy-app">Repository</a></footer></main></body></html>
+<p>Project source is released under the <a href="third-party-notices.html#project-license">MIT License</a>. Third-party dependencies, fonts, and assets retain their own licenses. Shifter branding retains its respective rights. See <a href="third-party-notices.html">third-party asset notices</a>.</p>
+<h2 id="application-updates">Application updates</h2>
+<p>See <a href="app-updates.md">Application updates</a> for platform integration, signed CDN metadata, Android flavors, publishing commands and production qualification gates. Updates are disabled until production configuration is supplied.</p><footer>Shifter Proxy App · Standalone documentation · <a href="https://github.com/shifter-io/proxy-app">Repository</a></footer></main></body></html>

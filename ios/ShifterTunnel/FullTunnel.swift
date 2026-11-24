@@ -3,15 +3,6 @@ import HevSocks5Tunnel
 import Network
 import NetworkExtension
 
-/// The gateway's SOCKS5 login. Same username format as the HTTP gateway
-/// (targeting and session in the username).
-struct SocksLogin: Codable, Equatable {
-    var host: String
-    var port: Int
-    var username: String
-    var password: String
-}
-
 /// Full-device mode: the tunnel routes every IPv4 and IPv6 packet, and
 /// hev-socks5-tunnel (ios/Frameworks, MIT) turns them back into SOCKS5
 /// connections to the gateway: TCP as CONNECT, UDP (QUIC, DNS, calls, games)

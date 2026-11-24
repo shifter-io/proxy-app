@@ -5,7 +5,6 @@ import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
 
-import 'local_proxy.dart';
 import 'proxy_engine.dart';
 import 'socks_login.dart';
 import 'system_proxy.dart' show SystemProxyException;
@@ -40,7 +39,6 @@ class AndroidFullEngine implements ProxyEngine {
   @override
   Future<void> apply(GatewayEndpoint endpoint) async {
     final login = socksLogin(endpoint);
-    if (login == null) throw SystemProxyException('This build has no full-device login.');
     try {
       await _channel.invokeMethod('start', {'host': '127.0.0.1', 'port': 0, 'bypass': <String>[], 'socks': login});
       _login = login;

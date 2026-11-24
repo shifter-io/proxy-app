@@ -25,23 +25,37 @@ studio and the tests use mock data (<code>lib/data/mock_api.dart</code>).</p>
 <li>New location, New IP and settings swap the login in the local proxy and
   close tunnels on the old exit, so they apply immediately (no login caching
   workarounds as in the browsers).</li>
-<li>Only apps that follow the system proxy go through Shifter; UDP (WebRTC,
-  games) connects directly. It is a system proxy, not a VPN tunnel.</li>
-<li><strong>Android</strong> (10+): apps can't set a system proxy, so the app opens a VPN
-  slot (<code>VpnService</code>, <code>android/app/src/main/kotlin/</code>) whose network carries
-  an HTTP proxy pointing at the same local proxy (<code>setHttpProxy</code>). It has no
-  routes: no packets go through it, traffic still speaks Shifter's proxy
-  protocol, and the rest goes direct, as on desktop. Android asks the user
-  once ("Connection request"); a "Connected" notification keeps the app
-  alive in the background; the proxy keeps working after the window closes.
-  Turning the VPN off in Settings disconnects the app.</li>
-<li><strong>iOS</strong> (15+): the same idea with a packet tunnel extension
-  (<code>ios/ShifterTunnel/</code>) whose <code>NEProxySettings</code> point apps at a local proxy.
-  iOS suspends the app in the background, so that proxy runs inside the
-  extension, in Swift (<code>TunnelProxy.swift</code>, a twin of <code>local_proxy.dart</code>);
-  <code>lib/proxy/tunnel_proxy_engine.dart</code> hands it the login. Running it
-  needs a device and an Apple team with the Network Extension entitlement
-  (the simulator can't run tunnel extensions).</li>
+<li>Desktop: only apps that follow the system proxy go through Shifter; UDP
+  (WebRTC, games) connects directly. It is a system proxy, not a VPN tunnel.</li>
+<li><strong>Phones: full-device mode.</strong> Android and iOS open a VPN interface that
+  routes every IPv4 packet (local networks excluded) and IPv6 (so nothing
+  goes around the proxy). <a href="https://github.com/heiher/hev-socks5-tunnel">hev-socks5-tunnel</a>
+  (MIT, pinned; <code>tool/ios/build_hev_xcframework.sh</code>,
+  <code>tool/android/build_hev_jni.sh</code>) turns the packets back into SOCKS5 to
+  the gateway with the plan's own login: TCP as CONNECT, UDP (QUIC, WebRTC,
+  DNS) as UDP ASSOCIATE. DNS goes to 1.1.1.1 / 8.8.8.8 through the tunnel.
+  Before starting, the app checks the login and sends one UDP request so
+  TCP and UDP start on the same exit. New location, New IP and settings
+  restart the engine so every app reconnects on the new exit.</li>
+<li><strong>Android</strong> (10+): <code>ShifterVpnService</code> + <code>FullTunnel.kt</code> +
+  <code>HevTunnel.kt</code> (JNI). Shifter itself is excluded from the VPN, so the
+  engine reaches the gateway directly and the app checks its exit through
+  SOCKS5 (<code>lib/proxy/android_full_engine.dart</code>). The tunnel has no IPv6
+  address, so apps use IPv4 at once. Android asks the user once
+  ("Connection request"); a "Connected" notification keeps the app alive in
+  the background. Turning the VPN off in Settings disconnects the app.</li>
+<li><strong>iOS</strong> (15+): packet tunnel extension (<code>ios/ShifterTunnel/</code>,
+  <code>FullTunnel.swift</code>, engine in <code>ios/Frameworks/</code>), sized for the 50 MB
+  extension limit; <code>lib/proxy/tunnel_proxy_engine.dart</code> hands it the
+  login. The extension's own sockets bypass the tunnel. It still contains
+  the proxy-settings mode (<code>TunnelProxy.swift</code>, a twin of
+  <code>local_proxy.dart</code>) for logins without SOCKS5. Running it needs a device
+  and an Apple team with the Network Extension entitlement (the simulator
+  can't run tunnel extensions).</li>
+<li>Development: <code>--dart-define-from-file</code> with SOCKS_HOST, SOCKS_PORT,
+  SOCKS_USER and SOCKS_PASS points the phone tunnels at another SOCKS5
+  server (<code>lib/proxy/socks_login.dart</code>). Keep that file private and never
+  share such a build.</li>
 <li>macOS: the app runs outside the App Sandbox (networksetup is blocked inside
   it), so ship it with Developer ID, not the Mac App Store.</li>
 </ul>

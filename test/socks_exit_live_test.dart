@@ -6,7 +6,7 @@ import 'package:shifter_app/proxy/proxy_engine.dart';
 
 /// Live check of the SOCKS5 exit lookup. Needs a private env file with
 /// SOCKS_HOST, SOCKS_PORT, SOCKS_USER and SOCKS_PASS:
-///   SHIFTER_SOCKS_ENV_FILE=<file> flutter test test/socks_exit_live_test.dart
+/// `SHIFTER_SOCKS_ENV_FILE=path/to/file flutter test test/socks_exit_live_test.dart`
 void main() {
   final path = Platform.environment['SHIFTER_SOCKS_ENV_FILE'];
   test('exit IP through SOCKS5 stays on one session', () async {

@@ -8,7 +8,6 @@ import 'android_full_engine.dart';
 import 'bypass.dart';
 import 'local_proxy.dart' show GatewayEndpoint;
 import 'proxy_isolate.dart';
-import 'socks_login.dart';
 import 'system_proxy.dart';
 import 'tunnel_proxy_engine.dart';
 
@@ -28,11 +27,11 @@ const _ipCheckTimeout = Duration(seconds: 12);
 /// Routes this device through one gateway login (the extension's
 /// ProxyController, src/lib/proxy/controller.ts).
 abstract class ProxyEngine {
-  /// The real engine for this device: the packet tunnel on iOS, the local
-  /// proxy plus the OS proxy (or Android's VPN slot) everywhere else.
+  /// The real engine for this device: full-device tunnels on iOS and
+  /// Android, the local proxy plus the OS proxy on desktop.
   static ProxyEngine forPlatform(Store store) => Platform.isIOS
       ? TunnelProxyEngine()
-      : Platform.isAndroid && socksConfigured
+      : Platform.isAndroid
           ? AndroidFullEngine()
           : LocalProxyEngine(store);
 

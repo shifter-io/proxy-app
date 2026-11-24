@@ -13,6 +13,15 @@ struct GatewayLogin: Codable {
     var socks: SocksLogin?
 }
 
+/// The gateway's SOCKS5 login. Same username format as the HTTP gateway
+/// (targeting and session in the username).
+struct SocksLogin: Codable, Equatable {
+    var host: String
+    var port: Int
+    var username: String
+    var password: String
+}
+
 /// Swift twin of lib/proxy/local_proxy.dart for the iOS packet tunnel, which
 /// can't host Flutter: an HTTP proxy on 127.0.0.1 that adds the gateway
 /// login to every request (CONNECT and absolute-form), sends bypassed hosts

@@ -7,15 +7,11 @@ import 'proxy_engine.dart';
 import 'socks_login.dart';
 import 'system_proxy.dart' show SystemProxyException;
 
-/// iOS: the local proxy can't live in the app (iOS suspends it in the
-/// background), so it runs in the Shifter packet tunnel extension
-/// (ios/ShifterTunnel/, a Swift twin of [LocalProxy]). The tunnel routes no
-/// packets; its network settings point apps at that proxy, as the system
-/// proxy does on desktop. This engine hands it the gateway login.
-///
-/// With a SOCKS5 login the tunnel instead runs in full-device mode: every
-/// packet, TCP and UDP, goes through the gateway (ios/ShifterTunnel/
-/// FullTunnel.swift); see [socksLogin].
+/// iOS: the Shifter packet tunnel extension (ios/ShifterTunnel/) runs in
+/// full-device mode: every packet, TCP and UDP, goes through the gateway's
+/// SOCKS5 (FullTunnel.swift, login from [socksLogin]). This engine hands it
+/// the gateway login. The extension also keeps the proxy-settings mode
+/// (TunnelProxy.swift, a Swift twin of [LocalProxy]) for logins without SOCKS5.
 class TunnelProxyEngine implements ProxyEngine {
   TunnelProxyEngine({this.checkUrl = ipCheckUrl}) {
     _channel.setMethodCallHandler((call) async {
@@ -52,7 +48,7 @@ class TunnelProxyEngine implements ProxyEngine {
         'username': endpoint.username,
         'password': endpoint.password,
         'bypass': expandedBypassList(endpoint.bypassList),
-        if (socksLogin(endpoint) case final socks?) 'socks': socks,
+        'socks': socksLogin(endpoint),
       });
       _port = status?['port'] as int?;
       _full = status?['full'] == true;

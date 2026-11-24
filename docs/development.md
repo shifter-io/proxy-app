@@ -25,23 +25,37 @@ studio and the tests use mock data (`lib/data/mock_api.dart`).
 - New location, New IP and settings swap the login in the local proxy and
   close tunnels on the old exit, so they apply immediately (no login caching
   workarounds as in the browsers).
-- Only apps that follow the system proxy go through Shifter; UDP (WebRTC,
-  games) connects directly. It is a system proxy, not a VPN tunnel.
-- **Android** (10+): apps can't set a system proxy, so the app opens a VPN
-  slot (`VpnService`, `android/app/src/main/kotlin/`) whose network carries
-  an HTTP proxy pointing at the same local proxy (`setHttpProxy`). It has no
-  routes: no packets go through it, traffic still speaks Shifter's proxy
-  protocol, and the rest goes direct, as on desktop. Android asks the user
-  once ("Connection request"); a "Connected" notification keeps the app
-  alive in the background; the proxy keeps working after the window closes.
-  Turning the VPN off in Settings disconnects the app.
-- **iOS** (15+): the same idea with a packet tunnel extension
-  (`ios/ShifterTunnel/`) whose `NEProxySettings` point apps at a local proxy.
-  iOS suspends the app in the background, so that proxy runs inside the
-  extension, in Swift (`TunnelProxy.swift`, a twin of `local_proxy.dart`);
-  `lib/proxy/tunnel_proxy_engine.dart` hands it the login. Running it
-  needs a device and an Apple team with the Network Extension entitlement
-  (the simulator can't run tunnel extensions).
+- Desktop: only apps that follow the system proxy go through Shifter; UDP
+  (WebRTC, games) connects directly. It is a system proxy, not a VPN tunnel.
+- **Phones: full-device mode.** Android and iOS open a VPN interface that
+  routes every IPv4 packet (local networks excluded) and IPv6 (so nothing
+  goes around the proxy). [hev-socks5-tunnel](https://github.com/heiher/hev-socks5-tunnel)
+  (MIT, pinned; `tool/ios/build_hev_xcframework.sh`,
+  `tool/android/build_hev_jni.sh`) turns the packets back into SOCKS5 to
+  the gateway with the plan's own login: TCP as CONNECT, UDP (QUIC, WebRTC,
+  DNS) as UDP ASSOCIATE. DNS goes to 1.1.1.1 / 8.8.8.8 through the tunnel.
+  Before starting, the app checks the login and sends one UDP request so
+  TCP and UDP start on the same exit. New location, New IP and settings
+  restart the engine so every app reconnects on the new exit.
+- **Android** (10+): `ShifterVpnService` + `FullTunnel.kt` +
+  `HevTunnel.kt` (JNI). Shifter itself is excluded from the VPN, so the
+  engine reaches the gateway directly and the app checks its exit through
+  SOCKS5 (`lib/proxy/android_full_engine.dart`). The tunnel has no IPv6
+  address, so apps use IPv4 at once. Android asks the user once
+  ("Connection request"); a "Connected" notification keeps the app alive in
+  the background. Turning the VPN off in Settings disconnects the app.
+- **iOS** (15+): packet tunnel extension (`ios/ShifterTunnel/`,
+  `FullTunnel.swift`, engine in `ios/Frameworks/`), sized for the 50 MB
+  extension limit; `lib/proxy/tunnel_proxy_engine.dart` hands it the
+  login. The extension's own sockets bypass the tunnel. It still contains
+  the proxy-settings mode (`TunnelProxy.swift`, a twin of
+  `local_proxy.dart`) for logins without SOCKS5. Running it needs a device
+  and an Apple team with the Network Extension entitlement (the simulator
+  can't run tunnel extensions).
+- Development: `--dart-define-from-file` with SOCKS_HOST, SOCKS_PORT,
+  SOCKS_USER and SOCKS_PASS points the phone tunnels at another SOCKS5
+  server (`lib/proxy/socks_login.dart`). Keep that file private and never
+  share such a build.
 - macOS: the app runs outside the App Sandbox (networksetup is blocked inside
   it), so ship it with Developer ID, not the Mac App Store.
 
