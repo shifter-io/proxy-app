@@ -52,9 +52,10 @@ class _WideShellState extends State<WideShell> {
       ),
     );
 
-    return Material(
-      color: Sf.bgDeepest,
-      child: Row(children: [
+    return Scaffold(
+      backgroundColor: Sf.bgDeepest,
+      resizeToAvoidBottomInset: false,
+      body: Row(children: [
         expanded ? _Sidebar(section: section, onSelect: _go) : _Rail(section: section, onSelect: _go),
         Expanded(child: content),
       ]),
