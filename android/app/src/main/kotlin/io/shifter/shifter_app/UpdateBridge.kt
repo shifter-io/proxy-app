@@ -9,6 +9,8 @@ import io.flutter.plugin.common.MethodChannel
 import java.util.concurrent.Executors
 
 /** Engine-owned bridge, with a separately attached Activity across recreation. */
+internal class UpdateValidationException(message: String) : Exception(message)
+
 object UpdateBridge {
     var activity: MainActivity? = null
     lateinit var app: Context
@@ -31,7 +33,11 @@ object UpdateBridge {
     fun background(result: MethodChannel.Result, task: () -> Any?) {
         worker.execute {
             try { val value = task(); main.post { result.success(value) } }
-            catch (_: Exception) { main.post { result.error("validation", "Update validation failed. Check package identity, permissions and free space.", null) } }
+            catch (e: UpdateValidationException) {
+                main.post { result.error("validation", e.message, null) }
+            } catch (_: Exception) {
+                main.post { result.error("validation", "Update validation failed. Check package identity, permissions and free space.", null) }
+            }
         }
     }
     fun foreground(task: () -> Unit) { main.post(task) }

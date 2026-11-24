@@ -11,6 +11,7 @@ import android.os.Build
 import android.provider.Settings
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
+import java.nio.file.Files
 import java.security.MessageDigest
 import java.util.zip.ZipFile
 
@@ -19,6 +20,10 @@ object DistributionUpdates {
     private val prefs get() = app.getSharedPreferences("shifter_update_direct", Context.MODE_PRIVATE)
     fun initialize(context: Context) { app = context }
     fun onActivityResult(requestCode: Int, resultCode: Int): Boolean = false
+    private fun validateUpdate(valid: Boolean, message: String) {
+        if (!valid) throw UpdateValidationException(message)
+    }
+
     @Suppress("DEPRECATION")
     private fun validate(args: Map<*, *>): File {
         require(Build.VERSION.SDK_INT >= 29)
@@ -27,26 +32,37 @@ object DistributionUpdates {
         val supplied = File(args["path"] as String)
         val file = supplied.canonicalFile
         // Dart path_provider's application-support directory is filesDir.
-        val root = File(app.filesDir, "updates-v1").canonicalFile
-        require(supplied.absolutePath == file.absolutePath && file.parentFile == root && file.isFile)
-        require(file.length() == (artifact["byteLength"] as Number).toLong())
+        val root = File(app.filesDir, "updates-v1")
+        validateUpdate(supplied.isAbsolute && !Files.isSymbolicLink(supplied.toPath()) &&
+            !Files.isSymbolicLink(root.toPath()) && file.parentFile == root.canonicalFile && file.isFile,
+            "Shifter could not access the APK in its update folder.")
+        validateUpdate(file.length() == (artifact["byteLength"] as Number).toLong(),
+            "The APK size did not match the release. Download it again.")
         val digest = MessageDigest.getInstance("SHA-256")
         file.inputStream().use { input -> val b = ByteArray(65536); while (true) { val n = input.read(b); if (n < 0) break; digest.update(b, 0, n) } }
         fun hex(bytes: ByteArray) = bytes.joinToString("") { "%02x".format(it) }
-        require(hex(digest.digest()) == artifact["sha256"])
+        validateUpdate(hex(digest.digest()) == artifact["sha256"],
+            "The APK checksum did not match the release. Download it again.")
         val pm = app.packageManager
-        val archive = pm.getPackageArchiveInfo(file.path, PackageManager.GET_SIGNING_CERTIFICATES) ?: error("Invalid APK")
+        val archive = pm.getPackageArchiveInfo(file.path, PackageManager.GET_SIGNING_CERTIFICATES)
+            ?: throw UpdateValidationException("Android could not read the downloaded APK.")
         val installed = pm.getPackageInfo(app.packageName, PackageManager.GET_SIGNING_CERTIFICATES)
-        require(archive.packageName == app.packageName && archive.packageName == release["applicationId"])
-        require(archive.longVersionCode == (release["build"] as Number).toLong() && archive.longVersionCode > installed.longVersionCode)
-        require(archive.applicationInfo!!.minSdkVersion <= Build.VERSION.SDK_INT)
+        validateUpdate(archive.packageName == app.packageName && archive.packageName == release["applicationId"],
+            "The APK is for a different application.")
+        validateUpdate(archive.longVersionCode == (release["build"] as Number).toLong() &&
+            archive.longVersionCode > installed.longVersionCode && archive.versionName == release["displayVersion"],
+            "The APK version does not match the available update.")
+        validateUpdate(archive.applicationInfo!!.minSdkVersion <= Build.VERSION.SDK_INT,
+            "This APK requires a newer Android version.")
         val candidate = archive.signingInfo!!.apkContentsSigners.map { hex(MessageDigest.getInstance("SHA-256").digest(it.toByteArray())) }.toSet()
         val current = installed.signingInfo!!.apkContentsSigners.map { hex(MessageDigest.getInstance("SHA-256").digest(it.toByteArray())) }.toSet()
         // Conservative v1: signing rotation needs an explicitly qualified release path.
-        require(candidate == current && candidate.size == 1 && candidate.single() == artifact["expectedSigner"])
+        validateUpdate(candidate == current && candidate.size == 1 && candidate.single() == artifact["expectedSigner"],
+            "The APK signing certificate does not match this installation.")
         ZipFile(file).use { zip ->
             val abis = zip.entries().asSequence().map { it.name }.filter { it.startsWith("lib/") && it.endsWith(".so") }.map { it.split('/')[1] }.toSet()
-            require(abis.isEmpty() || Build.SUPPORTED_ABIS.any { it in abis })
+            validateUpdate(abis.isEmpty() || Build.SUPPORTED_ABIS.any { it in abis },
+                "The APK does not support this device’s architecture.")
         }
         return file
     }
