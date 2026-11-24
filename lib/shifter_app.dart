@@ -49,11 +49,17 @@ class _ShifterAppState extends State<ShifterApp> with WidgetsBindingObserver {
   /// The device language changed: load that catalog and rebuild every screen.
   @override
   void didChangeLocales(List<Locale>? locales) {
-    if (locales == null) return;
+    // A language picked in Settings wins over the device language.
+    if (locales == null || controller.settings.language != null) return;
     I18n.load(preferred: locales).then((changed) {
       if (changed && mounted) setState(() {});
     });
   }
+  /// Settings > Language switched the catalog: rebuild every screen.
+  void _onLanguage() {
+    if (mounted) setState(() {});
+  }
+
   bool get _desktopUpdates =>
       Platform.isWindows || Platform.isMacOS || Platform.isLinux;
   static const _desktop = MethodChannel('io.shifter.desktop');
@@ -103,6 +109,7 @@ class _ShifterAppState extends State<ShifterApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    I18n.changes.addListener(_onLanguage);
     if (_desktopEnabled) {
       _desktop.setMethodCallHandler((call) async {
         switch (call.method) {
@@ -142,6 +149,7 @@ class _ShifterAppState extends State<ShifterApp> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    I18n.changes.removeListener(_onLanguage);
     if (_desktopEnabled) {
       controller.removeListener(_sendConnectionState);
       _desktop.setMethodCallHandler(null);

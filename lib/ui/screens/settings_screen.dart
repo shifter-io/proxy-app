@@ -1,3 +1,5 @@
+import 'dart:ui' show PlatformDispatcher;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -121,6 +123,21 @@ class SettingsScreen extends StatelessWidget {
               ])),
 
               section(_BypassList(list: s.bypassList, onChanged: (l) => app.updateSettings(s.copyWith(bypassList: l)))),
+
+              // ── Language ──────────────────────────────────────────────
+              section(Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                SectionLabel(tr('Language')),
+                SfCard(
+                  padding: EdgeInsets.zero,
+                  child: _ValueRow(
+                    title: tr('App language'),
+                    value: s.language == null
+                        ? trf('Automatic ({language})', {'language': I18n.names[I18n.code]})
+                        : I18n.names[s.language] ?? I18n.names['en']!,
+                    onTap: () => _showLanguagePicker(context),
+                  ),
+                ),
+              ])),
 
               // ── Account ───────────────────────────────────────────────
               section(Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -516,4 +533,112 @@ class _BypassListState extends State<_BypassList> {
       ),
     ]);
   }
+}
+
+/// A settings row that shows its current value and opens a picker.
+class _ValueRow extends StatelessWidget {
+  const _ValueRow({required this.title, required this.value, required this.onTap});
+  final String title;
+  final String value;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) {
+    return Pressable(
+      onTap: onTap,
+      scale: 1,
+      hoverColor: const Color(0x08FFFFFF),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+        child: Row(children: [
+          Expanded(child: Text(title, style: SfText.body)),
+          const SizedBox(width: 12),
+          Flexible(child: Text(value, style: SfText.body.copyWith(color: Sf.textTertiary, fontWeight: FontWeight.w400), overflow: TextOverflow.ellipsis)),
+          const SizedBox(width: 6),
+          const SfIcon(SfIcons.chevronRight, size: 16, color: Sf.textMuted),
+        ]),
+      ),
+    );
+  }
+}
+
+/// Settings > Language: Automatic (the device language) or one of the
+/// website's eight languages, each shown in its own language.
+Future<void> _showLanguagePicker(BuildContext context) {
+  final app = AppScope.read(context);
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    barrierColor: Colors.black.withValues(alpha: 0.55),
+    builder: (sheet) {
+      final current = app.settings.language;
+      final device = I18n.names[I18n.pick(PlatformDispatcher.instance.locales)]!;
+      final maxH = MediaQuery.sizeOf(sheet).height * 0.85;
+      final bottom = MediaQuery.paddingOf(sheet).bottom;
+      void choose(String? code) {
+        Navigator.pop(sheet);
+        app.setLanguage(code);
+      }
+
+      Widget option(String title, String? subtitle, bool selected, VoidCallback onTap) => Pressable(
+            onTap: onTap,
+            scale: 1,
+            hoverColor: const Color(0x08FFFFFF),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(children: [
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(title, style: SfText.body.copyWith(color: selected ? Sf.textPrimary : Sf.textSecondary)),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 2),
+                      Text(subtitle, style: SfText.small),
+                    ],
+                  ]),
+                ),
+                if (selected) const SfIcon(SfIcons.check, size: 18, color: Sf.accentLight, strokeWidth: 2.4),
+              ]),
+            ),
+          );
+
+      return Container(
+        constraints: BoxConstraints(maxHeight: maxH),
+        decoration: const BoxDecoration(
+          color: Sf.bgElevated,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+          border: Border(top: BorderSide(color: Sf.borderMedium)),
+          boxShadow: Sf.overlayShadow,
+        ),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const SizedBox(height: 10),
+          Container(width: 38, height: 5, decoration: BoxDecoration(color: Sf.borderStrong, borderRadius: BorderRadius.circular(9))),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(22, 16, 12, 8),
+            child: Row(children: [
+              Expanded(child: Text(tr('App language'), style: SfText.heading)),
+              SfIconButton(icon: SfIcons.x, tooltip: tr('Close'), onTap: () => Navigator.pop(sheet)),
+            ]),
+          ),
+          Flexible(
+            child: ListView(
+              shrinkWrap: true,
+              padding: EdgeInsets.fromLTRB(16, 4, 16, 20 + bottom),
+              children: [
+                SfCard(
+                  padding: EdgeInsets.zero,
+                  child: Column(children: [
+                    option(tr('Automatic'), trf('Follows your device: {language}', {'language': device}), current == null, () => choose(null)),
+                    for (final code in I18n.codes) ...[
+                      const _Divider(),
+                      option(I18n.names[code]!, null, current == code, () => choose(code)),
+                    ],
+                  ]),
+                ),
+              ],
+            ),
+          ),
+        ]),
+      );
+    },
+  );
 }

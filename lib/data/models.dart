@@ -344,6 +344,7 @@ class ProxySettings {
     this.strict = false,
     this.autoConnect = false,
     this.dataUseAccepted = false,
+    this.language,
     this.entryPoint,
     this.bypassList = defaultBypassList,
   });
@@ -364,6 +365,9 @@ class ProxySettings {
   /// The user accepted the data-use screen (phones, once per device).
   final bool dataUseAccepted;
 
+  /// App language picked in Settings (an I18n code); null follows the device.
+  final String? language;
+
   /// Residential gateway entry point key; null = the gateway picked in the panel.
   final String? entryPoint;
 
@@ -376,6 +380,7 @@ class ProxySettings {
         'strict': strict,
         'autoConnect': autoConnect,
         'dataUseAccepted': dataUseAccepted,
+        'language': language,
         'entryPoint': entryPoint,
         'bypassList': bypassList,
       };
@@ -389,6 +394,7 @@ class ProxySettings {
       strict: j['strict'] as bool? ?? d.strict,
       autoConnect: j['autoConnect'] as bool? ?? d.autoConnect,
       dataUseAccepted: j['dataUseAccepted'] as bool? ?? d.dataUseAccepted,
+      language: j['language'] as String?,
       entryPoint: j['entryPoint'] as String?,
       bypassList: (j['bypassList'] as List?)?.cast<String>() ?? d.bypassList,
     );
@@ -400,6 +406,7 @@ class ProxySettings {
     bool? strict,
     bool? autoConnect,
     bool? dataUseAccepted,
+    String? Function()? language,
     String? Function()? entryPoint,
     List<String>? bypassList,
   }) =>
@@ -409,6 +416,7 @@ class ProxySettings {
         strict: strict ?? this.strict,
         autoConnect: autoConnect ?? this.autoConnect,
         dataUseAccepted: dataUseAccepted ?? this.dataUseAccepted,
+        language: language != null ? language() : this.language,
         entryPoint: entryPoint != null ? entryPoint() : this.entryPoint,
         bypassList: bypassList ?? this.bypassList,
       );

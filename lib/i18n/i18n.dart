@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:ui' show Locale, PlatformDispatcher;
 
+import 'package:flutter/foundation.dart' show ValueNotifier;
 import 'package:flutter/services.dart' show rootBundle;
 
 /// App translations. The English string is the catalog key, the same
@@ -27,6 +28,21 @@ abstract final class I18n {
     Locale('ko'),
     Locale('pt', 'BR'),
   ];
+
+  /// Each language name in its own language, for the picker in Settings.
+  static const names = {
+    'en': 'English',
+    'es': 'Español',
+    'zh-Hans': '简体中文',
+    'de': 'Deutsch',
+    'fr': 'Français',
+    'ja': '日本語',
+    'ko': '한국어',
+    'pt-BR': 'Português (Brasil)',
+  };
+
+  /// Tells the app root to rebuild after the language changes.
+  static final changes = ValueNotifier<String>('en');
 
   static String _code = 'en';
   static Map<String, String> _catalog = const {};
@@ -74,6 +90,7 @@ abstract final class I18n {
     }
     _code = next;
     _catalog = catalog;
+    changes.value = next;
     return true;
   }
 
