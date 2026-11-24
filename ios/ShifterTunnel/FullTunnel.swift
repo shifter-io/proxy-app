@@ -36,8 +36,10 @@ final class FullTunnel {
         let ipv6 = NEIPv6Settings(addresses: [tunnelIPv6], networkPrefixLengths: [64])
         ipv6.includedRoutes = [NEIPv6Route.default()]
         settings.ipv6Settings = ipv6
-        // DNS goes through the tunnel as UDP over SOCKS5, never to the ISP.
-        let dns = NEDNSSettings(servers: ["1.1.1.1", "8.8.8.8"])
+        // DNS is answered inside the engine (mapped DNS): apps get a
+        // placeholder address and the gateway resolves the real name at the
+        // exit, so DNS never reaches the ISP and needs no UDP.
+        let dns = NEDNSSettings(servers: [mappedDNS])
         dns.matchDomains = [""]
         settings.dnsSettings = dns
         return settings
@@ -93,6 +95,7 @@ final class FullTunnel {
     private static let mtu = 8500
     private static let tunnelIPv4 = "198.18.0.1"
     private static let tunnelIPv6 = "fc00::1"
+    private static let mappedDNS = "198.18.0.2"
 
     private static func config(for login: SocksLogin) -> String {
         // Small buffers and a session cap keep the engine well under the
@@ -108,6 +111,12 @@ final class FullTunnel {
           udp: 'udp'
           username: '\(yaml(login.username))'
           password: '\(yaml(login.password))'
+        mapdns:
+          address: \(mappedDNS)
+          port: 53
+          network: 100.64.0.0
+          netmask: 255.192.0.0
+          cache-size: 4096
         misc:
           task-stack-size: 24576
           tcp-buffer-size: 4096

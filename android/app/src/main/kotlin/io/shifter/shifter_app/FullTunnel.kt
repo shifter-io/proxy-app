@@ -22,6 +22,7 @@ object FullTunnel {
     private const val MTU = 8500
     private const val IPV4 = "198.18.0.1"
     private const val IPV6 = "fc00::1"
+    private const val MAPPED_DNS = "198.18.0.2"
 
     /**
      * Local networks stay direct (printers, casting, the router). Loopback
@@ -50,9 +51,10 @@ object FullTunnel {
     fun configure(builder: VpnService.Builder): VpnService.Builder {
         builder.setMtu(MTU)
             .addAddress(IPV4, 32)
-            // DNS goes through the tunnel as UDP over SOCKS5, never to the ISP.
-            .addDnsServer("1.1.1.1")
-            .addDnsServer("8.8.8.8")
+            // DNS is answered inside the engine (mapped DNS): apps get a
+            // placeholder address and the gateway resolves the real name at
+            // the exit, so DNS never reaches the ISP and needs no UDP.
+            .addDnsServer(MAPPED_DNS)
             // IPv6 is routed into the tunnel so nothing leaves around the
             // proxy, but the tunnel has no IPv6 address: the gateway reaches
             // IPv4 only, so apps see no IPv6 and use IPv4 at once instead of
@@ -151,6 +153,12 @@ object FullTunnel {
           udp: 'udp'
           username: ${quoted(login.username)}
           password: ${quoted(login.password)}
+        mapdns:
+          address: $MAPPED_DNS
+          port: 53
+          network: 100.64.0.0
+          netmask: 255.192.0.0
+          cache-size: 10000
         misc:
           task-stack-size: 81920
           connect-timeout: 10000
