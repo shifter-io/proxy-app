@@ -288,7 +288,9 @@ void main() {
         engine: LocalProxyEngine(store, system: os, checkUrl: 'http://ip-check.test/json'),
       );
       addTearDown(routed.dispose);
-      await until(() => routed.phase == AuthPhase.signedIn, 'boot');
+      // Signed in is not enough: plans load after that, and selecting or
+      // connecting before they arrive silently does nothing.
+      await until(() => routed.phase == AuthPhase.signedIn && routed.usableMemberships.any((m) => m.id == 'pqqD'), 'boot and plans');
       await routed.selectMembership('pqqD');
       await routed.setTarget('pqqD', const ResidentialTarget(country: GeoCountry('de', 'Germany')));
       await routed.connect();
