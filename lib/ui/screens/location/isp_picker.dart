@@ -11,7 +11,9 @@ import '../../widgets/layout.dart';
 import '../../widgets/primitives.dart';
 import 'async_list.dart';
 
-/// ISP plans are a fixed set of static IPs: pick one, optionally filter by country.
+/// ISP plans are a fixed set of ISP proxies, each sticky to its city and ISP
+/// (the exit IP can refresh, the city and ASN stay): pick one, optionally
+/// filter by country.
 class IspPicker extends StatefulWidget {
   const IspPicker({super.key, required this.m, this.onBack, required this.onApplied, this.embedded = false});
   final IspMembership m;
