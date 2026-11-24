@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "io.shifter" "\0"
-            VALUE "FileDescription", "shifter_app" "\0"
+            VALUE "FileDescription", "Shifter" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "shifter_app" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 io.shifter. All rights reserved." "\0"
             VALUE "OriginalFilename", "shifter_app.exe" "\0"
-            VALUE "ProductName", "shifter_app" "\0"
+            VALUE "ProductName", "Shifter" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END
