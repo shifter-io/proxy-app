@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 
 import 'package:shared_preferences/shared_preferences.dart';
@@ -7,24 +8,52 @@ import 'package:package_info_plus/package_info_plus.dart';
 /// Separate from account storage. Each transaction is one awaited preference write.
 class UpdateStore {
   UpdateStore(this._prefs);
-  final SharedPreferences? _prefs;
-  final Map<String, Object> _memory = {};
+  final SharedPreferencesAsync? _prefs;
+  final Map<String, String> _memory = {};
   static const prefix = 'shifter.updates.v1.';
-  static Future<UpdateStore> open() async =>
-      UpdateStore(await SharedPreferences.getInstance());
-  String? read(String key) =>
-      _prefs?.getString('$prefix$key') ?? _memory[key] as String?;
+  // Preserve the physical keys written by SharedPreferences on desktop.
+  static const _diskPrefix = 'flutter.$prefix';
+  static const _androidMigrated = '${prefix}migrated';
+
+  static Future<UpdateStore> open() async {
+    // Use the same backend as proxy settings and analytics. On Windows and
+    // Linux, independent cached backends can overwrite the entire prefs file.
+    final prefs = SharedPreferencesAsync();
+    if (Platform.isAndroid && await prefs.getBool(_androidMigrated) != true) {
+      // Android's async backend defaults to DataStore. Copy only our keys
+      // from the legacy preferences file and preserve any newer values.
+      final legacy = await SharedPreferences.getInstance();
+      for (final key in legacy.getKeys().where(
+        (key) => key.startsWith(prefix),
+      )) {
+        final value = legacy.getString(key);
+        final diskKey = 'flutter.$key';
+        if (value != null && !await prefs.containsKey(diskKey)) {
+          await prefs.setString(diskKey, value);
+        }
+      }
+      await prefs.setBool(_androidMigrated, true);
+    }
+    final store = UpdateStore(prefs);
+    final keys = (await prefs.getKeys())
+        .where((key) => key.startsWith(_diskPrefix))
+        .toSet();
+    for (final entry in (await prefs.getAll(allowList: keys)).entries) {
+      if (entry.value case final String value) {
+        store._memory[entry.key.substring(_diskPrefix.length)] = value;
+      }
+    }
+    return store;
+  }
+
+  String? read(String key) => _memory[key];
   Future<void> write(String key, String? value) async {
     if (value == null) {
+      await _prefs?.remove('$_diskPrefix$key');
       _memory.remove(key);
     } else {
+      await _prefs?.setString('$_diskPrefix$key', value);
       _memory[key] = value;
-    }
-    if (_prefs != null) {
-      final ok = value == null
-          ? await _prefs.remove('$prefix$key')
-          : await _prefs.setString('$prefix$key', value);
-      if (!ok) throw StateError('Could not save update state.');
     }
   }
 
