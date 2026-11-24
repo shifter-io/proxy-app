@@ -42,7 +42,7 @@ class _CompactLogin extends StatelessWidget {
       const Positioned.fill(child: Atmosphere()),
       LayoutBuilder(builder: (context, c) {
         return SingleChildScrollView(
-          physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+          physics: const BouncingScrollPhysics(),
           padding: EdgeInsets.fromLTRB(side, pad.top + 24, side, pad.bottom + 18),
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: c.maxHeight - pad.top - pad.bottom - 42),
