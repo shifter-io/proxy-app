@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:math';
 
 import '../data/store.dart';
+import 'android_full_engine.dart';
 import 'bypass.dart';
 import 'local_proxy.dart' show GatewayEndpoint;
 import 'proxy_isolate.dart';
@@ -26,9 +27,13 @@ const _ipCheckTimeout = Duration(seconds: 12);
 /// Routes this device through one gateway login (the extension's
 /// ProxyController, src/lib/proxy/controller.ts).
 abstract class ProxyEngine {
-  /// The real engine for this device: the packet tunnel on iOS, the local
-  /// proxy plus the OS proxy (or Android's VPN slot) everywhere else.
-  static ProxyEngine forPlatform(Store store) => Platform.isIOS ? TunnelProxyEngine() : LocalProxyEngine(store);
+  /// The real engine for this device: full-device tunnels on iOS and
+  /// Android, the local proxy plus the OS proxy on desktop.
+  static ProxyEngine forPlatform(Store store) => Platform.isIOS
+      ? TunnelProxyEngine()
+      : Platform.isAndroid
+          ? AndroidFullEngine()
+          : LocalProxyEngine(store);
 
   /// False where the app can't route other apps yet (phones, tablets).
   bool get supported;
@@ -123,10 +128,21 @@ class LocalProxyEngine implements ProxyEngine {
 
 /// Asks the IP service at [url] for the exit address, through the local
 /// proxy on 127.0.0.1:[port].
-Future<ExitInfo> checkExitThrough(int port, String url) async {
+/// With [secret], it answers the proxy's login challenge (Android's bridge).
+Future<ExitInfo> checkExitThrough(int port, String url, {String? secret}) =>
+    _checkExit(url, 'PROXY 127.0.0.1:$port', proxyLogin: secret == null ? null : (port, secret));
+
+/// Same, without a proxy: for when the whole device (this app included) is
+/// already routed through Shifter.
+Future<ExitInfo> checkExitDirect(String url) => _checkExit(url, 'DIRECT');
+
+Future<ExitInfo> _checkExit(String url, String route, {(int, String)? proxyLogin}) async {
   final client = HttpClient()
-    ..findProxy = ((_) => 'PROXY 127.0.0.1:$port')
+    ..findProxy = ((_) => route)
     ..connectionTimeout = _ipCheckTimeout;
+  if (proxyLogin case (final port, final secret)) {
+    client.addProxyCredentials('127.0.0.1', port, 'Shifter', HttpClientBasicCredentials('shifter', secret));
+  }
   try {
     final req = await client.getUrl(Uri.parse(url)).timeout(_ipCheckTimeout);
     req.headers.set(HttpHeaders.cacheControlHeader, 'no-store');

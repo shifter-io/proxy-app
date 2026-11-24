@@ -4,13 +4,14 @@ import 'package:flutter/services.dart';
 
 import 'bypass.dart';
 import 'proxy_engine.dart';
+import 'socks_login.dart';
 import 'system_proxy.dart' show SystemProxyException;
 
-/// iOS: the local proxy can't live in the app (iOS suspends it in the
-/// background), so it runs in the Shifter packet tunnel extension
-/// (ios/ShifterTunnel/, a Swift twin of [LocalProxy]). The tunnel routes no
-/// packets; its network settings point apps at that proxy, as the system
-/// proxy does on desktop. This engine hands it the gateway login.
+/// iOS: the Shifter packet tunnel extension (ios/ShifterTunnel/) runs in
+/// full-device mode: every packet, TCP and UDP, goes through the gateway's
+/// SOCKS5 (FullTunnel.swift, login from [socksLogin]). This engine hands it
+/// the gateway login. The extension also keeps the proxy-settings mode
+/// (TunnelProxy.swift, a Swift twin of [LocalProxy]) for logins without SOCKS5.
 class TunnelProxyEngine implements ProxyEngine {
   TunnelProxyEngine({this.checkUrl = ipCheckUrl}) {
     _channel.setMethodCallHandler((call) async {
@@ -24,6 +25,7 @@ class TunnelProxyEngine implements ProxyEngine {
   final _stopped = StreamController<void>.broadcast();
   int? _port;
   int? get port => _port;
+  bool _full = false;
 
   @override
   bool get supported => true;
@@ -46,8 +48,10 @@ class TunnelProxyEngine implements ProxyEngine {
         'username': endpoint.username,
         'password': endpoint.password,
         'bypass': expandedBypassList(endpoint.bypassList),
+        'socks': socksLogin(endpoint),
       });
       _port = status?['port'] as int?;
+      _full = status?['full'] == true;
       if (_port == null) throw SystemProxyException("The connection didn't start. Try again.");
     } on PlatformException catch (e) {
       throw SystemProxyException(e.message ?? 'Could not start the connection.');
@@ -66,6 +70,8 @@ class TunnelProxyEngine implements ProxyEngine {
     if (status?['rejected'] == true) _rejected.add(null);
     final port = status?['port'] as int? ?? _port;
     if (port == null) throw StateError('Not connected');
+    // Full-device mode: this app's own requests go through the tunnel too.
+    if (status?['full'] == true || _full) return checkExitDirect(checkUrl);
     return checkExitThrough(port, checkUrl);
   }
 }

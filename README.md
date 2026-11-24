@@ -23,7 +23,7 @@
 
 Built with Flutter for **macOS, Windows, Linux, Android, iPhone, and iPad**, with layouts that adapt to desktop windows, phones, tablets, and foldables. Platform verification varies; see [platform support](#platform-support).
 
-**Live proxy connections require a Shifter account, an API key, and an active supported proxy plan.** The app configures an HTTP proxy for applications that honor the operating system's proxy settings. It does not tunnel all device traffic or provide a device-wide kill switch.
+**Live proxy connections require a Shifter account, an API key, and an active supported proxy plan.** On iPhone, iPad and Android, all device traffic, TCP and UDP, goes through your Shifter proxy plan. On desktop, the app configures an HTTP proxy for applications that honor the operating system's proxy settings. There is no device-wide kill switch.
 
 ## Contents
 
@@ -140,18 +140,18 @@ The app's lookup confirms the route used by that request; another application ma
 | **macOS 12+** | Local proxy and system network proxy settings. | Local macOS connection and restoration checks. |
 | **Windows** | Local proxy and WinINet proxy settings. | Implemented; not yet verified on Windows. |
 | **Linux / GNOME** | Local proxy and GNOME `gsettings`. | Implemented; not yet verified on Linux. Other desktop environments are not covered. |
-| **Android 10+** | Android connection service advertises the local HTTP proxy. | End-to-end checks recorded on Android 10 and 16, including phone and tablet. |
-| **iPhone / iPad, iOS 15+** | Network Extension supplies proxy settings and hosts the local proxy. | Live connection check recorded on iPhone. iPad layout is included; physical iPad routing is not independently verified. |
+| **Android 10+** | VPN service carries all device traffic, TCP and UDP, to the gateway over SOCKS5. | End-to-end checks recorded on Android 10 and 16, including phone and tablet. |
+| **iPhone / iPad, iOS 15+** | Network Extension carries all device traffic, TCP and UDP, to the gateway over SOCKS5. | Live connection check recorded on iPhone. iPad layout is included; physical iPad routing is not independently verified. |
 
 These are existing project verification notes, not a claim that every platform was retested for this README. Release packaging, store distribution, and production signing are separate from running a source build.
 
 ## How proxy routing works
 
-The app runs a local HTTP proxy that authenticates to the selected Shifter gateway. Compatible applications send HTTP requests and HTTPS CONNECT tunnels through it. Changing a location, session, or ISP selection updates gateway credentials and closes existing tunnels so the new selection can take effect.
+On desktop, the app runs a local HTTP proxy that authenticates to the selected Shifter gateway. Compatible applications send HTTP requests and HTTPS CONNECT tunnels through it. Changing a location, session, or ISP selection updates gateway credentials and closes existing tunnels so the new selection can take effect.
 
 On desktop, the app applies system proxy settings and saves the previous configuration for restoration on disconnect, sign-out, quit, or recovery after a crash. Applications with independent network settings may need their own proxy configuration or may bypass this integration entirely.
 
-Android uses `VpnService` to advertise proxy settings; iOS uses a Network Extension. These operating-system APIs can display a VPN permission prompt or indicator, but the app's routing is proxy based. UDP traffic, including many WebRTC and gaming connections, is not carried by the HTTP proxy. There is no device-wide kill switch.
+On Android (`VpnService`) and iOS (Network Extension), the app captures every app's traffic and sends it to the Shifter gateway over SOCKS5: TCP as connections and UDP (QUIC, WebRTC, calls, games, DNS) through UDP relay, all on your plan's location and session. Local networks such as printers and the router stay direct. The system shows a VPN permission prompt and indicator. Changing a location, session, or ISP selection reconnects every app on the new exit. There is no device-wide kill switch.
 
 macOS builds run outside App Sandbox because changing network proxy settings requires access blocked by the sandbox. Distribution uses Developer ID signing rather than the Mac App Store. See the [development guide](docs/development.html) for architecture details.
 
@@ -232,7 +232,7 @@ The source code is available under the MIT license. The app does not include fre
 
 ### Is Shifter Proxy App a VPN?
 
-It is an HTTP proxy client. Android and iOS use system connection APIs that can show a VPN indicator, but the app does not tunnel all IP traffic. Applications that ignore proxy settings and UDP traffic can connect directly.
+It is a proxy app: every connection goes through your own Shifter proxy plan. On Android and iOS it uses the system VPN interface to send all apps' TCP and UDP traffic to the Shifter gateway. On desktop it sets the system HTTP proxy, so applications that ignore proxy settings, and UDP traffic, can connect directly.
 
 ### Can I use rotating proxies or keep a sticky residential session?
 

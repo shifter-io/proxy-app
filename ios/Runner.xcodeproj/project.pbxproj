@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		AAB000000000000000000004 /* UpdateBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAB000000000000000000003 /* UpdateBridge.swift */; };
 		11692D3284A77AE2EBBE6992 /* TunnelProxy.swift in Sources */ = {isa = PBXBuildFile; fileRef = C983AC7C38C532D07E2C7216 /* TunnelProxy.swift */; };
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
 		2BDD46FBF01BF9981D6A484C /* TunnelBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CC0E17F4A6D86C505CA26F4 /* TunnelBridge.swift */; };
@@ -20,8 +19,11 @@
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
+		9A3C5836BA6C4AACDA2A5C13 /* HevSocks5Tunnel.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 00F8BCA141D9160AB1E23215 /* HevSocks5Tunnel.xcframework */; };
+		AAB000000000000000000004 /* UpdateBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAB000000000000000000003 /* UpdateBridge.swift */; };
 		DEA66ED8EF96B9CD2FC5A654 /* ShifterTunnel.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 479BA193883132EC7150C833 /* ShifterTunnel.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		EA996A45AB0FCA31944956A4 /* PacketTunnelProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2997E7B77834E3E6A61DD34 /* PacketTunnelProvider.swift */; };
+		F06979BCF9643507861F6EA2 /* FullTunnel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00BB7BD0C696E249C5EE7EAB /* FullTunnel.swift */; };
 		F516056A224B4DED6F940744 /* NetworkExtension.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0418B6185ABFE87025001CA6 /* NetworkExtension.framework */; };
 /* End PBXBuildFile section */
 
@@ -67,7 +69,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		AAB000000000000000000003 /* UpdateBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateBridge.swift; sourceTree = "<group>"; };
+		00BB7BD0C696E249C5EE7EAB /* FullTunnel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FullTunnel.swift; sourceTree = "<group>"; };
+		00F8BCA141D9160AB1E23215 /* HevSocks5Tunnel.xcframework */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = wrapper.xcframework; name = HevSocks5Tunnel.xcframework; path = Frameworks/HevSocks5Tunnel.xcframework; sourceTree = SOURCE_ROOT; };
 		0418B6185ABFE87025001CA6 /* NetworkExtension.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = NetworkExtension.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS14.0.sdk/System/Library/Frameworks/NetworkExtension.framework; sourceTree = DEVELOPER_DIR; };
 		12A7887B86A852F6D52BA879 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GeneratedPluginRegistrant.h; sourceTree = "<group>"; };
@@ -92,6 +95,7 @@
 		97C146FD1CF9000F007C117D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		97C147001CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		AAB000000000000000000003 /* UpdateBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateBridge.swift; sourceTree = "<group>"; };
 		C983AC7C38C532D07E2C7216 /* TunnelProxy.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TunnelProxy.swift; sourceTree = "<group>"; };
 		E2997E7B77834E3E6A61DD34 /* PacketTunnelProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PacketTunnelProvider.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -103,6 +107,7 @@
 			files = (
 				4FBF38197661C93BF5C16680 /* Foundation.framework in Frameworks */,
 				F516056A224B4DED6F940744 /* NetworkExtension.framework in Frameworks */,
+				9A3C5836BA6C4AACDA2A5C13 /* HevSocks5Tunnel.xcframework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -121,6 +126,7 @@
 			isa = PBXGroup;
 			children = (
 				301931AECB6186FFE31214CD /* iOS */,
+				00F8BCA141D9160AB1E23215 /* HevSocks5Tunnel.xcframework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -202,6 +208,7 @@
 				C983AC7C38C532D07E2C7216 /* TunnelProxy.swift */,
 				12A7887B86A852F6D52BA879 /* Info.plist */,
 				5B882D8CD612E4A9E40284FB /* ShifterTunnel.entitlements */,
+				00BB7BD0C696E249C5EE7EAB /* FullTunnel.swift */,
 			);
 			name = ShifterTunnel;
 			path = ShifterTunnel;
@@ -401,6 +408,7 @@
 			files = (
 				EA996A45AB0FCA31944956A4 /* PacketTunnelProvider.swift in Sources */,
 				11692D3284A77AE2EBBE6992 /* TunnelProxy.swift in Sources */,
+				F06979BCF9643507861F6EA2 /* FullTunnel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -501,13 +509,13 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = "";
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				DEVELOPMENT_TEAM = "";
 				PRODUCT_BUNDLE_IDENTIFIER = io.shifter.shifterApp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
@@ -523,6 +531,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_ENTITLEMENTS = ShifterTunnel/ShifterTunnel.entitlements;
+				DEVELOPMENT_TEAM = "";
 				INFOPLIST_FILE = ShifterTunnel/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -530,7 +539,6 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				DEVELOPMENT_TEAM = "";
 				PRODUCT_BUNDLE_IDENTIFIER = io.shifter.shifterApp.tunnel;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -595,6 +603,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_ENTITLEMENTS = ShifterTunnel/ShifterTunnel.entitlements;
+				DEVELOPMENT_TEAM = "";
 				INFOPLIST_FILE = ShifterTunnel/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -602,7 +611,6 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				DEVELOPMENT_TEAM = "";
 				PRODUCT_BUNDLE_IDENTIFIER = io.shifter.shifterApp.tunnel;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -733,13 +741,13 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = "";
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				DEVELOPMENT_TEAM = "";
 				PRODUCT_BUNDLE_IDENTIFIER = io.shifter.shifterApp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
@@ -757,13 +765,13 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = "";
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				DEVELOPMENT_TEAM = "";
 				PRODUCT_BUNDLE_IDENTIFIER = io.shifter.shifterApp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
@@ -779,6 +787,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_ENTITLEMENTS = ShifterTunnel/ShifterTunnel.entitlements;
+				DEVELOPMENT_TEAM = "";
 				INFOPLIST_FILE = ShifterTunnel/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -786,7 +795,6 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				DEVELOPMENT_TEAM = "";
 				PRODUCT_BUNDLE_IDENTIFIER = io.shifter.shifterApp.tunnel;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;

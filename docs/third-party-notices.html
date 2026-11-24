@@ -10,6 +10,14 @@
 <p>Three files with no flag-icons source (<code>an.png</code>, <code>cs.png</code>, <code>fam.png</code>) are still the originals from the <a href="https://github.com/legacy-icons/famfamfam-flags">famfamfam flag distribution</a>, shared with Shifter Proxy Extension and released with a public-domain dedication.</p>
 <h2 id="interface-icons">Interface icons</h2>
 <p>The inline stroke icons in <code>lib/ui/widgets/icons.dart</code> include paths derived from <a href="https://github.com/feathericons/feather">Feather</a>. Feather is MIT licensed, copyright 2013–2023 Cole Bemis. The license is reproduced below and in <code>docs/licenses/feather-MIT.txt</code>. Additional Shifter-specific icon paths are covered by the project license.</p>
+<h2 id="packet-tunnel-engine">Packet tunnel engine</h2>
+<p>Full-device mode on iOS and Android uses <a href="https://github.com/heiher/hev-socks5-tunnel">hev-socks5-tunnel</a>, built from a pinned commit into <code>ios/Frameworks/HevSocks5Tunnel.xcframework</code> and <code>android/app/src/main/jniLibs/</code> by <code>tool/ios/build_hev_xcframework.sh</code> and <code>tool/android/build_hev_jni.sh</code>. It bundles three libraries:</p>
+<ul>
+<li>hev-socks5-tunnel and <a href="https://github.com/heiher/hev-task-system">hev-task-system</a>: MIT licensed, copyright 2022 hev.</li>
+<li><a href="https://savannah.nongnu.org/projects/lwip/">lwIP</a>: BSD licensed, copyright 2001, 2002 Swedish Institute of Computer Science.</li>
+<li><a href="https://github.com/yaml/libyaml">libyaml</a>, through a fork by hev: MIT licensed, copyright 2006–2016 Kirill Simonov, 2017–2020 Ingy döt Net, 2022 hev.</li>
+</ul>
+<p>The licenses are reproduced below, in <code>docs/licenses/</code>, and next to the built engine on both platforms.</p>
 <h2 id="shifter-branding">Shifter branding</h2>
 <p>Shifter names, logos, and marks retain their respective rights. The source-code license does not grant trademark rights or imply endorsement of modified distributions.</p>
 <h2 id="dependencies">Dependencies</h2>
@@ -145,6 +153,97 @@ in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+</code></pre>
+<h2 id="hev-socks5-tunnel-license">hev-socks5-tunnel license</h2>
+<pre><code class="language-text">Copyright (c) 2022 hev
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the &quot;Software&quot;), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
+so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+</code></pre>
+<h2 id="hev-task-system-license">hev-task-system license</h2>
+<pre><code class="language-text">Copyright (c) 2022 hev
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the &quot;Software&quot;), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
+so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+</code></pre>
+<h2 id="lwip-license">lwIP license</h2>
+<pre><code class="language-text">Copyright (c) 2001, 2002 Swedish Institute of Computer Science.
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice,
+   this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+3. The name of the author may not be used to endorse or promote products
+   derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
+SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+OF SUCH DAMAGE.
+</code></pre>
+<h2 id="libyaml-license">libyaml license</h2>
+<pre><code class="language-text">Copyright (c) 2017-2020 Ingy döt Net
+Copyright (c) 2006-2016 Kirill Simonov
+Copyright (c) 2022 hev
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the &quot;Software&quot;), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
+so, subject to the following conditions:
 
 The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
