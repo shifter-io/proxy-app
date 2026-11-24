@@ -343,6 +343,7 @@ class ProxySettings {
     this.ttlSeconds = 600,
     this.strict = false,
     this.autoConnect = false,
+    this.dataUseAccepted = false,
     this.entryPoint,
     this.bypassList = defaultBypassList,
   });
@@ -360,6 +361,9 @@ class ProxySettings {
   /// Connect with the last location when the app starts.
   final bool autoConnect;
 
+  /// The user accepted the data-use screen (phones, once per device).
+  final bool dataUseAccepted;
+
   /// Residential gateway entry point key; null = the gateway picked in the panel.
   final String? entryPoint;
 
@@ -371,6 +375,7 @@ class ProxySettings {
         'ttlSeconds': ttlSeconds,
         'strict': strict,
         'autoConnect': autoConnect,
+        'dataUseAccepted': dataUseAccepted,
         'entryPoint': entryPoint,
         'bypassList': bypassList,
       };
@@ -383,6 +388,7 @@ class ProxySettings {
       ttlSeconds: (j['ttlSeconds'] as num?)?.toInt() ?? d.ttlSeconds,
       strict: j['strict'] as bool? ?? d.strict,
       autoConnect: j['autoConnect'] as bool? ?? d.autoConnect,
+      dataUseAccepted: j['dataUseAccepted'] as bool? ?? d.dataUseAccepted,
       entryPoint: j['entryPoint'] as String?,
       bypassList: (j['bypassList'] as List?)?.cast<String>() ?? d.bypassList,
     );
@@ -393,6 +399,7 @@ class ProxySettings {
     int? ttlSeconds,
     bool? strict,
     bool? autoConnect,
+    bool? dataUseAccepted,
     String? Function()? entryPoint,
     List<String>? bypassList,
   }) =>
@@ -401,6 +408,7 @@ class ProxySettings {
         ttlSeconds: ttlSeconds ?? this.ttlSeconds,
         strict: strict ?? this.strict,
         autoConnect: autoConnect ?? this.autoConnect,
+        dataUseAccepted: dataUseAccepted ?? this.dataUseAccepted,
         entryPoint: entryPoint != null ? entryPoint() : this.entryPoint,
         bypassList: bypassList ?? this.bypassList,
       );
