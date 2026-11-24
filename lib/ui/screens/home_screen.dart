@@ -13,6 +13,7 @@ import '../widgets/layout.dart';
 import '../widgets/membership_card.dart';
 import '../widgets/power_button.dart';
 import '../widgets/primitives.dart';
+import 'data_use_screen.dart';
 
 /// Phone home: plan switcher in the top bar, everything else centred.
 class HomeScreen extends StatelessWidget {
@@ -133,6 +134,15 @@ class Dashboard extends StatelessWidget {
         app.disconnect();
       } else if (target == null) {
         onOpenLocation();
+      } else if (app.needsDataUse) {
+        Navigator.of(context).push(MaterialPageRoute<void>(
+          fullscreenDialog: true,
+          builder: (ctx) => DataUseScreen(onAccept: () async {
+            Navigator.of(ctx).pop();
+            await app.acceptDataUse();
+            await app.connect();
+          }),
+        ));
       } else {
         app.connect();
       }
@@ -176,7 +186,7 @@ class Dashboard extends StatelessWidget {
       const SizedBox(height: 18),
       FadeSlideIn(
         delay: const Duration(milliseconds: 200),
-        child: RenewalLine(m, onRenew: () => openExternal(context, m.manageUrl ?? ShifterUrls.renew(m.id))),
+        child: RenewalLine(m, onRenew: showPurchaseLinks ? () => openExternal(context, m.manageUrl ?? ShifterUrls.renew(m.id)) : null),
       ),
     ]);
   }

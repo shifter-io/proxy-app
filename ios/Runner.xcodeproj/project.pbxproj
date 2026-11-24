@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		82A9BF2796FB99FC59D72570 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C89F6C02AE34EEA49C379E41 /* PrivacyInfo.xcprivacy */; };
+		10E029B613E6D7F8F2BC79B6 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 3E1176320F90E1F9E9906B33 /* PrivacyInfo.xcprivacy */; };
 		11692D3284A77AE2EBBE6992 /* TunnelProxy.swift in Sources */ = {isa = PBXBuildFile; fileRef = C983AC7C38C532D07E2C7216 /* TunnelProxy.swift */; };
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
 		2BDD46FBF01BF9981D6A484C /* TunnelBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CC0E17F4A6D86C505CA26F4 /* TunnelBridge.swift */; };
@@ -68,6 +70,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		C89F6C02AE34EEA49C379E41 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		3E1176320F90E1F9E9906B33 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		00BB7BD0C696E249C5EE7EAB /* FullTunnel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FullTunnel.swift; sourceTree = "<group>"; };
 		00F8BCA141D9160AB1E23215 /* HevSocks5Tunnel.xcframework */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = wrapper.xcframework; name = HevSocks5Tunnel.xcframework; path = Frameworks/HevSocks5Tunnel.xcframework; sourceTree = SOURCE_ROOT; };
 		0418B6185ABFE87025001CA6 /* NetworkExtension.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = NetworkExtension.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS14.0.sdk/System/Library/Frameworks/NetworkExtension.framework; sourceTree = DEVELOPER_DIR; };
@@ -194,6 +198,7 @@
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 				8CC0E17F4A6D86C505CA26F4 /* TunnelBridge.swift */,
 				4FD4A14C2C530D7BF80126AB /* Runner.entitlements */,
+				C89F6C02AE34EEA49C379E41 /* PrivacyInfo.xcprivacy */,
 			);
 			path = Runner;
 			sourceTree = "<group>";
@@ -206,6 +211,7 @@
 				12A7887B86A852F6D52BA879 /* Info.plist */,
 				5B882D8CD612E4A9E40284FB /* ShifterTunnel.entitlements */,
 				00BB7BD0C696E249C5EE7EAB /* FullTunnel.swift */,
+				3E1176320F90E1F9E9906B33 /* PrivacyInfo.xcprivacy */,
 			);
 			name = ShifterTunnel;
 			path = ShifterTunnel;
@@ -328,6 +334,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				10E029B613E6D7F8F2BC79B6 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -337,6 +344,7 @@
 			files = (
 				97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */,
 				3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */,
+				82A9BF2796FB99FC59D72570 /* PrivacyInfo.xcprivacy in Resources */,
 				97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */,
 				97C146FC1CF9000F007C117D /* Main.storyboard in Resources */,
 			);

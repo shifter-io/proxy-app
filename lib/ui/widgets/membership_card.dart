@@ -110,9 +110,10 @@ class PoolTag extends StatelessWidget {
 
 /// "Renews in 23 days · Oct 23, 2026"; expired plans get a Renew link.
 class RenewalLine extends StatelessWidget {
-  const RenewalLine(this.m, {super.key, required this.onRenew, this.center = true});
+  const RenewalLine(this.m, {super.key, this.onRenew, this.center = true});
   final Membership m;
-  final VoidCallback onRenew;
+  /// Null hides the Renew link (store builds).
+  final VoidCallback? onRenew;
   final bool center;
 
   @override
@@ -137,7 +138,7 @@ class RenewalLine extends StatelessWidget {
       spacing: 12,
       children: [
         line,
-        if (!m.usable) SfLinkButton(text: m.canManage ? 'Renew' : 'Open in panel', icon: SfIcons.external, onTap: onRenew, fontSize: 12.5),
+        if (!m.usable && onRenew != null) SfLinkButton(text: m.canManage ? 'Renew' : 'Open in panel', icon: SfIcons.external, onTap: onRenew!, fontSize: 12.5),
       ],
     );
   }
@@ -180,10 +181,10 @@ class UsageLine extends StatelessWidget {
 }
 
 class MembershipCard extends StatelessWidget {
-  const MembershipCard(this.m, {super.key, required this.onSelect, required this.onRenew, this.selected = false});
+  const MembershipCard(this.m, {super.key, required this.onSelect, this.onRenew, this.selected = false});
   final Membership m;
   final VoidCallback onSelect;
-  final VoidCallback onRenew;
+  final VoidCallback? onRenew;
   final bool selected;
 
   @override

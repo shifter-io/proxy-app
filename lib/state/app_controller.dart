@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'dart:math';
 
 import 'package:flutter/widgets.dart';
@@ -326,7 +327,19 @@ class AppController extends ChangeNotifier {
     _notify();
   }
 
+  /// Phones must show the data-use screen and get the user's tap before the
+  /// first connection adds the VPN configuration (App Store 5.4, Google Play
+  /// VpnService policy). Desktop sets a system proxy and needs no screen.
+  bool get needsDataUse => (Platform.isIOS || Platform.isAndroid) && !settings.dataUseAccepted;
+
+  Future<void> acceptDataUse() async {
+    settings = settings.copyWith(dataUseAccepted: true);
+    _notify();
+    await store.writeSettings(settings);
+  }
+
   Future<void> connect() async {
+    if (needsDataUse) return;
     final m = activeMembership;
     if (m == null || !m.usable || phase != AuthPhase.signedIn) return;
     final target = currentTarget(m);

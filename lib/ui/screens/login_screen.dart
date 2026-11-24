@@ -343,6 +343,7 @@ class _LoginFormState extends State<_LoginForm> with SingleTickerProviderStateMi
           },
         ),
       ),
+      if (showPurchaseLinks) ...[
       const SizedBox(height: 36),
       Row(children: [
         const Expanded(child: Divider(color: Sf.borderSubtle, height: 1)),
@@ -362,6 +363,7 @@ class _LoginFormState extends State<_LoginForm> with SingleTickerProviderStateMi
       ),
       const SizedBox(height: 12),
       Text('Sign up, then copy your key from Profile → API Key.', textAlign: TextAlign.center, style: SfText.micro.copyWith(fontSize: 12.5)),
+      ],
       const SizedBox(height: 10),
       if (widget.showWordmark) const Spacer(),
       const SizedBox(height: 24),
@@ -372,6 +374,8 @@ class _LoginFormState extends State<_LoginForm> with SingleTickerProviderStateMi
         const SizedBox(width: 6),
         Flexible(child: Text('Your key is stored only on this device.', style: SfText.micro)),
       ]),
+      const SizedBox(height: 6),
+      SfLinkButton(text: 'Privacy policy', onTap: () => openExternal(context, ShifterUrls.privacy), fontSize: 12.5),
     ]);
   }
 
