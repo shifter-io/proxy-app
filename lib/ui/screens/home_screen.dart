@@ -176,7 +176,7 @@ class Dashboard extends StatelessWidget {
       const SizedBox(height: 18),
       FadeSlideIn(
         delay: const Duration(milliseconds: 200),
-        child: RenewalLine(m, onRenew: () => openExternal(context, m.manageUrl ?? ShifterUrls.renew(m.id))),
+        child: RenewalLine(m, onRenew: showPurchaseLinks ? () => openExternal(context, m.manageUrl ?? ShifterUrls.renew(m.id)) : null),
       ),
     ]);
   }

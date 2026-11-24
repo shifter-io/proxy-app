@@ -105,6 +105,7 @@ class PlansList extends StatelessWidget {
           ),
         ],
         _PlanGroups(onChosen: onChosen, showSelected: embedded),
+        if (showPurchaseLinks) ...[
         const SizedBox(height: 10),
         SfButton(
           label: const Text('Add a plan'),
@@ -114,6 +115,7 @@ class PlansList extends StatelessWidget {
           expand: true,
           onPressed: () => openExternal(context, ShifterUrls.order),
         ),
+        ],
       ]);
     }
 
@@ -156,7 +158,7 @@ class _PlanGroups extends StatelessWidget {
           await app.selectMembership(m.id);
           if (context.mounted && app.activeId == m.id) onChosen?.call();
         },
-        onRenew: () => openExternal(context, m.manageUrl ?? ShifterUrls.renew(m.id)),
+        onRenew: showPurchaseLinks ? () => openExternal(context, m.manageUrl ?? ShifterUrls.renew(m.id)) : null,
       ),
     );
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -189,8 +191,10 @@ class _PlanGroups extends StatelessWidget {
                     icon: SfIcons.layers,
                     title: 'No active memberships',
                     body: 'Get a Residential or ISP plan on Shifter and it will show up here instantly.',
-                    action: SfButton(label: const Text('View plans'), small: true,
-                        onPressed: () => openExternal(context, ShifterUrls.order)),
+                    action: showPurchaseLinks
+                        ? SfButton(label: const Text('View plans'), small: true,
+                            onPressed: () => openExternal(context, ShifterUrls.order))
+                        : null,
                   ),
               if (usable.isNotEmpty) ...[
                 SectionLabel('Active', trailing: CountText(usable.length)),
