@@ -1,4 +1,4 @@
-package io.shifter.shifter_app
+package io.shifter.app
 
 /**
  * JNI binding to hev-socks5-tunnel (jniLibs/, MIT; built by

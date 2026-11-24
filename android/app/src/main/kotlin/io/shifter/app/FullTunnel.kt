@@ -1,4 +1,4 @@
-package io.shifter.shifter_app
+package io.shifter.app
 
 import android.content.Context
 import android.net.IpPrefix

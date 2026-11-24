@@ -1,4 +1,4 @@
-package io.shifter.shifter_app
+package io.shifter.app
 
 import android.util.Base64
 import android.util.Log

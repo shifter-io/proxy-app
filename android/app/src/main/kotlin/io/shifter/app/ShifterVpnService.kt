@@ -1,4 +1,4 @@
-package io.shifter.shifter_app
+package io.shifter.app
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -28,7 +28,7 @@ import android.util.Log
  */
 class ShifterVpnService : VpnService() {
     companion object {
-        private const val ACTION_START = "io.shifter.shifter_app.START"
+        private const val ACTION_START = "io.shifter.app.START"
         private const val NOTIFICATION_ID = 1
         private const val NOTIFICATION_CHANNEL = "connection"
 

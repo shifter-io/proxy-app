@@ -14,7 +14,7 @@ import 'dart:io';
 import '../../test/support/fake_shifter.dart';
 import 'e2e_support.dart';
 
-const _package = 'io.shifter.shifter_app';
+const _package = 'io.shifter.app';
 const _apiPort = 18090;
 
 late String _serial;

@@ -6,7 +6,7 @@ import NetworkExtension
 /// tunnel with the gateway login, swaps the login while connected, and
 /// reports when the tunnel stops without the app asking.
 final class TunnelBridge {
-    private static let providerBundleIdentifier = (Bundle.main.bundleIdentifier ?? "io.shifter.shifterApp") + ".tunnel"
+    private static let providerBundleIdentifier = (Bundle.main.bundleIdentifier ?? "io.shifter.app") + ".tunnel"
     private let channel: FlutterMethodChannel
     private var manager: NETunnelProviderManager?
     private var stopRequested = false
