@@ -550,9 +550,17 @@ class _ValueRow extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
         child: Row(children: [
-          Expanded(child: Text(title, style: SfText.body)),
+          Text(title, style: SfText.body),
           const SizedBox(width: 12),
-          Flexible(child: Text(value, style: SfText.body.copyWith(color: Sf.textTertiary, fontWeight: FontWeight.w400), overflow: TextOverflow.ellipsis)),
+          // The value sits on the right, next to the arrow.
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: SfText.body.copyWith(color: Sf.textTertiary, fontWeight: FontWeight.w400),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
           const SizedBox(width: 6),
           const SfIcon(SfIcons.chevronRight, size: 16, color: Sf.textMuted),
         ]),
