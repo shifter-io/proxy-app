@@ -1,7 +1,7 @@
 #!/bin/bash
 # Build android/app/src/main/jniLibs/<abi>/libhev-socks5-tunnel.so from a
 # pinned hev-socks5-tunnel (MIT; bundles lwIP BSD, libyaml MIT,
-# hev-task-system MIT), bound to io.shifter.shifter_app.HevTunnel. The VPN
+# hev-task-system MIT), bound to io.shifter.app.HevTunnel. The VPN
 # service uses it to send all device TCP and UDP through the gateway's SOCKS5.
 #
 #   ANDROID_NDK_HOME=<ndk> tool/android/build_hev_jni.sh
@@ -28,7 +28,7 @@ git submodule update --quiet --init --recursive
 env -u MAKEFLAGS -u MFLAGS "$NDK/ndk-build" \
   NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=Android.mk NDK_APPLICATION_MK=Application.mk \
   APP_ABI="$ABIS" APP_PLATFORM=android-24 \
-  APP_CFLAGS="-O3 -DPKGNAME=io/shifter/shifter_app -DCLSNAME=HevTunnel" \
+  APP_CFLAGS="-O3 -DPKGNAME=io/shifter/app -DCLSNAME=HevTunnel" \
   </dev/null >/dev/null
 
 for abi in $ABIS; do

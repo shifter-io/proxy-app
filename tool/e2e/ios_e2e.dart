@@ -83,7 +83,7 @@ Future<void> main(List<String> args) async {
       final e = shifter.log.skip(before).firstWhere((e) => e.target.contains('example.test'));
       check(e.user == user, 'with the same login (${e.user})');
     }
-    await devicectl(['process', 'launch', 'io.shifter.shifterApp']);
+    await devicectl(['process', 'launch', 'io.shifter.app']);
 
     shifter.step = 2;
     final code = await testExit.timeout(const Duration(minutes: 3));
