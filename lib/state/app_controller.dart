@@ -42,6 +42,7 @@ class AppController extends ChangeNotifier {
   final Store store;
   final ProxyEngine engine;
   final bool suppressUpdateReconnect;
+  bool _updateRequired = false;
   bool _updatePreparing = false;
   bool get updatePreparing => _updatePreparing;
   bool _recoveryFailed = false;
@@ -315,7 +316,15 @@ class AppController extends ChangeNotifier {
   bool get isConnecting => connection.status == ConnectionStatus.connecting;
 
   /// False on devices that can't route other apps yet (phones, tablets).
-  bool get canConnect => engine.supported && !_updatePreparing && !_recoveryFailed;
+  bool get canConnect =>
+      engine.supported && !_updateRequired && !_updatePreparing && !_recoveryFailed;
+
+  void setUpdateRequired(bool required) {
+    if (_updateRequired == required) return;
+    _updateRequired = required;
+    if (required && (isConnected || isConnecting)) unawaited(disconnect());
+    _notify();
+  }
 
   Future<void> connect() async {
     final m = activeMembership;

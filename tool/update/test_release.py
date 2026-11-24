@@ -1,8 +1,6 @@
 import argparse
 import base64
-import copy
 import json
-import os
 from pathlib import Path
 import subprocess
 import tempfile
@@ -24,24 +22,24 @@ class PublisherTests(unittest.TestCase):
         self.template=json.loads(Path(__file__).with_name('feed.example.json').read_text())
         self.template['releases'][0]['artifact']['expectedSigner']='a'*64
         (self.root/'template.json').write_text(json.dumps(self.template))
-        (self.root/'package.apk').write_bytes(b'test package bytes')
+        (self.root/'package.nupkg').write_bytes(b'test package bytes')
         self.args=argparse.Namespace(template=str(self.root/'template.json'),key=str(self.key),key_id='test',trusted_keys=str(self.root/'keys.json'),
-            output=str(self.root/'cdn'),scratch=str(self.root),sequence=1,artifact=['android-0.2.0-2='+str(self.root/'package.apk')])
+            output=str(self.root/'cdn'),scratch=str(self.root),sequence=1,artifact=['windows-0.2.0-2='+str(self.root/'package.nupkg')])
 
     def test_sign_publish_refresh_and_immutable_urls(self):
         release.publish(self.args)
-        feed=self.root/'cdn/direct/android/universal/stable.json'
+        feed=self.root/'cdn/desktop/windows/x64/stable.json'
         envelope=json.loads(feed.read_bytes())
         payload=base64.b64decode(envelope['payloadBase64'])
         (self.root/'payload').write_bytes(payload)
         (self.root/'signature').write_bytes(base64.b64decode(envelope['signatureBase64']))
         subprocess.run([release.openssl(),'pkey','-in',str(self.key),'-pubout','-out',str(self.root/'public.pem')],check=True,capture_output=True)
         subprocess.run([release.openssl(),'pkeyutl','-verify','-rawin','-pubin','-inkey',str(self.root/'public.pem'),'-in',str(self.root/'payload'),'-sigfile',str(self.root/'signature')],check=True,capture_output=True)
-        self.assertEqual(json.loads(payload)['releases'][0]['artifact']['sha256'],release.sha256(self.root/'package.apk'))
+        self.assertEqual(json.loads(payload)['releases'][0]['artifact']['sha256'],release.sha256(self.root/'package.nupkg'))
         with self.assertRaises(ValueError): release.publish(self.args)
         self.args.sequence=2;self.args.artifact=[];release.publish(self.args)
-        self.args.sequence=3;self.args.artifact=['android-0.2.0-2='+str(self.root/'package.apk')]
-        (self.root/'package.apk').write_bytes(b'replaced')
+        self.args.sequence=3;self.args.artifact=['windows-0.2.0-2='+str(self.root/'package.nupkg')]
+        (self.root/'package.nupkg').write_bytes(b'replaced')
         with self.assertRaises(ValueError):release.publish(self.args)
         self.assertEqual(json.loads(base64.b64decode(json.loads(feed.read_bytes())['payloadBase64']))['feedSequence'],2)
         self.assertFalse((self.root/'cdn/.shifter-publish.lock').exists())

@@ -22,10 +22,12 @@ class UpdateCoordinator extends ChangeNotifier {
     required this.canPrompt,
     this.prepareAutomaticConnection,
     this.canAutomaticallyInstall = _disabled,
-    this.didApplyUpdate,
     this.capabilities = const UpdateCapabilities(),
     DateTime Function()? clock,
-  }) : clock = clock ?? DateTime.now;
+  }) : clock = clock ?? DateTime.now,
+       _minimumVersion = repository == null
+           ? null
+           : store.read('minimumVersion');
   final UpdateStore store;
   final UpdateAdapter adapter;
   final InstalledIdentity identity;
@@ -35,15 +37,12 @@ class UpdateCoordinator extends ChangeNotifier {
   final Future<void> Function(Future<void> Function())?
   prepareAutomaticConnection;
   final bool Function() canAutomaticallyInstall;
-  final void Function(Release target, String previousVersion)? didApplyUpdate;
 
   static bool _disabled() => false;
   bool get supportsAutomaticInstall =>
       repository != null &&
       prepareAutomaticConnection != null &&
-      capabilities.install &&
-      identity.distribution == Distribution.desktop &&
-      (identity.platform == 'windows' || identity.platform == 'macos');
+      capabilities.install;
   bool get automaticInstallEnabled => store.read('automaticInstall') == 'true';
 
   Future<void> setAutomaticInstall(bool enabled) async {
@@ -53,10 +52,10 @@ class UpdateCoordinator extends ChangeNotifier {
 
   Uri? get manualDownload {
     final candidate = release;
-    if (candidate == null || repository == null) return null;
-    final path = identity.distribution == Distribution.direct
-        ? candidate.path
-        : candidate.manualDownloadPath;
+    if (candidate == null || repository == null || !_meetsMinimum(candidate)) {
+      return null;
+    }
+    final path = candidate.manualDownloadPath;
     return path == null ? null : repository!.config.resolve(path);
   }
 
@@ -83,21 +82,47 @@ class UpdateCoordinator extends ChangeNotifier {
   bool _cancelled = false;
   File? _artifact;
   Future<void>? _operation;
-  Timer? _nativePoll;
-  String? _operationId;
+  String? _minimumVersion;
+  String? get requiredVersion {
+    final minimum = _minimumVersion;
+    return minimum != null && compareVersions(identity.version, minimum) < 0
+        ? minimum
+        : null;
+  }
+
+  bool _meetsMinimum(Release candidate) =>
+      requiredVersion == null ||
+      compareVersions(candidate.version, requiredVersion!) >= 0;
+
+  Future<bool> _refreshRequiredVersion() async {
+    final previous = requiredVersion;
+    try {
+      final version = await repository!.fetchRequiredVersion();
+      if (version != _minimumVersion) {
+        _minimumVersion = version;
+        _notify();
+        await store.write('minimumVersion', version);
+      }
+    } catch (_) {
+      // Keep the last valid minimum across offline, malformed and failed checks.
+    }
+    return previous != requiredVersion;
+  }
+
   bool get busy => _operation != null;
   DateTime? get lastCheck => store.time('lastSuccess');
   bool get ready => phase == UpdatePhase.ready;
   bool get canDownload =>
       release != null &&
+      _meetsMinimum(release!) &&
       capabilities.download &&
       !busy &&
       !ready &&
       (_artifact == null || phase == UpdatePhase.error) &&
-      phase != UpdatePhase.awaitingSystemConsent &&
       phase != UpdatePhase.handingOff;
   bool get canInstall =>
       release != null &&
+      _meetsMinimum(release!) &&
       capabilities.install &&
       !busy &&
       (ready || (phase == UpdatePhase.error && _artifact != null));
@@ -117,8 +142,6 @@ class UpdateCoordinator extends ChangeNotifier {
     UpdatePhase.verifying => 'Verifying update…',
     UpdatePhase.ready => 'Update ready to install.',
     UpdatePhase.preparingInstall => 'Preparing to update…',
-    UpdatePhase.awaitingSystemConsent =>
-      'Finish the update in the system installer.',
     UpdatePhase.handingOff => 'The update has been handed to the installer.',
     UpdatePhase.error => error ?? 'Could not check for updates. Please retry.',
   };
@@ -132,8 +155,7 @@ class UpdateCoordinator extends ChangeNotifier {
     final future = Future<void>.microtask(() async {
       RandomAccessFile? processLock;
       try {
-        if (identity.distribution == Distribution.desktop &&
-            repository != null) {
+        if (repository != null) {
           final path = '${(await _directory()).path}/transaction.lock';
           final type = await FileSystemEntity.type(path, followLinks: false);
           if (type != FileSystemEntityType.notFound &&
@@ -178,19 +200,12 @@ class UpdateCoordinator extends ChangeNotifier {
     await _run(() async {
       final pending = store.object('pending');
       if (pending != null) {
-        _operationId = pending['operationId'] as String?;
         final target = Release(
           (pending['release'] as Map).cast<String, dynamic>(),
         );
+        await store.write('pending', null);
         if (!identity.newer(target)) {
-          await store.write('pending', null);
           await store.write('staged', null);
-          final previous = pending['previousVersion'];
-          if (previous is String &&
-              identity.version == target.version &&
-              identity.build == target.build) {
-            didApplyUpdate?.call(target, previous);
-          }
         } else {
           // The journal is a hint only; install still requires fresh signed metadata.
           release = target;
@@ -227,12 +242,8 @@ class UpdateCoordinator extends ChangeNotifier {
         }
       }
       await _cleanup();
-      await _reconcileNative();
     });
-    if (phase != UpdatePhase.ready &&
-        phase != UpdatePhase.awaitingSystemConsent) {
-      await check(automatic: true, offer: false);
-    }
+    await check(automatic: true, offer: false);
     await _installOnStartup();
     await considerPrompt();
   }
@@ -245,7 +256,9 @@ class UpdateCoordinator extends ChangeNotifier {
         !canAutomaticallyInstall() ||
         target == null ||
         !target.automaticInstall ||
-        (store.time('laterUntil')?.isAfter(clock()) ?? false)) {
+        !_meetsMinimum(target) ||
+        (requiredVersion == null &&
+            (store.time('laterUntil')?.isAfter(clock()) ?? false))) {
       return false;
     }
     final cohort = await store.cohort();
@@ -262,22 +275,24 @@ class UpdateCoordinator extends ChangeNotifier {
 
   Future<void> check({bool automatic = false, bool offer = true}) {
     if (busy) return _operation!;
-    if (phase == UpdatePhase.ready ||
-        phase == UpdatePhase.downloading ||
-        phase == UpdatePhase.awaitingSystemConsent ||
-        phase == UpdatePhase.handingOff) {
-      return Future.value();
-    }
-    final last = store.time('lastAttempt');
-    if (automatic &&
-        last != null &&
-        clock().difference(last).abs() < const Duration(hours: 6)) {
-      return Future.value();
-    }
+    if (phase == UpdatePhase.handingOff) return Future.value();
     return _run(() async {
       if (repository == null) {
         error = 'Updates are not configured for this build.';
         phase = UpdatePhase.unavailable;
+        return;
+      }
+      final policyChanged = await _refreshRequiredVersion();
+      final last = store.time('lastAttempt');
+      final needsRequiredRelease =
+          requiredVersion != null &&
+          (release == null || !_meetsMinimum(release!));
+      if (automatic &&
+          !policyChanged &&
+          !needsRequiredRelease &&
+          (phase == UpdatePhase.ready ||
+              (last != null &&
+                  clock().difference(last).abs() < const Duration(hours: 6)))) {
         return;
       }
       if (automatic) {
@@ -293,20 +308,20 @@ class UpdateCoordinator extends ChangeNotifier {
                 (r) =>
                     r.enabled &&
                     identity.newer(r) &&
-                    (!automatic || cohort < r.rollout),
+                    _meetsMinimum(r) &&
+                    (!automatic ||
+                        requiredVersion != null ||
+                        cohort < r.rollout),
               )
               .toList()
-            ..sort(
-              (a, b) => identity.platform == 'android'
-                  ? b.build.compareTo(a.build)
-                  : (identity.platform == 'ios'
-                        ? comparePublicVersions(b.version, a.version)
-                        : compareVersions(b.version, a.version)),
-            );
+            ..sort((a, b) => compareVersions(b.version, a.version));
       final previousRelease = release;
       release = null;
       for (final candidate in candidates) {
-        if (await adapter.eligible(candidate, automatic: automatic)) {
+        if (await adapter.eligible(
+          candidate,
+          automatic: automatic && requiredVersion == null,
+        )) {
           release = candidate;
           break;
         }
@@ -320,12 +335,14 @@ class UpdateCoordinator extends ChangeNotifier {
         await store.write('staged', null);
       }
       await store.write('lastSuccess', clock().toUtc().toIso8601String());
+      if (release == null && requiredVersion != null) {
+        error = 'The required update is unavailable for this installation. Try again shortly.';
+      }
       phase = release != null
-          ? UpdatePhase.available
-          : candidates.isEmpty
+          ? (_artifact != null ? UpdatePhase.ready : UpdatePhase.available)
+          : candidates.isEmpty && requiredVersion == null
           ? UpdatePhase.current
           : UpdatePhase.unavailable;
-      if (identity.distribution == Distribution.play) await _reconcileNative();
       if (automatic && offer) await considerPrompt();
     });
   }
@@ -333,6 +350,7 @@ class UpdateCoordinator extends ChangeNotifier {
   Future<void> considerPrompt() async {
     if (_disposed ||
         !canPrompt() ||
+        requiredVersion != null ||
         release == null ||
         (phase != UpdatePhase.available && phase != UpdatePhase.ready)) {
       return;
@@ -384,18 +402,13 @@ class UpdateCoordinator extends ChangeNotifier {
 
   Future<File> _file(Release r, {required bool partial}) async {
     final format = r.artifact!['format'];
-    // Android's archive parser expects an APK file name even during staging.
-    final extension = partial
-        ? (format == 'apk' ? 'partial.apk' : 'partial')
-        : format;
+    final extension = partial ? 'partial' : format;
     return File('${(await _directory()).path}/${r.sha256}.$extension');
   }
 
   Future<void> _cleanup() async {
     if (!capabilities.download) return;
     final dir = await _directory();
-    // A native installer may still hold the staged package after process death.
-    if (store.object('pending') != null) return;
     await for (final entry in dir.list(followLinks: false)) {
       if (entry.path == _artifact?.path ||
           entry.path.endsWith('/transaction.lock') ||
@@ -413,7 +426,11 @@ class UpdateCoordinator extends ChangeNotifier {
     final feed = await repository!.fetch();
     final fresh = feed.releases
         .where(
-          (r) => r.enabled && r.sameArtifact(selected) && identity.newer(r),
+          (r) =>
+              r.enabled &&
+              r.sameArtifact(selected) &&
+              identity.newer(r) &&
+              _meetsMinimum(r),
         )
         .firstOrNull;
     if (fresh == null || !await adapter.eligible(fresh, automatic: false)) {
@@ -478,25 +495,20 @@ class UpdateCoordinator extends ChangeNotifier {
     repository?.cancel();
   }
 
-  void backgrounded() {
-    if (identity.distribution == Distribution.direct) cancelDownload();
-  }
-
-  Future<void> startPlayDownload() {
-    if (release == null || identity.distribution != Distribution.play || busy) {
-      return Future.value();
+  Future<void> updateNow() async {
+    if (busy || phase == UpdatePhase.handingOff) return;
+    if (release == null ||
+        phase == UpdatePhase.error ||
+        !_meetsMinimum(release!)) {
+      await check();
     }
-    return _run(() async {
-      await _revalidate(release!);
-      _operationId = '${clock().microsecondsSinceEpoch}';
-      await store.write(
-        'pending',
-        jsonEncode({'operationId': _operationId, 'release': release!.json}),
-      );
-      await adapter.startStoreDownload(_operationId!, release!);
-      phase = UpdatePhase.downloading;
-      _pollNative();
-    });
+    if (requiredVersion == null) return;
+    if (canDownload) await download();
+    if (ready && canInstall) {
+      await install();
+    } else if (!capabilities.install && manualDownload != null) {
+      await openManualDownload();
+    }
   }
 
   Future<void> install({bool automatic = false}) {
@@ -529,103 +541,23 @@ class UpdateCoordinator extends ChangeNotifier {
           await UpdateRepository.verifyFile(selected, _artifact!);
         }
         await adapter.prepare(selected, _artifact?.path);
-        // Play keeps the download's native operation ID through completion.
-        // Replacing it here would discard later failure/cancellation callbacks.
-        if (identity.distribution != Distribution.play ||
-            _operationId == null) {
-          _operationId = '${clock().microsecondsSinceEpoch}';
-        }
-        await store.write(
-          'pending',
-          jsonEncode({
-            'operationId': _operationId,
-            'release': selected.json,
-            'previousVersion': identity.version,
-          }),
-        );
+        await store.write('pending', jsonEncode({'release': selected.json}));
         await store.write('suppressReconnect', 'true');
-        await adapter.install(selected, _artifact?.path, _operationId!);
-        if (identity.distribution == Distribution.direct) {
-          phase = UpdatePhase.awaitingSystemConsent;
-          _pollNative();
-        } else {
+        try {
+          await adapter.install(selected, _artifact?.path);
           phase = UpdatePhase.handingOff;
+        } catch (_) {
+          await store.write('pending', null);
+          await store.write('suppressReconnect', null);
+          rethrow;
         }
       });
     });
   }
 
-  Future<void> openStore() => _run(() async {
-    await prepareConnection(() async {
-      await store.write('suppressReconnect', 'true');
-      await adapter.openStore();
-    });
-  });
-  void _pollNative() {
-    _nativePoll ??= Timer.periodic(const Duration(seconds: 2), (_) {
-      if (!busy && !_disposed) unawaited(resume());
-    });
-  }
-
-  Future<void> _reconcileNative() async {
-    if (identity.distribution != Distribution.play &&
-        identity.distribution != Distribution.direct) {
-      return;
-    }
-    final native = await adapter.reconcile();
-    final operation = native['operationId'];
-    if (operation != null &&
-        _operationId != null &&
-        operation != _operationId) {
-      return;
-    }
-    if (native['state'] == 'ready' &&
-        release != null &&
-        native['build'] == release!.build) {
-      phase = UpdatePhase.ready;
-      _nativePoll?.cancel();
-      _nativePoll = null;
-    }
-    if (native['state'] == 'downloading') {
-      phase = UpdatePhase.downloading;
-      _pollNative();
-      progress = (native['progress'] as num?)?.toDouble();
-    }
-    if (const {'failed', 'canceled', 'blocked'}.contains(native['state']) &&
-        store.object('pending') != null) {
-      _nativePoll?.cancel();
-      _nativePoll = null;
-      await store.write('pending', null);
-      throw UpdateFailure(
-        native['state'] == 'blocked'
-            ? 'Android blocked this installation during verification.'
-            : 'Installation did not complete. You can retry the update.',
-      );
-    }
-    if (native['state'] == 'awaitingSystemConsent' &&
-        store.object('pending') != null) {
-      phase = UpdatePhase.awaitingSystemConsent;
-      _pollNative();
-    }
-  }
-
-  Future<void> resume() async {
-    if (busy) return;
-    final previousError = error;
-    await _run(_reconcileNative);
-    if (phase == UpdatePhase.error && error == null) {
-      error = previousError;
-      _notify();
-    }
-    if (phase != UpdatePhase.downloading && phase != UpdatePhase.error) {
-      await check(automatic: true);
-    }
-  }
-
   @override
   void dispose() {
     _disposed = true;
-    _nativePoll?.cancel();
     repository?.cancel();
     super.dispose();
   }

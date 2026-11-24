@@ -262,4 +262,4 @@ Project source is released under the [MIT License](LICENSE). Third-party depende
 
 ## Application updates
 
-See [Application updates](docs/app-updates.md) for platform integration, signed CDN metadata, Android flavors, publishing commands and production qualification gates. Updates are disabled until production configuration is supplied.
+See [Application updates](docs/app-updates.md) for desktop required updates, signed release feeds, and mobile store handoff. Enable desktop updates with the release build configuration.

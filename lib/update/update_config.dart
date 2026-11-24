@@ -6,9 +6,16 @@ class UpdateConfig {
   UpdateConfig({
     required this.origin,
     required this.keys,
-    this.enabled = true,
-    this.appStoreId = '',
-  }) {
+    Uri? requiredUpdateUrl,
+  }) : requiredUpdateUrl =
+           requiredUpdateUrl ?? Uri.parse('https://shifter.io/app.json') {
+    if (this.requiredUpdateUrl.scheme != 'https' ||
+        this.requiredUpdateUrl.host.isEmpty ||
+        this.requiredUpdateUrl.userInfo.isNotEmpty ||
+        this.requiredUpdateUrl.hasQuery ||
+        this.requiredUpdateUrl.hasFragment) {
+      throw const UpdateFailure('Required updates need an HTTPS policy URL.');
+    }
     if (origin.scheme != 'https' ||
         origin.host.isEmpty ||
         origin.userInfo.isNotEmpty ||
@@ -23,8 +30,7 @@ class UpdateConfig {
   }
   final Uri origin;
   final Map<String, List<int>> keys;
-  final bool enabled;
-  final String appStoreId;
+  final Uri requiredUpdateUrl;
   static UpdateConfig? production() {
     if (!const bool.fromEnvironment('SHIFTER_UPDATES_ENABLED')) return null;
     final raw = jsonDecode(
@@ -38,7 +44,12 @@ class UpdateConfig {
       keys: raw.map(
         (key, value) => MapEntry(key as String, base64Decode(value as String)),
       ),
-      appStoreId: const String.fromEnvironment('SHIFTER_APP_STORE_ID'),
+      requiredUpdateUrl: Uri.parse(
+        const String.fromEnvironment(
+          'SHIFTER_REQUIRED_UPDATE_URL',
+          defaultValue: 'https://shifter.io/app.json',
+        ),
+      ),
     );
   }
 

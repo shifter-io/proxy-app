@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:math';
 
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,27 +12,11 @@ class UpdateStore {
   static const prefix = 'shifter.updates.v1.';
   // Preserve the physical keys written by SharedPreferences on desktop.
   static const _diskPrefix = 'flutter.$prefix';
-  static const _androidMigrated = '${prefix}migrated';
 
   static Future<UpdateStore> open() async {
-    // Use the same backend as proxy settings and analytics. On Windows and
+    // Use the same backend as proxy settings. On Windows and
     // Linux, independent cached backends can overwrite the entire prefs file.
     final prefs = SharedPreferencesAsync();
-    if (Platform.isAndroid && await prefs.getBool(_androidMigrated) != true) {
-      // Android's async backend defaults to DataStore. Copy only our keys
-      // from the legacy preferences file and preserve any newer values.
-      final legacy = await SharedPreferences.getInstance();
-      for (final key in legacy.getKeys().where(
-        (key) => key.startsWith(prefix),
-      )) {
-        final value = legacy.getString(key);
-        final diskKey = 'flutter.$key';
-        if (value != null && !await prefs.containsKey(diskKey)) {
-          await prefs.setString(diskKey, value);
-        }
-      }
-      await prefs.setBool(_androidMigrated, true);
-    }
     final store = UpdateStore(prefs);
     final keys = (await prefs.getKeys())
         .where((key) => key.startsWith(_diskPrefix))

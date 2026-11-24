@@ -15,9 +15,6 @@ import 'update_security_test.dart' show identity, releaseJson;
 class FakeAdapter implements UpdateAdapter {
   bool allowed = true;
   int installed = 0;
-  String? downloadOperationId;
-  String? installOperationId;
-  Map<String, dynamic> nativeState = {};
   @override
   Future<InstalledIdentity> identity() async => throw UnimplementedError();
   @override
@@ -29,22 +26,8 @@ class FakeAdapter implements UpdateAdapter {
   @override
   Future<void> prepare(Release release, String? path) async {}
   @override
-  Future<void> install(
-    Release release,
-    String? path,
-    String operationId,
-  ) async {
+  Future<void> install(Release release, String? path) async {
     installed++;
-    installOperationId = operationId;
-  }
-
-  @override
-  Future<Map<String, dynamic>> reconcile() async => nativeState;
-  @override
-  Future<void> openStore() async {}
-  @override
-  Future<void> startStoreDownload(String operationId, Release release) async {
-    downloadOperationId = operationId;
   }
 }
 
@@ -63,6 +46,23 @@ class FakeRepository extends UpdateRepository {
   Completer<void>? pending;
   bool withdrawn = false;
   bool fail = false;
+  String? minimumVersion;
+  @override
+  Future<String> fetchRequiredVersion() async {
+    if (minimumVersion case final version?) return version;
+    throw const UpdateFailure('Policy unavailable');
+  }
+
+  @override
+  Future<void> download(
+    Release release,
+    File destination,
+    void Function(int, int) progress,
+  ) async {
+    await destination.writeAsString('abc');
+    progress(3, 3);
+  }
+
   Map<String, dynamic> candidate = releaseJson();
   @override
   Future<VerifiedFeed> fetch() async {
@@ -80,12 +80,18 @@ class FakeRepository extends UpdateRepository {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  const channel = MethodChannel('plugins.flutter.io/path_provider');
+  late Directory temporary;
   late FakeAdapter adapter;
   late FakeRepository repo;
   late UpdateStore store;
   late UpdateCoordinator coordinator;
   var cleanupFails = false;
-  setUp(() {
+  setUp(() async {
+    temporary = await Directory.systemTemp.createTemp('shifter-update-test-');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (_) async => temporary.path);
     store = UpdateStore(null);
     adapter = FakeAdapter();
     repo = FakeRepository(store);
@@ -103,93 +109,20 @@ void main() {
       },
     );
   });
-  tearDown(() => coordinator.dispose());
-  void usePlayCoordinator() {
+  tearDown(() async {
     coordinator.dispose();
-    coordinator = UpdateCoordinator(
-      store: store,
-      adapter: adapter,
-      identity: const InstalledIdentity(
-        applicationId: 'io.shifter.test',
-        platform: 'android',
-        architecture: 'universal',
-        distribution: Distribution.play,
-        version: '1.0.0',
-        build: 10,
-        osVersion: '35',
-      ),
-      repository: repo,
-      capabilities: const UpdateCapabilities(install: true, store: true),
-      canPrompt: () => true,
-      prepareConnection: (handoff) => handoff(),
-    );
-  }
-
-  test(
-    'Play consent cancellation clears pending state and permits retry',
-    () async {
-      usePlayCoordinator();
-      await coordinator.check();
-      await coordinator.startPlayDownload();
-      expect(coordinator.phase, UpdatePhase.downloading);
-      adapter.nativeState = {
-        'state': 'canceled',
-        'operationId': adapter.downloadOperationId,
-      };
-      await coordinator.resume();
-      expect(coordinator.phase, UpdatePhase.error);
-      expect(store.read('pending'), isNull);
-      await coordinator.check();
-      expect(coordinator.phase, UpdatePhase.available);
-      await coordinator.startPlayDownload();
-      expect(coordinator.phase, UpdatePhase.downloading);
-    },
-  );
-
-  test(
-    'Play completion preserves native operation ID and observes failure',
-    () async {
-      usePlayCoordinator();
-      await coordinator.check();
-      await coordinator.startPlayDownload();
-      adapter.nativeState = {
-        'state': 'ready',
-        'build': 11,
-        'operationId': adapter.downloadOperationId,
-      };
-      await coordinator.resume();
-      expect(coordinator.phase, UpdatePhase.ready);
-      await coordinator.install();
-      expect(coordinator.phase, UpdatePhase.handingOff);
-      expect(adapter.installOperationId, adapter.downloadOperationId);
-      adapter.nativeState['state'] = 'failed';
-      await coordinator.resume();
-      expect(coordinator.phase, UpdatePhase.error);
-      expect(store.read('pending'), isNull);
-    },
-  );
-
-  test('Play recovery keeps the journal operation ID across restart', () async {
-    usePlayCoordinator();
-    await coordinator.check();
-    await coordinator.startPlayDownload();
-    adapter.nativeState = {
-      'state': 'ready',
-      'build': 11,
-      'operationId': adapter.downloadOperationId,
-    };
-    usePlayCoordinator();
-    await coordinator.initialize();
-    expect(coordinator.phase, UpdatePhase.ready);
-    await coordinator.install();
-    expect(adapter.installOperationId, adapter.downloadOperationId);
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, null);
+    await temporary.delete(recursive: true);
   });
 
   test('concurrent manual checks join the same operation', () async {
     repo.pending = Completer<void>();
     final first = coordinator.check();
     final second = coordinator.check();
-    await Future<void>.delayed(Duration.zero);
+    while (repo.checks == 0) {
+      await Future<void>.delayed(const Duration(milliseconds: 1));
+    }
     expect(repo.checks, 1);
     repo.pending!.complete();
     await Future.wait([first, second]);
@@ -242,17 +175,11 @@ void main() {
     expect(coordinator.phase, UpdatePhase.error);
   });
   group('automatic desktop installation', () {
-    TestWidgetsFlutterBinding.ensureInitialized();
-    const channel = MethodChannel('plugins.flutter.io/path_provider');
-    late Directory temporary;
     var canApply = true;
     var revokeDuringPreparation = false;
 
     setUp(() async {
       coordinator.dispose();
-      temporary = await Directory.systemTemp.createTemp('shifter-auto-test-');
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(channel, (_) async => temporary.path);
       canApply = true;
       revokeDuringPreparation = false;
       repo.candidate['automaticInstall'] = true;
@@ -263,7 +190,6 @@ void main() {
           applicationId: 'io.shifter.test',
           platform: 'windows',
           architecture: 'x64',
-          distribution: Distribution.desktop,
           version: '1.0.0',
           build: 10,
           osVersion: '10.0.0',
@@ -282,12 +208,6 @@ void main() {
       );
       await coordinator.check();
       coordinator.phase = UpdatePhase.ready;
-    });
-
-    tearDown(() async {
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(channel, null);
-      await temporary.delete(recursive: true);
     });
 
     test('opt-in and disconnected runtime are required', () async {
@@ -315,26 +235,55 @@ void main() {
     );
   });
 
-  test('Android verification rejection clears the pending handoff', () async {
-    await coordinator.check();
-    coordinator.phase = UpdatePhase.ready;
-    await coordinator.install();
-    expect(coordinator.phase, UpdatePhase.awaitingSystemConsent);
-    adapter.nativeState = {
-      'state': 'blocked',
-      'operationId': adapter.installOperationId,
-    };
-    await coordinator.resume();
-    expect(coordinator.phase, UpdatePhase.error);
-    expect(coordinator.error, contains('Android blocked'));
-    expect(store.read('pending'), isNull);
+  test('required policy bypasses rollout and a deferred prompt', () async {
+    await coordinator.check(automatic: true);
+    expect(coordinator.promptRequested, isTrue);
+    await coordinator.later();
+    repo.candidate['rolloutPercentage'] = 0;
+    repo.minimumVersion = '1.1.0';
+
+    await coordinator.check(automatic: true);
+
+    expect(coordinator.requiredVersion, '1.1.0');
+    expect(coordinator.release?.version, '1.1.0');
+    expect(coordinator.promptRequested, isFalse);
   });
-  test('successful handoff journals target and suppresses reconnect', () async {
+
+  test(
+    'required policy stays active after failure and rejects lower releases',
+    () async {
+      repo.minimumVersion = '1.2.0';
+      await coordinator.check();
+      expect(coordinator.phase, UpdatePhase.unavailable);
+      expect(coordinator.release, isNull);
+      expect(store.read('minimumVersion'), '1.2.0');
+
+      repo.minimumVersion = null;
+      await coordinator.check();
+      expect(coordinator.requiredVersion, '1.2.0');
+      expect(coordinator.release, isNull);
+
+      repo.minimumVersion = '1.0.0';
+      await coordinator.check(automatic: true);
+      expect(coordinator.requiredVersion, isNull);
+    },
+  );
+
+  test('Update now downloads, verifies, and restarts', () async {
+    coordinator.dispose();
+    coordinator = UpdateCoordinator(
+      store: store,
+      adapter: adapter,
+      identity: identity,
+      repository: repo,
+      capabilities: const UpdateCapabilities(download: true, install: true),
+      canPrompt: () => false,
+      prepareConnection: (handoff) => handoff(),
+    );
+    repo.minimumVersion = '1.1.0';
     await coordinator.check();
-    coordinator.phase = UpdatePhase.ready;
-    await coordinator.install();
+    await coordinator.updateNow();
+    expect(coordinator.phase, UpdatePhase.handingOff);
     expect(adapter.installed, 1);
-    expect(store.read('suppressReconnect'), 'true');
-    expect(store.object('pending')!['release']['build'], 11);
   });
 }

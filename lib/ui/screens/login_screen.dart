@@ -365,7 +365,8 @@ class _LoginFormState extends State<_LoginForm> with SingleTickerProviderStateMi
       const SizedBox(height: 10),
       if (widget.showWordmark) const Spacer(),
       const SizedBox(height: 24),
-      TextButton(onPressed: UpdateScope.of(context)?.open, child: const Text('About / App updates')),
+      if (UpdateScope.of(context) case final updates?)
+        TextButton(onPressed: updates.open, child: const Text('About / App updates')),
       Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         const SfIcon(SfIcons.lock, size: 13, color: Sf.textMuted),
         const SizedBox(width: 6),

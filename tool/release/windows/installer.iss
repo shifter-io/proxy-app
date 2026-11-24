@@ -33,22 +33,6 @@ begin
   Result := ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe');
 end;
 
-function DownloadToken(): String;
-var
-  Name, Token: String;
-  Index: Integer;
-begin
-  Result := '';
-  Name := Lowercase(ExtractFileName(ExpandConstant('{srcexe}')));
-  if (Length(Name) <> 50) or (Copy(Name, 1, 14) <> 'shifter-setup-') or
-     (Copy(Name, 47, 4) <> '.exe') then
-    Exit;
-  Token := Copy(Name, 15, 32);
-  for Index := 1 to Length(Token) do
-    if Pos(Token[Index], '0123456789abcdef') = 0 then Exit;
-  Result := Token;
-end;
-
 function InstallationSucceeded(): Boolean;
 begin
   Result := InstallationError = '';
@@ -61,7 +45,6 @@ var
 begin
   if CurStep <> ssPostInstall then Exit;
   Params := ExpandConstant('-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "{tmp}\user-install.ps1" -Setup "{tmp}\Shifter-Velopack-Setup.exe"');
-  if DownloadToken() <> '' then Params := Params + ' -Attribution ' + DownloadToken();
   if not Exec(PowerShell(), Params, '', SW_HIDE, ewWaitUntilTerminated, ExitCode) or (ExitCode <> 0) then
     InstallationError := 'Shifter could not install the per-user app. Run Setup from a normal Windows desktop and quit any running Shifter app first.';
   if InstallationError <> '' then Log(InstallationError);

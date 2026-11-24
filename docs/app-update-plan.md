@@ -1,5 +1,7 @@
 # Shifter application updates: implementation and release plan
 
+> Historical plan. See [Application updates](app-updates.md) for the current desktop required-update flow and mobile store distribution.
+
 ## Summary
 
 Implement **one update experience** with a permanent **Settings → App updates** section and an app-wide update modal. Use:

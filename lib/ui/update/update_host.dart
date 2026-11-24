@@ -1,17 +1,14 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../analytics/installation_analytics.dart';
 import '../../data/models.dart';
 import '../../proxy/proxy_engine.dart';
 import '../../proxy/tunnel_proxy_engine.dart';
 import '../../state/app_controller.dart';
 import '../../theme/tokens.dart';
 import '../../update/adapters/desktop_velopack.dart';
-import '../../update/adapters/native_adapter.dart';
 import '../../update/adapters/update_adapter.dart';
 import '../../update/update_config.dart';
 import '../../update/update_coordinator.dart';
@@ -52,14 +49,12 @@ class UpdateHost extends StatefulWidget {
     required this.navigatorKey,
     required this.child,
     this.initialCoordinator,
-    this.analytics,
   });
   final AppController app;
   final bool enabled;
   final GlobalKey<NavigatorState> navigatorKey;
   final Widget child;
   final UpdateCoordinator? initialCoordinator;
-  final InstallationAnalytics? analytics;
   @override
   State<UpdateHost> createState() => _UpdateHostState();
 }
@@ -75,9 +70,10 @@ class _UpdateHostState extends State<UpdateHost> {
   );
   AppLifecycleListener? _lifecycle;
   String? _route;
-  Timer? _startup;
+  Timer? _policyPoll;
+  bool _required = false;
+  bool get _modalOpen => _open || _required;
   bool _foreground = true;
-  bool _startupSettled = false;
   bool _initialized = false;
   @override
   void initState() {
@@ -87,6 +83,9 @@ class _UpdateHostState extends State<UpdateHost> {
       _updates = widget.initialCoordinator;
       _updates!.addListener(_changed);
       _initialized = true;
+      if (_updates!.requiredVersion != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _changed());
+      }
     } else if (widget.enabled) {
       unawaited(_initialize());
     } else {
@@ -95,15 +94,13 @@ class _UpdateHostState extends State<UpdateHost> {
     _lifecycle = AppLifecycleListener(
       onResume: () {
         _foreground = true;
-        unawaited(_updates?.resume());
+        if (_initialized) unawaited(_updates?.check(automatic: true));
       },
       onHide: () {
         _foreground = false;
-        _updates?.backgrounded();
       },
       onPause: () {
         _foreground = false;
-        _updates?.backgrounded();
       },
     );
   }
@@ -135,11 +132,8 @@ class _UpdateHostState extends State<UpdateHost> {
   Future<void> _initialize() async {
     try {
       final config = UpdateConfig.production();
-      final UpdateAdapter adapter = Platform.isAndroid || Platform.isIOS
-          ? NativeUpdateAdapter(config)
-          : DesktopVelopackAdapter();
+      final UpdateAdapter adapter = DesktopVelopackAdapter();
       final identity = await adapter.identity();
-      unawaited(widget.analytics?.initialize(identity));
       final capabilities = await adapter.capabilities();
       final store = await UpdateStore.open();
       final updates = UpdateCoordinator(
@@ -151,8 +145,6 @@ class _UpdateHostState extends State<UpdateHost> {
             ? null
             : UpdateRepository(config, identity, store, proxy: _proxy),
         prepareConnection: widget.app.prepareForUpdate,
-        didApplyUpdate: (_, previous) =>
-            unawaited(widget.analytics?.recordUpdate(previous)),
         prepareAutomaticConnection: (handoff) =>
             widget.app.prepareForUpdate(handoff, automatic: true),
         canAutomaticallyInstall: () =>
@@ -180,11 +172,13 @@ class _UpdateHostState extends State<UpdateHost> {
         _updates = updates;
       });
       updates.addListener(_changed);
-      // Give authentication and startup network recovery time to settle.
-      _startup = Timer(const Duration(seconds: 3), () {
-        _startupSettled = true;
-        _initializeWhenReady();
-      });
+      _changed();
+      _initializeWhenReady();
+      if (config != null) {
+        _policyPoll = Timer.periodic(const Duration(minutes: 5), (_) {
+          if (_initialized) unawaited(updates.check(automatic: true));
+        });
+      }
     } catch (_) {
       if (mounted) {
         setState(() {
@@ -196,8 +190,8 @@ class _UpdateHostState extends State<UpdateHost> {
 
   void _initializeWhenReady() {
     if (!_initialized &&
-        _startupSettled &&
         _updates != null &&
+        !widget.app.isConnecting &&
         widget.app.phase != AuthPhase.booting) {
       _initialized = true;
       unawaited(_updates!.initialize());
@@ -224,6 +218,11 @@ class _UpdateHostState extends State<UpdateHost> {
 
   void _changed() {
     if (!mounted) return;
+    final wasOpen = _modalOpen;
+    _required = _updates?.requiredVersion != null;
+    widget.app.setUpdateRequired(_required);
+    if (_required && !wasOpen) _focusDialog();
+    if (wasOpen && !_modalOpen) _restoreFocus();
     if (_updates?.promptRequested == true) {
       _updates!.consumePrompt();
       _show();
@@ -232,23 +231,31 @@ class _UpdateHostState extends State<UpdateHost> {
   }
 
   void _show() {
-    if (_open) return;
-    _previousFocus = FocusManager.instance.primaryFocus;
+    if (_modalOpen) return;
     setState(() {
       _open = true;
     });
+    _focusDialog();
+  }
+
+  void _focusDialog() {
+    _previousFocus = FocusManager.instance.primaryFocus;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _dialogFocus.requestFocus();
+      if (mounted && _modalOpen) _dialogFocus.requestFocus();
     });
   }
 
+  void _restoreFocus() {
+    if (_previousFocus?.context != null) _previousFocus?.requestFocus();
+  }
+
   void _close() {
-    if (_updates?.phase == UpdatePhase.preparingInstall) return;
+    if (_required || _updates?.phase == UpdatePhase.preparingInstall) return;
     unawaited(_updates?.later());
     setState(() {
       _open = false;
     });
-    if (_previousFocus?.context != null) _previousFocus?.requestFocus();
+    _restoreFocus();
   }
 
   @override
@@ -256,20 +263,21 @@ class _UpdateHostState extends State<UpdateHost> {
     coordinator: _updates,
     open: _show,
     problem: _problem,
-    modalOpen: _open,
+    modalOpen: _modalOpen,
     close: _close,
     child: Stack(
       children: [
         ExcludeFocus(
-          excluding: _open,
-          child: ExcludeSemantics(excluding: _open, child: widget.child),
+          excluding: _modalOpen,
+          child: ExcludeSemantics(excluding: _modalOpen, child: widget.child),
         ),
-        if (_open) ...[
+        if (_modalOpen) ...[
           ModalBarrier(
             color: Colors.black.withValues(alpha: .7),
-            dismissible: _updates?.phase != UpdatePhase.preparingInstall,
-            onDismiss: _close,
-            semanticsLabel: 'Close app updates',
+            dismissible:
+                !_required && _updates?.phase != UpdatePhase.preparingInstall,
+            onDismiss: _required ? null : _close,
+            semanticsLabel: _required ? null : 'Close app updates',
           ),
           SafeArea(
             child: Center(
@@ -292,7 +300,7 @@ class _UpdateHostState extends State<UpdateHost> {
                     child: Semantics(
                       scopesRoute: true,
                       namesRoute: true,
-                      label: 'App updates',
+                      label: _required ? 'Update required' : 'App updates',
                       explicitChildNodes: true,
                       child: Dialog(
                         backgroundColor: Sf.bgElevated,
@@ -302,7 +310,9 @@ class _UpdateHostState extends State<UpdateHost> {
                           child: SingleChildScrollView(
                             child: Padding(
                               padding: const EdgeInsets.all(24),
-                              child: UpdatePanel(onClose: _close),
+                              child: _required
+                                  ? RequiredUpdatePanel(updates: _updates!)
+                                  : UpdatePanel(onClose: _close),
                             ),
                           ),
                         ),
@@ -319,7 +329,7 @@ class _UpdateHostState extends State<UpdateHost> {
   );
   @override
   void dispose() {
-    _startup?.cancel();
+    _policyPoll?.cancel();
     _lifecycle?.dispose();
     widget.app.removeListener(_appChanged);
     _updates?.removeListener(_changed);

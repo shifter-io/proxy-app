@@ -5,8 +5,6 @@ import 'dart:ui' show AppExitResponse;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'analytics/analytics_controls.dart';
-import 'analytics/installation_analytics.dart';
 import 'data/http_api.dart';
 import 'data/models.dart';
 import 'data/store.dart';
@@ -45,14 +43,8 @@ class ShifterApp extends StatefulWidget {
 class _ShifterAppState extends State<ShifterApp> {
   late final AppController controller = _create();
   AppLifecycleListener? _lifecycle;
-  late final InstallationAnalytics? _analytics = widget.live
-      ? InstallationAnalytics(
-          canSend: () =>
-              controller.phase != AuthPhase.booting &&
-              !controller.updatePreparing &&
-              controller.connection.status == ConnectionStatus.disconnected,
-        )
-      : null;
+  bool get _desktopUpdates =>
+      Platform.isWindows || Platform.isMacOS || Platform.isLinux;
   static const _desktop = MethodChannel('io.shifter.desktop');
   bool get _desktopEnabled =>
       widget.live && (Platform.isMacOS || Platform.isWindows);
@@ -120,9 +112,6 @@ class _ShifterAppState extends State<ShifterApp> {
         if (mounted) _sendConnectionState();
       });
     }
-    if (_analytics case final analytics?) {
-      controller.addListener(analytics.routeChanged);
-    }
     // Quitting while connected: put the OS proxy settings back first.
     if (widget.live) {
       _lifecycle = AppLifecycleListener(
@@ -144,10 +133,6 @@ class _ShifterAppState extends State<ShifterApp> {
       controller.removeListener(_sendConnectionState);
       _desktop.setMethodCallHandler(null);
     }
-    if (_analytics case final analytics?) {
-      controller.removeListener(analytics.routeChanged);
-      analytics.dispose();
-    }
     _lifecycle?.dispose();
     controller.dispose();
     super.dispose();
@@ -159,16 +144,16 @@ class _ShifterAppState extends State<ShifterApp> {
     // all see the same controller.
     return AppScope(
       controller: controller,
-      child: AnalyticsScope(
-        notifier: _analytics,
-        child: MaterialApp(
-          title: 'Shifter',
-          navigatorKey: _navigatorKey,
-          debugShowCheckedModeBanner: false,
-          theme: buildShifterTheme(),
-          // Paint behind route fades too, so the native surface never shows
-          // through while switching from startup to login or the account.
-          builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
+      child: MaterialApp(
+        title: 'Shifter',
+        navigatorKey: _navigatorKey,
+        debugShowCheckedModeBanner: false,
+        theme: buildShifterTheme(),
+        // Paint behind route fades too, so the native surface never shows
+        // through while switching from startup to login or the account.
+        builder: (context, child) {
+          final content = ColoredBox(color: Sf.bgDeepest, child: child!);
+          return AnnotatedRegion<SystemUiOverlayStyle>(
             value: const SystemUiOverlayStyle(
               statusBarColor: Colors.transparent,
               statusBarIconBrightness: Brightness.light,
@@ -178,17 +163,18 @@ class _ShifterAppState extends State<ShifterApp> {
               systemNavigationBarIconBrightness: Brightness.light,
               systemNavigationBarContrastEnforced: false,
             ),
-            child: UpdateHost(
-              app: controller,
-              enabled: widget.live,
-              analytics: _analytics,
-              navigatorKey: _navigatorKey,
-              child: ColoredBox(color: Sf.bgDeepest, child: child!),
-            ),
-          ),
-          home: const UpdateBackGuard(
-            child: AmbientMotionScope(child: AppRoot()),
-          ),
+            child: _desktopUpdates
+                ? UpdateHost(
+                    app: controller,
+                    enabled: widget.live,
+                    navigatorKey: _navigatorKey,
+                    child: content,
+                  )
+                : content,
+          );
+        },
+        home: const UpdateBackGuard(
+          child: AmbientMotionScope(child: AppRoot()),
         ),
       ),
     );

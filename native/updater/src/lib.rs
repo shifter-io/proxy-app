@@ -12,9 +12,11 @@ use std::{
 };
 use velopack::{
     locator::{auto_locate_app_manifest, LocationContext, VelopackLocatorConfig},
-    sources::FileSource,
-    UpdateCheck, UpdateManager, UpdateOptions, VelopackApp,
+    VelopackApp,
 };
+
+#[cfg(not(target_os = "linux"))]
+use velopack::{sources::FileSource, UpdateCheck, UpdateManager, UpdateOptions};
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 fn private_dir(path: &Path) -> Result<()> {
@@ -105,17 +107,71 @@ pub extern "C" fn shifter_update_bootstrap() {
         // Velopack's default cache. Ordinary application startup may continue.
     });
 }
+#[cfg(target_os = "linux")]
+fn replace_appimage(c: &VelopackLocatorConfig, package: &Path, version: &str) -> Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+    use std::process::Command;
+    use velopack::{bundle, locator::VelopackLocator};
+
+    let current = c.load_manifest()?;
+    let mut bundle = bundle::load_bundle_from_file(package)?;
+    let next = bundle.read_manifest()?;
+    if next.id != current.id
+        || next.version <= current.version
+        || next.version.to_string() != version
+        || next.os != current.os
+        || next.machine_architecture != current.machine_architecture
+    {
+        return Err("AppImage package identity does not match this installation".into());
+    }
+    let destination = &c.RootAppDir;
+    if !fs::symlink_metadata(destination)?.file_type().is_file() {
+        return Err("AppImage must be a regular file".into());
+    }
+    let locator = VelopackLocator::new_with_manifest(c.clone(), current);
+    let staging = locator.get_temp_dir_rand16();
+    private_dir(&staging)?;
+    let replacement = staging.join("next.AppImage");
+    let backup = staging.join("previous.AppImage");
+    let mut preserve_backup = false;
+    let result = (|| -> Result<()> {
+        bundle.extract_zip_predicate_to_path(|name| name.ends_with(".AppImage"), &replacement)?;
+        fs::set_permissions(&replacement, fs::Permissions::from_mode(0o755))?;
+        File::open(&replacement)?.sync_all()?;
+        // Both images are on the same filesystem. No sudo or shell fallback.
+        fs::hard_link(destination, &backup)?;
+        fs::rename(&replacement, destination)?;
+        let child = Command::new(destination)
+            .env_remove("APPIMAGE")
+            .env_remove("APPDIR")
+            .env_remove("ARGV0")
+            .spawn();
+        if let Err(error) = child {
+            preserve_backup = true;
+            fs::rename(&backup, destination)?;
+            preserve_backup = false;
+            return Err(error.into());
+        }
+        Ok(())
+    })();
+    if !preserve_backup {
+        let _ = fs::remove_dir_all(&staging);
+    }
+    result
+}
 fn execute(v: Value) -> Result<Value> {
     let method = v["method"].as_str().ok_or("Missing method")?;
     let c = config()?;
     if method == "identity" {
         let m = c.load_manifest()?;
+        #[cfg(target_os = "linux")]
+        let install = fs::symlink_metadata(&c.RootAppDir)?.file_type().is_file()
+            && c.RootAppDir.is_absolute();
+        #[cfg(not(target_os = "linux"))]
+        let install = true;
         return Ok(
-            json!({"version": m.version.to_string(), "packageId": m.id, "install": !cfg!(target_os = "linux")}),
+            json!({"version": m.version.to_string(), "packageId": m.id, "install": install}),
         );
-    }
-    if cfg!(target_os = "linux") {
-        return Err("Linux automatic installation awaits no-elevation qualification. Install the new AppImage manually.".into());
     }
     let lock_path = c.PackagesDir.join("shifter-install.lock");
     if fs::symlink_metadata(&lock_path)
@@ -146,10 +202,27 @@ fn execute(v: Value) -> Result<Value> {
     if method != "install" {
         return Err("Unknown operation".into());
     }
-    let current = c.load_manifest()?;
     let version = release["displayVersion"]
         .as_str()
         .ok_or("Missing version")?;
+    #[cfg(target_os = "linux")]
+    {
+        replace_appimage(&c, &path, version)?;
+        std::process::exit(0);
+    }
+    #[cfg(not(target_os = "linux"))]
+    apply_velopack(c, &path, version, length, hash)
+}
+
+#[cfg(not(target_os = "linux"))]
+fn apply_velopack(
+    c: VelopackLocatorConfig,
+    path: &Path,
+    version: &str,
+    length: u64,
+    hash: &str,
+) -> Result<Value> {
+    let current = c.load_manifest()?;
     if !current
         .id
         .chars()

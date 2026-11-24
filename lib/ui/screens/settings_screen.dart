@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../analytics/analytics_controls.dart';
 import '../../data/format.dart';
 import '../../data/models.dart';
 import '../../proxy/bypass.dart';
@@ -9,8 +8,8 @@ import '../../state/app_controller.dart';
 import '../../theme/theme.dart';
 import '../../theme/tokens.dart';
 import '../links.dart';
-import '../update/update_panel.dart';
 import '../update/update_host.dart';
+import '../update/update_panel.dart';
 import '../widgets/icons.dart';
 import '../widgets/layout.dart';
 import '../widgets/primitives.dart';
@@ -158,8 +157,7 @@ class SettingsScreen extends StatelessWidget {
                   onPressed: () => _confirmSignOut(context, app),
                 ),
               ])),
-              section(const AppUpdatesEntry()),
-              const AnalyticsControl(),
+              if (UpdateScope.of(context) != null) section(const AppUpdatesEntry()),
             ]),
           ),
         ],

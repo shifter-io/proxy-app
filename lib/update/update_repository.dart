@@ -33,28 +33,25 @@ class UpdateRepository {
   }
 
   Future<T> _request<T>(
-    String path,
+    Uri uri,
     int limit,
-    Future<T> Function(HttpClientResponse, int) consume,
-  ) async {
+    Future<T> Function(HttpClientResponse, int) consume, {
+    Duration responseTimeout = const Duration(seconds: 25),
+  }) async {
     final generation = _generation;
     final route = proxy();
     final client = HttpClient()
       ..autoUncompress = false
-      ..connectionTimeout = const Duration(seconds: 20)
+      ..connectionTimeout = responseTimeout
       ..findProxy = (_) => route;
     _client = client;
     try {
-      final request = await client
-          .getUrl(config.resolve(path))
-          .timeout(const Duration(seconds: 25));
+      final request = await client.getUrl(uri).timeout(responseTimeout);
       request.followRedirects =
           false; // All redirects refused, including cross-origin.
       request.headers.set('Accept-Encoding', 'identity');
       request.headers.set('Cache-Control', 'no-cache');
-      final response = await request.close().timeout(
-        const Duration(seconds: 25),
-      );
+      final response = await request.close().timeout(responseTimeout);
       if (response.statusCode != 200 ||
           response.contentLength > limit ||
           response.headers.value('content-encoding') != null) {
@@ -75,19 +72,47 @@ class UpdateRepository {
     }
   }
 
-  Future<VerifiedFeed> fetch() => _request(identity.feedPath, 262144, (
-    response,
-    generation,
-  ) async {
-    final bytes = <int>[];
-    await for (final chunk in response.timeout(const Duration(seconds: 25))) {
-      bytes.addAll(chunk);
-      if (bytes.length > 262144) {
-        throw const UpdateFailure('Update metadata is too large.');
+  Future<VerifiedFeed> fetch() => _request(
+    config.resolve(identity.feedPath),
+    262144,
+    (response, generation) async {
+      final bytes = <int>[];
+      await for (final chunk in response.timeout(const Duration(seconds: 25))) {
+        bytes.addAll(chunk);
+        if (bytes.length > 262144) {
+          throw const UpdateFailure('Update metadata is too large.');
+        }
       }
+      return verify(utf8.decode(bytes));
+    },
+  );
+
+  Future<String> fetchRequiredVersion() => _request(
+    config.requiredUpdateUrl,
+    4096,
+    (response, _) async {
+      final bytes = await response
+          .fold<List<int>>(<int>[], (bytes, chunk) {
+            if (bytes.length + chunk.length > 4096) {
+              throw const UpdateFailure('Required update policy is too large.');
+            }
+            return bytes..addAll(chunk);
+          })
+          .timeout(const Duration(seconds: 10));
+      return parseRequiredVersion(utf8.decode(bytes));
+    },
+    responseTimeout: const Duration(seconds: 10),
+  );
+
+  static String parseRequiredVersion(String body) {
+    final policy = strictJson(body);
+    if (policy is! Map || policy['version'] is! String) {
+      throw const UpdateFailure('Invalid required update policy.');
     }
-    return verify(utf8.decode(bytes));
-  });
+    final version = policy['version'] as String;
+    compareVersions(version, version);
+    return version;
+  }
 
   Future<VerifiedFeed> verify(String envelope) async {
     if (utf8.encode(envelope).length > 262144) {
@@ -116,7 +141,7 @@ class UpdateRepository {
         p['channel'] != 'stable' ||
         p['platform'] != identity.platform ||
         p['architecture'] != identity.architecture ||
-        p['distribution'] != identity.distribution.name) {
+        p['distribution'] != 'desktop') {
       throw const UpdateFailure(
         'This update feed is not for this installation.',
       );
@@ -150,9 +175,6 @@ class UpdateRepository {
         .toList();
     final ids = <String>{};
     for (final r in releases) {
-      if (identity.distribution == Distribution.desktop) {
-        compareVersions(r.version, r.version);
-      }
       if (r.applicationId != identity.applicationId || !ids.add(r.id)) {
         throw const UpdateFailure('Invalid release identity.');
       }
@@ -162,25 +184,19 @@ class UpdateRepository {
         }
         config.resolve(path);
       }
-      if (identity.distribution == Distribution.desktop ||
-          identity.distribution == Distribution.direct) {
-        final a = r.artifact;
-        if (a == null ||
-            a['byteLength'] is! int ||
-            r.byteLength <= 0 ||
-            r.byteLength > 4 * 1024 * 1024 * 1024 ||
-            a['sha256'] is! String ||
-            !RegExp(r'^[a-f0-9]{64}$').hasMatch(r.sha256) ||
-            a['format'] !=
-                (identity.distribution == Distribution.direct
-                    ? 'apk'
-                    : 'nupkg') ||
-            a['expectedSigner'] is! String ||
-            (a['expectedSigner'] as String).isEmpty) {
-          throw const UpdateFailure('Invalid update artifact.');
-        }
-        config.resolve(r.path);
+      final a = r.artifact;
+      if (a == null ||
+          a['byteLength'] is! int ||
+          r.byteLength <= 0 ||
+          r.byteLength > 4 * 1024 * 1024 * 1024 ||
+          a['sha256'] is! String ||
+          !RegExp(r'^[a-f0-9]{64}$').hasMatch(r.sha256) ||
+          a['format'] != 'nupkg' ||
+          a['expectedSigner'] is! String ||
+          (a['expectedSigner'] as String).isEmpty) {
+        throw const UpdateFailure('Invalid update artifact.');
       }
+      config.resolve(r.path);
     }
     await store.write(
       'high.${identity.feedPath}',
@@ -200,7 +216,7 @@ class UpdateRepository {
     }
     final sink = destination.openWrite(mode: FileMode.writeOnly);
     try {
-      await _request(release.path, release.byteLength, (
+      await _request(config.resolve(release.path), release.byteLength, (
         response,
         generation,
       ) async {
