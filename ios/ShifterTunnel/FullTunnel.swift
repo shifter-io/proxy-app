@@ -225,13 +225,12 @@ private struct SocksProbe {
     private func ready(_ c: NWConnection) async throws {
         try await withTimeout(10) {
             try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
-                var resumed = false
+                let once = Once()
                 c.stateUpdateHandler = { state in
-                    guard !resumed else { return }
                     switch state {
-                    case .ready: resumed = true; cont.resume()
-                    case let .failed(e), let .waiting(e): resumed = true; cont.resume(throwing: e)
-                    case .cancelled: resumed = true; cont.resume(throwing: FullTunnel.error("Connection cancelled."))
+                    case .ready: once.run { cont.resume() }
+                    case let .failed(e), let .waiting(e): once.run { cont.resume(throwing: e) }
+                    case .cancelled: once.run { cont.resume(throwing: FullTunnel.error("Connection cancelled.")) }
                     default: break
                     }
                 }
@@ -278,5 +277,18 @@ private struct SocksProbe {
             group.cancelAll()
             return first
         }
+    }
+}
+
+/// Runs its block at most once, from any thread.
+private final class Once: @unchecked Sendable {
+    private let lock = NSLock()
+    private var done = false
+    func run(_ block: () -> Void) {
+        lock.lock()
+        let first = !done
+        done = true
+        lock.unlock()
+        if first { block() }
     }
 }
