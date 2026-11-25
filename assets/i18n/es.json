@@ -410,6 +410,7 @@
   "The Shifter gateway did not respond. Check your plan has traffic left.": "La puerta de enlace de Shifter no respondió. Comprueba que tu plan tenga tráfico disponible.",
   "The active proxy is unavailable. Retry after disconnecting.": "El proxy activo no está disponible. Vuelve a intentarlo después de desconectar.",
   "The connection didn't start. Try again.": "La conexión no se ha iniciado. Inténtalo de nuevo.",
+  "The connection didn't start: {reason}": "La conexión no se inició: {reason}",
   "The connection has not stopped. Retry before installing an update.": "La conexión no se ha detenido. Vuelve a intentarlo antes de instalar una actualización.",
   "The download link could not be opened.": "No se pudo abrir el enlace de descarga.",
   "The installer could not complete the update.": "El instalador no ha podido completar la actualización.",

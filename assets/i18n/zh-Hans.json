@@ -410,6 +410,7 @@
   "The Shifter gateway did not respond. Check your plan has traffic left.": "Shifter 网关无响应。请检查您的套餐是否还有剩余流量。",
   "The active proxy is unavailable. Retry after disconnecting.": "当前代理不可用。断开连接后重试。",
   "The connection didn't start. Try again.": "连接未能启动。请重试。",
+  "The connection didn't start: {reason}": "连接未能启动：{reason}",
   "The connection has not stopped. Retry before installing an update.": "连接尚未停止。请在安装更新前重试。",
   "The download link could not be opened.": "无法打开下载链接。",
   "The installer could not complete the update.": "安装程序无法完成更新。",

@@ -116,6 +116,21 @@ abstract final class I18n {
 /// The translation of [en] in the active language (English when missing).
 String tr(String en) => I18n._catalog[en] ?? en;
 
+/// A message from the native side (Android or iOS): either one catalog key,
+/// or "<lead>: <reason>" where both halves are keys (iOS sends
+/// "The connection didn't start: Couldn't reach Shifter...").
+String trNative(String message) {
+  if (I18n._catalog.containsKey(message)) return tr(message);
+  final i = message.indexOf(': ');
+  if (i > 0) {
+    final lead = message.substring(0, i);
+    final reason = message.substring(i + 2);
+    final template = '$lead: {reason}';
+    if (I18n._catalog.containsKey(template)) return trf(template, {'reason': trNative(reason)});
+  }
+  return tr(message);
+}
+
 /// [tr] with `{name}` placeholders filled from [args].
 String trf(String en, Map<String, Object?> args) {
   var s = tr(en);

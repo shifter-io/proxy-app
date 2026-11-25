@@ -473,7 +473,7 @@ class AppController extends ChangeNotifier {
         connection = ProxyConnection.error(switch (e) {
           _ConnectFailure(:final message) => message,
           ApiException(:final message) => message,
-          SystemProxyException(:final message) => tr(message),
+          SystemProxyException(:final message) => trNative(message),
           _ => tr('Could not connect. Try again.'),
         });
         _notify();

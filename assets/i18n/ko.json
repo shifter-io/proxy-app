@@ -410,6 +410,7 @@
   "The Shifter gateway did not respond. Check your plan has traffic left.": "Shifter 게이트웨이가 응답하지 않았습니다. 플랜에 트래픽이 남아 있는지 확인하세요.",
   "The active proxy is unavailable. Retry after disconnecting.": "사용 중인 프록시를 사용할 수 없습니다. 연결 해제 후 다시 시도하세요.",
   "The connection didn't start. Try again.": "연결이 시작되지 않았습니다. 다시 시도해 주세요.",
+  "The connection didn't start: {reason}": "연결이 시작되지 않았습니다: {reason}",
   "The connection has not stopped. Retry before installing an update.": "연결이 중지되지 않았습니다. 업데이트를 설치하기 전에 다시 시도하세요.",
   "The download link could not be opened.": "다운로드 링크를 열 수 없습니다.",
   "The installer could not complete the update.": "설치 프로그램이 업데이트를 완료하지 못했습니다.",
