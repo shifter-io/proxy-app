@@ -22,8 +22,10 @@ for forbidden in ('Desktop', 'Documents', 'Mobile Documents', 'CloudStorage', 'D
         p.error('Build root must be a non-synced cache')
 root.mkdir(parents=True, exist_ok=True)
 disk = shutil.disk_usage(root)
-if disk.free - 5 * 1024**3 < disk.total * .2:
-    p.error('Cannot budget 5 GiB while retaining 20% free space')
+# The Rust build needs well under 1 GiB; keep 5 GiB for it and at least
+# 10 GiB free afterwards, so a release build never fills the disk.
+if disk.free - 5 * 1024**3 < 10 * 1024**3:
+    p.error('Need 15 GiB free: 5 GiB for the build and 10 GiB left over')
 env = dict(os.environ, CARGO_TARGET_DIR=str(root / 'rust'))
 repo = Path(__file__).resolve().parents[2]
 command = ['cargo', 'build', '--locked', '--release', '--manifest-path', str(repo / 'native/updater/Cargo.toml')]
