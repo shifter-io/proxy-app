@@ -43,6 +43,7 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("production")
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
 }
