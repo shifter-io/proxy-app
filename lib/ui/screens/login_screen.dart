@@ -256,7 +256,7 @@ class _LoginFormState extends State<_LoginForm> with SingleTickerProviderStateMi
             final dx = math.sin(t * math.pi * 6) * 9 * (1 - t);
             return Transform.translate(offset: Offset(dx, 0), child: child);
           },
-          child: AnimatedContainer(
+          child: TextFieldTapRegion(child: AnimatedContainer(
             duration: Sf.fast,
             height: 52,
             decoration: BoxDecoration(
@@ -279,6 +279,8 @@ class _LoginFormState extends State<_LoginForm> with SingleTickerProviderStateMi
                   enableIMEPersonalizedLearning: false,
                   autofillHints: const [],
                   onSubmitted: _verify,
+                  // Tapping anywhere outside the field (and its eye/paste buttons) closes the keyboard.
+                  onTapOutside: (_) => _focus.unfocus(),
                   onChanged: (v) {
                     if (_error != null) setState(() => _error = null);
                     // A whole key arriving at once = pasted: verify instantly.
@@ -298,7 +300,7 @@ class _LoginFormState extends State<_LoginForm> with SingleTickerProviderStateMi
               SfIconButton(icon: SfIcons.clipboard, tooltip: tr('Paste from clipboard'), size: 38, iconSize: 17, onTap: busy ? null : _paste),
               const SizedBox(width: 6),
             ]),
-          ),
+          )),
         ),
       ),
       const SizedBox(height: 8),
