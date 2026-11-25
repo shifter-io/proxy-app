@@ -376,7 +376,7 @@ class _LoginFormState extends State<_LoginForm> with SingleTickerProviderStateMi
         Flexible(child: Text(tr('Your key is stored only on this device.'), style: SfText.micro)),
       ]),
       const SizedBox(height: 6),
-      SfLinkButton(text: tr('Privacy policy'), onTap: () => openExternal(context, ShifterUrls.privacy), fontSize: 12.5),
+      Center(child: SfLinkButton(text: tr('Privacy policy'), onTap: () => openExternal(context, ShifterUrls.privacy), fontSize: 12.5)),
     ]);
   }
 
