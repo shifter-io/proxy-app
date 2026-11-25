@@ -41,6 +41,18 @@ abstract final class I18n {
     'pt-BR': 'Português (Brasil)',
   };
 
+  /// Flag shown next to each language in the picker (assets/flags/<cc>.png).
+  static const flags = {
+    'en': 'us',
+    'es': 'es',
+    'zh-Hans': 'cn',
+    'de': 'de',
+    'fr': 'fr',
+    'ja': 'jp',
+    'ko': 'kr',
+    'pt-BR': 'br',
+  };
+
   /// Tells the app root to rebuild after the language changes.
   static final changes = ValueNotifier<String>('en');
 

@@ -550,9 +550,17 @@ class _ValueRow extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
         child: Row(children: [
-          Expanded(child: Text(title, style: SfText.body)),
+          Text(title, style: SfText.body),
           const SizedBox(width: 12),
-          Flexible(child: Text(value, style: SfText.body.copyWith(color: Sf.textTertiary, fontWeight: FontWeight.w400), overflow: TextOverflow.ellipsis)),
+          // The value sits on the right, next to the arrow.
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: SfText.body.copyWith(color: Sf.textTertiary, fontWeight: FontWeight.w400),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
           const SizedBox(width: 6),
           const SfIcon(SfIcons.chevronRight, size: 16, color: Sf.textMuted),
         ]),
@@ -580,27 +588,6 @@ Future<void> _showLanguagePicker(BuildContext context) {
         app.setLanguage(code);
       }
 
-      Widget option(String title, String? subtitle, bool selected, VoidCallback onTap) => Pressable(
-            onTap: onTap,
-            scale: 1,
-            hoverColor: const Color(0x08FFFFFF),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              child: Row(children: [
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(title, style: SfText.body.copyWith(color: selected ? Sf.textPrimary : Sf.textSecondary)),
-                    if (subtitle != null) ...[
-                      const SizedBox(height: 2),
-                      Text(subtitle, style: SfText.small),
-                    ],
-                  ]),
-                ),
-                if (selected) const SfIcon(SfIcons.check, size: 18, color: Sf.accentLight, strokeWidth: 2.4),
-              ]),
-            ),
-          );
-
       return Container(
         constraints: BoxConstraints(maxHeight: maxH),
         decoration: const BoxDecoration(
@@ -624,16 +611,21 @@ Future<void> _showLanguagePicker(BuildContext context) {
               shrinkWrap: true,
               padding: EdgeInsets.fromLTRB(16, 4, 16, 20 + bottom),
               children: [
-                SfCard(
-                  padding: EdgeInsets.zero,
-                  child: Column(children: [
-                    option(tr('Automatic'), trf('Follows your device: {language}', {'language': device}), current == null, () => choose(null)),
-                    for (final code in I18n.codes) ...[
-                      const _Divider(),
-                      option(I18n.names[code]!, null, current == code, () => choose(code)),
-                    ],
-                  ]),
+                // Same rows as the country list: flag, name, check when selected.
+                SfRow(
+                  leading: const SfFlag(null),
+                  title: tr('Automatic'),
+                  subtitle: trf('Follows your device: {language}', {'language': device}),
+                  selected: current == null,
+                  onTap: () => choose(null),
                 ),
+                for (final code in I18n.codes)
+                  SfRow(
+                    leading: SfFlag(I18n.flags[code]),
+                    title: I18n.names[code]!,
+                    selected: current == code,
+                    onTap: () => choose(code),
+                  ),
               ],
             ),
           ),
