@@ -10,6 +10,9 @@ import json, pathlib, re
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 CALL = re.compile(r"""\btrf?\(\s*(?:'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)")""")
+# Error messages the app shows through tr(error): the first literal of these
+# exceptions anywhere in lib/ (also when the call spans several lines).
+THROWN = re.compile(r"""\b(?:UpdateFailure|SystemProxyException|ApiException)\(\s*'((?:[^'\\]|\\.)*)'""", re.S)
 # tr(cond ? 'A' : 'B'): both literals are keys.
 TERNARY = re.compile(r"""\btrf?\(\s*[^'"]{1,120}?\?\s*'((?:[^'\\]|\\.)*)'\s*:\s*'((?:[^'\\]|\\.)*)'""", re.S)
 
@@ -26,6 +29,9 @@ def keys():
         text = p.read_text()
         for m in CALL.finditer(text):
             out.append(unescape(m.group(1) if m.group(1) is not None else m.group(2)))
+        for m in THROWN.finditer(text):
+            if '$' not in m.group(1):  # messages built from variables can't be keys
+                out.append(unescape(m.group(1)))
         for m in TERNARY.finditer(text):
             out += [unescape(m.group(1)), unescape(m.group(2))]
     # Android notification (values/strings.xml) and text shown through tr(variable).

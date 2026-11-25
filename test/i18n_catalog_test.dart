@@ -10,6 +10,8 @@ import 'package:shifter_app/i18n/i18n.dart';
 
 final _call = RegExp(r'''\btrf?\(\s*(?:'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)")''');
 final _placeholder = RegExp(r'\{[a-zA-Z0-9_]+\}');
+// Error messages shown through tr(error): the first literal of these exceptions.
+final _thrown = RegExp(r"\b(?:UpdateFailure|SystemProxyException|ApiException)\(\s*'((?:[^'\\]|\\.)*)'");
 // tr(cond ? 'A' : 'B'): both literals are keys.
 final _ternary = RegExp(r"\btrf?\(\s*[^'\x22]{1,120}?\?\s*'((?:[^'\\]|\\.)*)'\s*:\s*'((?:[^'\\]|\\.)*)'");
 
@@ -23,6 +25,9 @@ Set<String> _keys() {
     final text = f.readAsStringSync();
     for (final m in _call.allMatches(text)) {
       keys.add(_unescape(m.group(1) ?? m.group(2)!));
+    }
+    for (final m in _thrown.allMatches(text)) {
+      if (!m.group(1)!.contains(r'$')) keys.add(_unescape(m.group(1)!)); // built from variables: not a key
     }
     for (final m in _ternary.allMatches(text)) {
       keys..add(_unescape(m.group(1)!))..add(_unescape(m.group(2)!));
@@ -58,6 +63,30 @@ void main() {
       }
     });
   }
+
+  test('no user-facing text in the code skips tr()', () {
+    // Literal text handed straight to a widget, not through tr() / trf().
+    final patterns = [
+      RegExp(r"""\bText\(\s*'([^'\$]*[A-Za-z]{3}[^']*)'"""),
+      RegExp(r"""\b(?:label|title|subtitle|body|hintText|labelText|helperText|errorText|tooltip|semanticsLabel|message|text|heading):\s*'([A-Z][a-z][^']*)'"""),
+    ];
+    const allowed = {'Shifter', 'IP', 'ISP', 'API'};
+    final bad = <String>[];
+    for (final f in Directory('lib').listSync(recursive: true).whereType<File>()) {
+      if (!f.path.endsWith('.dart') || f.path.contains('/preview/') || f.path.endsWith('main_preview.dart')) continue;
+      final lines = f.readAsLinesSync();
+      for (var i = 0; i < lines.length; i++) {
+        final l = lines[i];
+        if (l.trimLeft().startsWith('//')) continue;
+        for (final p in patterns) {
+          for (final m in p.allMatches(l)) {
+            if (!allowed.contains(m.group(1)) && !m.group(1)!.startsWith('©')) bad.add('${f.path}:${i + 1}: ${m.group(1)}');
+          }
+        }
+      }
+    }
+    expect(bad, isEmpty, reason: 'Wrap these in tr() / trf().');
+  });
 
   test('device languages map to the website languages', () {
     expect(I18n.pick(const [Locale('de', 'AT')]), 'de');

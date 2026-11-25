@@ -37,9 +37,9 @@ String relativeDays(DateTime d) {
 }
 
 String formatDuration(int seconds) {
-  if (seconds < 60) return '${seconds}s';
-  if (seconds < 3600) return '${(seconds / 60).round()} min';
-  return '${_trim(seconds / 3600, 1)} h';
+  if (seconds < 60) return trf('{n}s', {'n': seconds});
+  if (seconds < 3600) return trf('{n} min', {'n': (seconds / 60).round()});
+  return trf('{n} h', {'n': _trim(seconds / 3600, 1)});
 }
 
 String formatUptime(Duration d) {
@@ -106,10 +106,10 @@ ResidentialTarget clampTarget(ResidentialTarget t, ResidentialPool pool) {
       return (title: ip.label, subtitle: ispIpPlace(ip));
     case ResidentialTarget t:
       if (t.country == null) return (title: tr('Random location'), subtitle: tr('Worldwide · best available'));
-      final title = t.city?.name ?? t.region?.name ?? t.country!.name;
+      final title = t.city?.name ?? t.region?.name ?? tr(t.country!.name);
       final trail = [
         if (t.city != null && t.region != null) t.region!.name,
-        if (t.city != null || t.region != null) t.country!.name,
+        if (t.city != null || t.region != null) tr(t.country!.name),
       ].join(', ');
       final asn = t.asn?.name ?? '';
       return (title: title, subtitle: [trail.isEmpty ? tr('Any city') : trail, asn].where((s) => s.isNotEmpty).join(' · '));

@@ -158,7 +158,7 @@ class HttpShifterApi implements ShifterApi {
           city: p['city'] as String?,
           asn: (p['asn'] as num?)?.toInt(),
           isp: switch ((p['asn'] as num?)?.toInt()) {
-            null => 'ISP proxy',
+            null => tr('ISP proxy'),
             final asn => names[asn] ?? 'AS$asn',
           },
         ),
