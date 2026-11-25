@@ -38,19 +38,22 @@ class _CompactLogin extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pad = MediaQuery.paddingOf(context);
+    // With the keyboard open the usable height shrinks, so the centered form
+    // moves up and the focused field scrolls into view above the keyboard.
+    final bottom = math.max(pad.bottom, MediaQuery.viewInsetsOf(context).bottom);
     final side = context.pagePadding + 4;
     return Stack(children: [
       const Positioned.fill(child: Atmosphere()),
       LayoutBuilder(builder: (context, c) {
         return SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(side, pad.top + 24, side, pad.bottom + 18),
-          // Fill the screen height so the form's Spacer pushes the key note and
-          // privacy link to the bottom; taller content still scrolls.
+          padding: EdgeInsets.fromLTRB(side, pad.top + 24, side, bottom + 18),
+          // Fill the screen height: the form sits in the middle and the key note
+          // and privacy link at the bottom; taller content still scrolls.
           child: Align(
             alignment: Alignment.topCenter,
             child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: 440, minHeight: c.maxHeight - pad.top - pad.bottom - 42),
+              constraints: BoxConstraints(maxWidth: 440, minHeight: math.max(0, c.maxHeight - pad.top - bottom - 42)),
               child: const IntrinsicHeight(child: _LoginForm(showWordmark: true)),
             ),
           ),
@@ -234,6 +237,7 @@ class _LoginFormState extends State<_LoginForm> with SingleTickerProviderStateMi
     final borderColor = _error != null ? const Color(0x8CEF4444) : _focus.hasFocus ? Sf.accent : Sf.borderMedium;
 
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+      if (widget.showWordmark) const Spacer(),
       if (widget.showWordmark) const Align(alignment: Alignment.centerLeft, child: FadeSlideIn(child: Wordmark(height: 26))),
       if (widget.showWordmark) const SizedBox(height: 40),
       FadeSlideIn(
