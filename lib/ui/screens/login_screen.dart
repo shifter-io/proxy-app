@@ -45,13 +45,13 @@ class _CompactLogin extends StatelessWidget {
         return SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
           padding: EdgeInsets.fromLTRB(side, pad.top + 24, side, pad.bottom + 18),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: c.maxHeight - pad.top - pad.bottom - 42),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 440),
-                child: const IntrinsicHeight(child: _LoginForm(showWordmark: true)),
-              ),
+          // Fill the screen height so the form's Spacer pushes the key note and
+          // privacy link to the bottom; taller content still scrolls.
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: 440, minHeight: c.maxHeight - pad.top - pad.bottom - 42),
+              child: const IntrinsicHeight(child: _LoginForm(showWordmark: true)),
             ),
           ),
         );
