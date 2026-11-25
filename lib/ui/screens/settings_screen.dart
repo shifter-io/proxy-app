@@ -588,13 +588,16 @@ Future<void> _showLanguagePicker(BuildContext context) {
         app.setLanguage(code);
       }
 
-      Widget option(String title, String? subtitle, bool selected, VoidCallback onTap) => Pressable(
+      // [flag] null shows a globe (Automatic).
+      Widget option(String? flag, String title, String? subtitle, bool selected, VoidCallback onTap) => Pressable(
             onTap: onTap,
             scale: 1,
             hoverColor: const Color(0x08FFFFFF),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               child: Row(children: [
+                SfFlag(flag, width: 24),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(title, style: SfText.body.copyWith(color: selected ? Sf.textPrimary : Sf.textSecondary)),
@@ -635,10 +638,10 @@ Future<void> _showLanguagePicker(BuildContext context) {
                 SfCard(
                   padding: EdgeInsets.zero,
                   child: Column(children: [
-                    option(tr('Automatic'), trf('Follows your device: {language}', {'language': device}), current == null, () => choose(null)),
+                    option(null, tr('Automatic'), trf('Follows your device: {language}', {'language': device}), current == null, () => choose(null)),
                     for (final code in I18n.codes) ...[
                       const _Divider(),
-                      option(I18n.names[code]!, null, current == code, () => choose(code)),
+                      option(I18n.flags[code], I18n.names[code]!, null, current == code, () => choose(code)),
                     ],
                   ]),
                 ),
