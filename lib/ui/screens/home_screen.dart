@@ -243,7 +243,7 @@ class _Hero extends StatelessWidget {
         ],
       );
     } else if (connecting) {
-      sub = Text('Securing your route through Shifter', key: const ValueKey('c'), style: SfText.small, textAlign: TextAlign.center);
+      sub = Text(tr('Securing your route through Shifter'), key: const ValueKey('c'), style: SfText.small, textAlign: TextAlign.center);
     } else if (status == ConnectionStatus.error) {
       sub = Text(error ?? '', key: const ValueKey('e'), style: SfText.small.copyWith(color: Sf.dangerLight), textAlign: TextAlign.center);
     } else {
