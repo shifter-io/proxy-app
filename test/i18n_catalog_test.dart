@@ -74,4 +74,15 @@ void main() {
     expect(tr('Not translated'), 'Not translated');
     expect(trf('In {n} days', {'n': 3}), 'In 3 Tagen');
   });
+
+  test('native messages "<lead>: <reason>" translate both halves', () {
+    I18n.useCatalog('de', {
+      "The connection didn't start: {reason}": 'Die Verbindung wurde nicht gestartet: {reason}',
+      "Couldn't reach Shifter. Check your connection and try again.": 'Shifter ist nicht erreichbar.',
+    });
+    addTearDown(() => I18n.useCatalog('en', const {}));
+    expect(trNative("The connection didn't start: Couldn't reach Shifter. Check your connection and try again."),
+        'Die Verbindung wurde nicht gestartet: Shifter ist nicht erreichbar.');
+    expect(trNative('Something new'), 'Something new');
+  });
 }

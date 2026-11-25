@@ -410,6 +410,7 @@
   "The Shifter gateway did not respond. Check your plan has traffic left.": "Shifter のゲートウェイが応答しませんでした。プランにトラフィックが残っているか確認してください。",
   "The active proxy is unavailable. Retry after disconnecting.": "使用中のプロキシが利用できません。切断後に再試行してください。",
   "The connection didn't start. Try again.": "接続を開始できませんでした。もう一度お試しください。",
+  "The connection didn't start: {reason}": "接続を開始できませんでした: {reason}",
   "The connection has not stopped. Retry before installing an update.": "接続が停止していません。アップデートをインストールする前に再試行してください。",
   "The download link could not be opened.": "ダウンロードリンクを開けませんでした。",
   "The installer could not complete the update.": "インストーラーがアップデートを完了できませんでした。",

@@ -16,6 +16,7 @@ Could not set up the connection.
 Open Shifter and tap Connect.
 Shifter needs your permission to add a VPN configuration. Tap Connect and choose Allow.
 The connection didn't start. Try again.
+The connection didn't start: {reason}
 The connection has not stopped. Retry before installing an update.
 
 # Month names in formatDate (lib/data/format.dart).
