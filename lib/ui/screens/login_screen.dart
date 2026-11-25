@@ -38,20 +38,23 @@ class _CompactLogin extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pad = MediaQuery.paddingOf(context);
+    // With the keyboard open the usable height shrinks, so the centered form
+    // moves up and the focused field scrolls into view above the keyboard.
+    final bottom = math.max(pad.bottom, MediaQuery.viewInsetsOf(context).bottom);
     final side = context.pagePadding + 4;
     return Stack(children: [
       const Positioned.fill(child: Atmosphere()),
       LayoutBuilder(builder: (context, c) {
         return SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(side, pad.top + 24, side, pad.bottom + 18),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: c.maxHeight - pad.top - pad.bottom - 42),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 440),
-                child: const IntrinsicHeight(child: _LoginForm(showWordmark: true)),
-              ),
+          padding: EdgeInsets.fromLTRB(side, pad.top + 24, side, bottom + 18),
+          // Fill the screen height: the form sits in the middle and the key note
+          // and privacy link at the bottom; taller content still scrolls.
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: 440, minHeight: math.max(0, c.maxHeight - pad.top - bottom - 42)),
+              child: const IntrinsicHeight(child: _LoginForm(showWordmark: true)),
             ),
           ),
         );
@@ -234,6 +237,7 @@ class _LoginFormState extends State<_LoginForm> with SingleTickerProviderStateMi
     final borderColor = _error != null ? const Color(0x8CEF4444) : _focus.hasFocus ? Sf.accent : Sf.borderMedium;
 
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+      if (widget.showWordmark) const Spacer(),
       if (widget.showWordmark) const Align(alignment: Alignment.centerLeft, child: FadeSlideIn(child: Wordmark(height: 26))),
       if (widget.showWordmark) const SizedBox(height: 40),
       FadeSlideIn(
@@ -256,7 +260,7 @@ class _LoginFormState extends State<_LoginForm> with SingleTickerProviderStateMi
             final dx = math.sin(t * math.pi * 6) * 9 * (1 - t);
             return Transform.translate(offset: Offset(dx, 0), child: child);
           },
-          child: AnimatedContainer(
+          child: TextFieldTapRegion(child: AnimatedContainer(
             duration: Sf.fast,
             height: 52,
             decoration: BoxDecoration(
@@ -279,6 +283,8 @@ class _LoginFormState extends State<_LoginForm> with SingleTickerProviderStateMi
                   enableIMEPersonalizedLearning: false,
                   autofillHints: const [],
                   onSubmitted: _verify,
+                  // Tapping anywhere outside the field (and its eye/paste buttons) closes the keyboard.
+                  onTapOutside: (_) => _focus.unfocus(),
                   onChanged: (v) {
                     if (_error != null) setState(() => _error = null);
                     // A whole key arriving at once = pasted: verify instantly.
@@ -298,7 +304,7 @@ class _LoginFormState extends State<_LoginForm> with SingleTickerProviderStateMi
               SfIconButton(icon: SfIcons.clipboard, tooltip: tr('Paste from clipboard'), size: 38, iconSize: 17, onTap: busy ? null : _paste),
               const SizedBox(width: 6),
             ]),
-          ),
+          )),
         ),
       ),
       const SizedBox(height: 8),
@@ -376,7 +382,7 @@ class _LoginFormState extends State<_LoginForm> with SingleTickerProviderStateMi
         Flexible(child: Text(tr('Your key is stored only on this device.'), style: SfText.micro)),
       ]),
       const SizedBox(height: 6),
-      SfLinkButton(text: tr('Privacy policy'), onTap: () => openExternal(context, ShifterUrls.privacy), fontSize: 12.5),
+      Center(child: SfLinkButton(text: tr('Privacy policy'), onTap: () => openExternal(context, ShifterUrls.privacy), fontSize: 12.5)),
     ]);
   }
 
