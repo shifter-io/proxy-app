@@ -34,6 +34,8 @@ def main():
     parser.add_argument("--mac-installer")
     parser.add_argument("--mac-notary-profile")
     parser.add_argument("--qa", action="store_true", help="Allow local macOS test packages without notarization")
+    parser.add_argument("--arch", choices=("arm64", "x64"),
+                        help="macOS: package this architecture of the universal bundle (default: this Mac's)")
     args = parser.parse_args()
     if not re.fullmatch(r"\d+\.\d+\.\d+", args.version):
         parser.error("Expected a three-part release version")
@@ -41,6 +43,12 @@ def main():
     arch = {"aarch64": "arm64", "arm64": "arm64", "x86_64": "x64"}.get(platform.machine())
     if not arch or system not in {"Darwin", "Linux"}:
         parser.error("Run on the matching macOS or Linux build host")
+    if args.arch and args.arch != arch:
+        # The Flutter macOS bundle is universal; only the updater bridge and the
+        # Velopack runtime are per architecture, and both cross-build on a Mac.
+        if system != "Darwin":
+            parser.error("Cross-architecture packages are only supported on macOS")
+        arch = args.arch
     args.bundle = args.bundle.resolve(strict=True)
     args.output.mkdir(parents=True, exist_ok=True)
     if any(args.output.iterdir()):
