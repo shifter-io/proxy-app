@@ -1,5 +1,7 @@
 # Shifter desktop releases
 
+For Windows/Linux artifact uploads, use the configured [Bunny Gate API](bunny-release-api.md).
+
 Start with a clean release checkout and use the same version and build number across the Flutter bundle, installer, and signed update metadata. Use a matching Rust target and Velopack CLI 1.2.161. Keep outputs and native caches outside synced folders. Publish artifacts before the feed using the procedure in [Application updates](app-updates.md).
 
 ## Windows
