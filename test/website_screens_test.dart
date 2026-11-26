@@ -221,8 +221,10 @@ Future<(GlobalKey, _WebsiteController)> _pumpApp(WidgetTester tester, _Form form
 
 Future<void> _connectedShot(WidgetTester tester, GlobalKey b, _WebsiteController c, _Form form, String locale, String name) async {
   c.backdate();
-  await tester.pump(const Duration(seconds: 1));
-  await tester.pump(const Duration(milliseconds: 50));
+  // Several frames so pop-in and size animations (location chips) finish.
+  for (var i = 0; i < 20; i++) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
   await _shot(tester, b, form, locale, name);
 }
 
