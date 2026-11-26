@@ -79,7 +79,7 @@ class _Form {
 }
 
 // iPhone 15 Pro (status bar and home indicator are drawn by the website).
-const _phone = _Form('phone', Size(393, 852), EdgeInsets.only(top: 59, bottom: 34));
+const _phone = _Form('phone', Size(440, 956), EdgeInsets.only(top: 62, bottom: 34)); // iPhone 16 Pro Max
 // A small desktop window: the wide layout with sidebar and docked picker.
 const _desktop = _Form('desktop', Size(1024, 700), EdgeInsets.zero);
 const _pixelRatio = 2.0;
