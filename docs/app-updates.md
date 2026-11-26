@@ -1,20 +1,18 @@
 # Application updates
 
-Windows, macOS and Linux check a common required-version policy. A newer minimum blocks the app, including its connection controls, until the installed version meets it. The modal displays the installed and required versions and offers **Update now**. It stays open through Escape, Back, navigation, download and retry. The app safely disconnects an active proxy when the requirement takes effect.
+Windows, macOS and Linux read their required version from the same signed platform feed that lists available releases. A newer minimum blocks the app, including its connection controls, until the installed version meets it. The modal displays the installed and required versions and offers **Update now**. It stays open through Escape, Back, navigation, download and retry. The app safely disconnects an active proxy when the requirement takes effect.
 
 Desktop releases also offer optional updates through Settings and the signed-out screen. Eligible releases can install automatically on disconnected startup when the user has enabled **Install eligible updates automatically** and the signed feed allows it. App Store and Google Play handle mobile updates. Mobile builds have no Shifter update checks or prompts. All builds ship without app analytics or installer attribution.
 
-## Required desktop version
+## Required desktop versions
 
-Serve this JSON at [Shifter's app.json endpoint](https://shifter.io/app.json) with HTTPS, a 200 response, and a short cache lifetime.
+To require a version, add `"minimumRequiredVersion": "1.0.1"` as a top-level field in the input for that platform and architecture's signed feed. The required version uses three numeric components. Omit the field for an optional rollout or to remove a requirement. To roll back to a lower minimum, publish it in a newly signed feed with a higher sequence.
 
-```json
-{"version":"0.2.0"}
-```
+The app checks on startup, on foreground return, and every five minutes. It keeps the most recent verified minimum when the feed is missing, offline, or invalid. New installations with no verified minimum remain usable. A valid newer feed without the field clears a previously verified minimum.
 
-`version` is the minimum usable desktop version on all three platforms. Use a stable three-part version. The app checks on startup, on foreground return, and every five minutes. An unavailable or invalid response keeps the last valid policy. On a fresh installation with no prior policy, the app remains usable until it receives a valid minimum. Publishing a valid lower minimum rolls back the requirement for clients that receive it.
+Upload the packages and verify installation on the supported systems for that feed before publishing a minimum. The feed must include an enabled release that meets the minimum. A required update is offered regardless of the staged rollout or the **Later** delay. Publish a separate signed feed for each affected architecture.
 
-**Publish the packages and signed feeds for every supported desktop platform and architecture first.** Verify that those feeds offer an enabled release at or above the proposed minimum and that it installs on supported OS versions. Raise `version` after those checks. Required updates bypass the staged rollout and the **Later** delay. The policy selects a minimum version. The signed platform feed supplies the package and its verified hash. Keep the policy at the current minimum during an optional rollout. Production publication is a separate step from building and testing.
+Older releases that used the shared website `app.json` require an app update before they can enforce a minimum from the signed feed.
 
 ## Build configuration
 
@@ -23,7 +21,6 @@ Use Flutter's `--dart-define-from-file` with the following desktop build setting
 - `SHIFTER_UPDATES_ENABLED` enables release discovery and the required-version policy. The default is `false`.
 - `SHIFTER_UPDATE_ORIGIN` is the HTTPS origin for signed feeds and artifacts.
 - `SHIFTER_UPDATE_PUBLIC_KEYS` is a JSON string mapping key IDs to Base64-encoded raw 32-byte Ed25519 public keys. The private keys stay outside the build.
-- `SHIFTER_REQUIRED_UPDATE_URL` defaults to `https://shifter.io/app.json`. Override it for isolated QA builds.
 
 Feeds live at `/desktop/<platform>/<architecture>/stable.json`. Use `windows`, `macos` or `linux` and `x64` or `arm64`. Each release's application ID must match the actual installed application.
 
@@ -51,7 +48,7 @@ python3 tool/update/release.py publish \
   --scratch /path/to/private/publisher-scratch
 ```
 
-Use immutable artifact paths. Upload artifacts first and signed feeds second. Upload `app.json` last when raising the minimum. Refresh each signed feed before the 48-hour expiration using a strictly greater sequence. For a refresh, omit `--artifact` to reuse the staged bytes. Withdraw a release by setting `enabled=false` in a new feed. If that release is the only one that meets the minimum, publish a compatible replacement or roll back the minimum to restore access.
+Use immutable artifact paths. Upload artifacts first and signed feeds second. Refresh each signed feed before the 48-hour expiration using a strictly greater sequence. For a refresh, omit `--artifact` to reuse the staged bytes. Withdraw a release by setting `enabled=false` in a new feed. If that release is the only one that meets the minimum, publish a compatible replacement or lower or remove the minimum in the same signed feed.
 
 Each envelope contains `keyId`, `payloadBase64`, and `signatureBase64`. Shifter verifies the exact payload bytes and rejects duplicate fields, incompatible identities, unsafe paths, expiry, replay, conflicts and redirects. Package length and SHA-256 must match the authenticated feed. Before rotating signing keys, qualify adoption of a release with both embedded public keys.
 

@@ -87,6 +87,12 @@ def atomic_write(path, data):
             os.unlink(temporary)
 
 
+def version_parts(version):
+    if not isinstance(version, str) or not re.fullmatch(r'(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)', version):
+        raise ValueError('Stable semantic version required')
+    return tuple(map(int, version.split('.')))
+
+
 def validate(payload):
     if payload.get('schemaVersion') != 1 or payload.get('environment') != 'production' or payload.get('channel') != 'stable':
         raise ValueError('Unsupported schema, environment or channel')
@@ -95,14 +101,17 @@ def validate(payload):
             or payload['architecture'] not in ('x64', 'arm64')):
         raise ValueError('Expected a desktop platform and architecture')
     ids = set()
+    minimum = version_parts(payload['minimumRequiredVersion']) if 'minimumRequiredVersion' in payload else None
+    has_required_release = False
     for release in payload['releases']:
         if release['releaseId'] in ids:
             raise ValueError('Duplicate release ID')
         ids.add(release['releaseId'])
-        if not re.fullmatch(r'(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)', release['displayVersion']):
-            raise ValueError('Stable semantic version required')
+        version = version_parts(release['displayVersion'])
         if type(release['build']) is not int or release['build'] < 1 or type(release['enabled']) is not bool:
             raise ValueError('Invalid build or enabled flag')
+        if minimum is not None and release['enabled'] and version >= minimum:
+            has_required_release = True
         if not 0 <= release['rolloutPercentage'] <= 100 or len(release['notes'].encode()) > 8192:
             raise ValueError('Invalid rollout or release notes')
         if 'automaticInstall' in release and type(release['automaticInstall']) is not bool:
@@ -117,6 +126,8 @@ def validate(payload):
             raise ValueError('Production signing identity is required')
         if artifact['format'] != 'nupkg':
             raise ValueError('Wrong artifact format')
+    if minimum is not None and not has_required_release:
+        raise ValueError('The required update is missing from the feed')
 
 
 def publish(args):

@@ -51,5 +51,21 @@ class PublisherTests(unittest.TestCase):
             with self.assertRaises(ValueError):release.safe_path(path)
         with self.assertRaises(ValueError):release.strict_load('{"a":1,"a":2}')
 
+    def test_required_minimum_requires_a_compatible_enabled_release(self):
+        self.template['minimumRequiredVersion'] = '0.2.0'
+        (self.root/'template.json').write_text(json.dumps(self.template))
+        release.publish(self.args)
+        feed = self.root/'cdn/desktop/windows/x64/stable.json'
+        signed = json.loads(base64.b64decode(json.loads(feed.read_bytes())['payloadBase64']))
+        self.assertEqual(signed['minimumRequiredVersion'], '0.2.0')
+        for invalid in ('0.2', '0.3.0', None):
+            self.template['minimumRequiredVersion'] = invalid
+            with self.assertRaises(ValueError):
+                release.validate(self.template)
+        self.template['minimumRequiredVersion'] = '0.2.0'
+        self.template['releases'][0]['enabled'] = False
+        with self.assertRaises(ValueError):
+            release.validate(self.template)
+
 
 if __name__=='__main__':unittest.main()

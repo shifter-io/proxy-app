@@ -25,10 +25,7 @@ class UpdateCoordinator extends ChangeNotifier {
     this.canAutomaticallyInstall = _disabled,
     this.capabilities = const UpdateCapabilities(),
     DateTime Function()? clock,
-  }) : clock = clock ?? DateTime.now,
-       _minimumVersion = repository == null
-           ? null
-           : store.read('minimumVersion');
+  }) : clock = clock ?? DateTime.now;
   final UpdateStore store;
   final UpdateAdapter adapter;
   final InstalledIdentity identity;
@@ -83,31 +80,16 @@ class UpdateCoordinator extends ChangeNotifier {
   bool _cancelled = false;
   File? _artifact;
   Future<void>? _operation;
-  String? _minimumVersion;
   String? get requiredVersion {
-    final minimum = _minimumVersion;
+    final minimum = repository?.minimumRequiredVersion;
     return minimum != null && compareVersions(identity.version, minimum) < 0
         ? minimum
         : null;
   }
 
-  bool _meetsMinimum(Release candidate) =>
-      requiredVersion == null ||
-      compareVersions(candidate.version, requiredVersion!) >= 0;
-
-  Future<bool> _refreshRequiredVersion() async {
-    final previous = requiredVersion;
-    try {
-      final version = await repository!.fetchRequiredVersion();
-      if (version != _minimumVersion) {
-        _minimumVersion = version;
-        _notify();
-        await store.write('minimumVersion', version);
-      }
-    } catch (_) {
-      // Keep the last valid minimum across offline, malformed and failed checks.
-    }
-    return previous != requiredVersion;
+  bool _meetsMinimum(Release candidate) {
+    final minimum = requiredVersion;
+    return minimum == null || compareVersions(candidate.version, minimum) >= 0;
   }
 
   bool get busy => _operation != null;
@@ -224,7 +206,8 @@ class UpdateCoordinator extends ChangeNotifier {
                 (r) =>
                     r.id == staged['releaseId'] &&
                     r.enabled &&
-                    identity.newer(r),
+                    identity.newer(r) &&
+                    _meetsMinimum(r),
               )
               .firstOrNull;
           if (r != null) {
@@ -286,17 +269,10 @@ class UpdateCoordinator extends ChangeNotifier {
         phase = UpdatePhase.unavailable;
         return;
       }
-      final policyChanged = await _refreshRequiredVersion();
       final last = store.time('lastAttempt');
-      final needsRequiredRelease =
-          requiredVersion != null &&
-          (release == null || !_meetsMinimum(release!));
       if (automatic &&
-          !policyChanged &&
-          !needsRequiredRelease &&
-          (phase == UpdatePhase.ready ||
-              (last != null &&
-                  clock().difference(last).abs() < const Duration(hours: 6)))) {
+          last != null &&
+          clock().difference(last).abs() < const Duration(seconds: 30)) {
         return;
       }
       if (automatic) {
@@ -467,16 +443,18 @@ class UpdateCoordinator extends ChangeNotifier {
         phase = UpdatePhase.verifying;
         _notify();
         await adapter.prepare(selected, file.path);
+        final feed = await repository!.fetch();
+        if (!feed.releases.any(
+          (r) => r.enabled && r.sameArtifact(selected) && _meetsMinimum(r),
+        )) {
+          throw const UpdateFailure('This release was withdrawn.');
+        }
         final finalFile = await _file(selected, partial: false);
         if (await FileSystemEntity.type(finalFile.path, followLinks: false) !=
             FileSystemEntityType.notFound) {
           await finalFile.delete();
         }
         _artifact = await file.rename(finalFile.path);
-        final feed = await repository!.fetch();
-        if (!feed.releases.any((r) => r.enabled && r.sameArtifact(selected))) {
-          throw const UpdateFailure('This release was withdrawn.');
-        }
         await store.write(
           'staged',
           jsonEncode({'envelope': feed.envelope, 'releaseId': selected.id}),
