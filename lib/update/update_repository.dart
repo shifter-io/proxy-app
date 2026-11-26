@@ -22,6 +22,10 @@ class UpdateRepository {
   final InstalledIdentity identity;
   final UpdateStore store;
 
+  String get _feedStateKey => 'high.${identity.feedPath}';
+  String? get minimumRequiredVersion =>
+      store.object(_feedStateKey)?['minimumRequiredVersion'] as String?;
+
   /// Returns explicit DIRECT or PROXY. Must throw during ambiguous routing.
   final String Function() proxy;
   final DateTime Function() clock;
@@ -35,9 +39,9 @@ class UpdateRepository {
   Future<T> _request<T>(
     Uri uri,
     int limit,
-    Future<T> Function(HttpClientResponse, int) consume, {
-    Duration responseTimeout = const Duration(seconds: 25),
-  }) async {
+    Future<T> Function(HttpClientResponse, int) consume,
+  ) async {
+    const responseTimeout = Duration(seconds: 25);
     final generation = _generation;
     final route = proxy();
     final client = HttpClient()
@@ -72,10 +76,11 @@ class UpdateRepository {
     }
   }
 
-  Future<VerifiedFeed> fetch() => _request(
-    config.resolve(identity.feedPath),
-    262144,
-    (response, generation) async {
+  Future<VerifiedFeed> fetch() async {
+    final envelope = await _request(config.resolve(identity.feedPath), 262144, (
+      response,
+      _,
+    ) async {
       final bytes = <int>[];
       await for (final chunk in response.timeout(const Duration(seconds: 25))) {
         bytes.addAll(chunk);
@@ -83,35 +88,9 @@ class UpdateRepository {
           throw const UpdateFailure('Update metadata is too large.');
         }
       }
-      return verify(utf8.decode(bytes));
-    },
-  );
-
-  Future<String> fetchRequiredVersion() => _request(
-    config.requiredUpdateUrl,
-    4096,
-    (response, _) async {
-      final bytes = await response
-          .fold<List<int>>(<int>[], (bytes, chunk) {
-            if (bytes.length + chunk.length > 4096) {
-              throw const UpdateFailure('Required update policy is too large.');
-            }
-            return bytes..addAll(chunk);
-          })
-          .timeout(const Duration(seconds: 10));
-      return parseRequiredVersion(utf8.decode(bytes));
-    },
-    responseTimeout: const Duration(seconds: 10),
-  );
-
-  static String parseRequiredVersion(String body) {
-    final policy = strictJson(body);
-    if (policy is! Map || policy['version'] is! String) {
-      throw const UpdateFailure('Invalid required update policy.');
-    }
-    final version = policy['version'] as String;
-    compareVersions(version, version);
-    return version;
+      return utf8.decode(bytes);
+    });
+    return verify(envelope);
   }
 
   Future<VerifiedFeed> verify(String envelope) async {
@@ -162,7 +141,7 @@ class UpdateRepository {
       throw const UpdateFailure('Invalid update sequence.');
     }
     final digest = hashes.sha256.convert(payload).toString();
-    final high = store.object('high.${identity.feedPath}');
+    final high = store.object(_feedStateKey);
     if (high != null &&
         (sequence < (high['sequence'] as int) ||
             (sequence == high['sequence'] && digest != high['digest']))) {
@@ -198,10 +177,33 @@ class UpdateRepository {
       }
       config.resolve(r.path);
     }
-    await store.write(
-      'high.${identity.feedPath}',
-      jsonEncode({'sequence': sequence, 'digest': digest}),
-    );
+    String? minimum;
+    if (p.containsKey('minimumRequiredVersion')) {
+      final version = p['minimumRequiredVersion'];
+      if (version is! String) {
+        throw const UpdateFailure('Invalid required update policy.');
+      }
+      compareVersions(version, version);
+      if (!releases.any(
+        (r) => r.enabled && compareVersions(r.version, version) >= 0,
+      )) {
+        throw const UpdateFailure('Invalid required update policy.');
+      }
+      minimum = version;
+    }
+    // Keep the minimum and the replay protection in a single preference write.
+    if (sequence != high?['sequence'] ||
+        digest != high?['digest'] ||
+        minimum != high?['minimumRequiredVersion']) {
+      await store.write(
+        _feedStateKey,
+        jsonEncode({
+          'sequence': sequence,
+          'digest': digest,
+          'minimumRequiredVersion': ?minimum,
+        }),
+      );
+    }
     return VerifiedFeed(releases, expires, sequence, digest, envelope);
   }
 

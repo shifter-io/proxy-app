@@ -47,11 +47,9 @@ class FakeRepository extends UpdateRepository {
   bool withdrawn = false;
   bool fail = false;
   String? minimumVersion;
+  String? _lastMinimum;
   @override
-  Future<String> fetchRequiredVersion() async {
-    if (minimumVersion case final version?) return version;
-    throw const UpdateFailure('Policy unavailable');
-  }
+  String? get minimumRequiredVersion => _lastMinimum;
 
   @override
   Future<void> download(
@@ -69,6 +67,7 @@ class FakeRepository extends UpdateRepository {
     checks++;
     await pending?.future;
     if (fail) throw const UpdateFailure('Network unavailable');
+    _lastMinimum = minimumVersion;
     return VerifiedFeed(
       withdrawn ? [] : [Release(candidate)],
       DateTime.now().add(const Duration(hours: 1)),
@@ -87,6 +86,7 @@ void main() {
   late FakeRepository repo;
   late UpdateStore store;
   late UpdateCoordinator coordinator;
+  late DateTime now;
   var cleanupFails = false;
   setUp(() async {
     temporary = await Directory.systemTemp.createTemp('shifter-update-test-');
@@ -96,11 +96,13 @@ void main() {
     adapter = FakeAdapter();
     repo = FakeRepository(store);
     cleanupFails = false;
+    now = DateTime.utc(2026, 11, 26);
     coordinator = UpdateCoordinator(
       store: store,
       adapter: adapter,
       identity: identity,
       repository: repo,
+      clock: () => now,
       capabilities: const UpdateCapabilities(install: true),
       canPrompt: () => true,
       prepareConnection: (handoff) async {
@@ -147,12 +149,15 @@ void main() {
       expect(coordinator.phase, UpdatePhase.available);
     },
   );
-  test('automatic checks respect six-hour throttle', () async {
+  test('automatic checks refresh the signed feed every five minutes', () async {
     await coordinator.check(automatic: true);
     await coordinator.check(automatic: true);
     expect(repo.checks, 1);
-    await coordinator.check();
+    now = now.add(const Duration(minutes: 5));
+    await coordinator.check(automatic: true);
     expect(repo.checks, 2);
+    await coordinator.check();
+    expect(repo.checks, 3);
   });
   test(
     'proxy restoration failure prevents installer and restart marker',
@@ -241,6 +246,7 @@ void main() {
     await coordinator.later();
     repo.candidate['rolloutPercentage'] = 0;
     repo.minimumVersion = '1.1.0';
+    now = now.add(const Duration(minutes: 5));
 
     await coordinator.check(automatic: true);
 
@@ -250,21 +256,20 @@ void main() {
   });
 
   test(
-    'required policy stays active after failure and rejects lower releases',
+    'required policy stays active after failure and can be cleared',
     () async {
-      repo.minimumVersion = '1.2.0';
+      repo.minimumVersion = '1.1.0';
       await coordinator.check();
-      expect(coordinator.phase, UpdatePhase.unavailable);
-      expect(coordinator.release, isNull);
-      expect(store.read('minimumVersion'), '1.2.0');
+      expect(coordinator.phase, UpdatePhase.available);
+      expect(coordinator.requiredVersion, '1.1.0');
 
+      repo.fail = true;
       repo.minimumVersion = null;
       await coordinator.check();
-      expect(coordinator.requiredVersion, '1.2.0');
-      expect(coordinator.release, isNull);
+      expect(coordinator.requiredVersion, '1.1.0');
 
-      repo.minimumVersion = '1.0.0';
-      await coordinator.check(automatic: true);
+      repo.fail = false;
+      await coordinator.check();
       expect(coordinator.requiredVersion, isNull);
     },
   );

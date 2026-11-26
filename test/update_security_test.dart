@@ -181,23 +181,58 @@ void main() {
       );
     },
   );
-  test('required policy accepts only a valid version string', () {
-    expect(
-      UpdateRepository.parseRequiredVersion('{"version":"1.10.0"}'),
-      '1.10.0',
-    );
-    for (final body in [
-      '<html>Missing</html>',
-      '{"version":2}',
-      '{"version":"1.2"}',
-      '{"version":"1.2.0","version":"9.0.0"}',
-    ]) {
-      expect(
-        () => UpdateRepository.parseRequiredVersion(body),
-        throwsException,
+  test('minimum must be valid and have an enabled update', () async {
+    for (final version in [null, 2, '1.2', '1.2.0', '1.1.0-rc']) {
+      payload['minimumRequiredVersion'] = version;
+      await expectLater(
+        repo.verify(await envelope(payload)),
+        throwsA(isA<UpdateFailure>()),
       );
     }
+    payload['minimumRequiredVersion'] = '1.1.0';
+    payload['releases'] = [releaseJson()..['enabled'] = false];
+    await expectLater(
+      repo.verify(await envelope(payload)),
+      throwsA(isA<UpdateFailure>()),
+    );
+    expect(repo.minimumRequiredVersion, isNull);
   });
+
+  test(
+    'only a newer signed feed for this platform can clear its minimum',
+    () async {
+      await repo.store.write(
+        'minimumVersion',
+        '9.0.0',
+      ); // Legacy global policy.
+      expect(repo.minimumRequiredVersion, isNull);
+      final noMinimum = await envelope(payload);
+      payload['feedSequence'] = 2;
+      payload['minimumRequiredVersion'] = '1.1.0';
+      await repo.verify(await envelope(payload));
+      final restarted = UpdateRepository(
+        repo.config,
+        identity,
+        repo.store,
+        proxy: () => 'DIRECT',
+        clock: () => now,
+      );
+      expect(restarted.minimumRequiredVersion, '1.1.0');
+      await expectLater(repo.verify(noMinimum), throwsA(isA<UpdateFailure>()));
+
+      payload.remove('minimumRequiredVersion');
+      payload['feedSequence'] = 3;
+      payload['architecture'] = 'arm64';
+      await expectLater(
+        repo.verify(await envelope(payload)),
+        throwsA(isA<UpdateFailure>()),
+      );
+      expect(repo.minimumRequiredVersion, '1.1.0');
+      payload['architecture'] = 'x64';
+      await repo.verify(await envelope(payload));
+      expect(repo.minimumRequiredVersion, isNull);
+    },
+  );
 
   test('file verification rejects corruption, truncation and symlinks', () async {
     final base = Directory(

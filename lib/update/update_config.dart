@@ -3,19 +3,7 @@ import 'dart:convert';
 import 'update_models.dart';
 
 class UpdateConfig {
-  UpdateConfig({
-    required this.origin,
-    required this.keys,
-    Uri? requiredUpdateUrl,
-  }) : requiredUpdateUrl =
-           requiredUpdateUrl ?? Uri.parse('https://shifter.io/app.json') {
-    if (this.requiredUpdateUrl.scheme != 'https' ||
-        this.requiredUpdateUrl.host.isEmpty ||
-        this.requiredUpdateUrl.userInfo.isNotEmpty ||
-        this.requiredUpdateUrl.hasQuery ||
-        this.requiredUpdateUrl.hasFragment) {
-      throw const UpdateFailure('Required updates need an HTTPS policy URL.');
-    }
+  UpdateConfig({required this.origin, required this.keys}) {
     if (origin.scheme != 'https' ||
         origin.host.isEmpty ||
         origin.userInfo.isNotEmpty ||
@@ -30,7 +18,6 @@ class UpdateConfig {
   }
   final Uri origin;
   final Map<String, List<int>> keys;
-  final Uri requiredUpdateUrl;
   static UpdateConfig? production() {
     if (!const bool.fromEnvironment('SHIFTER_UPDATES_ENABLED')) return null;
     final raw = jsonDecode(
@@ -43,12 +30,6 @@ class UpdateConfig {
       origin: Uri.parse(const String.fromEnvironment('SHIFTER_UPDATE_ORIGIN')),
       keys: raw.map(
         (key, value) => MapEntry(key as String, base64Decode(value as String)),
-      ),
-      requiredUpdateUrl: Uri.parse(
-        const String.fromEnvironment(
-          'SHIFTER_REQUIRED_UPDATE_URL',
-          defaultValue: 'https://shifter.io/app.json',
-        ),
       ),
     );
   }

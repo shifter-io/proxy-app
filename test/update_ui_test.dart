@@ -43,13 +43,14 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final app = AppController();
     final store = UpdateStore(null);
-    await store.write('minimumVersion', '1.1.0');
+    final repository = FakeRepository(store)..minimumVersion = '1.1.0';
+    await repository.fetch();
     final updates =
         UpdateCoordinator(
             store: store,
             adapter: FakeAdapter(),
             identity: identity,
-            repository: FakeRepository(store),
+            repository: repository,
             prepareConnection: app.prepareForUpdate,
             canPrompt: () => false,
             capabilities: const UpdateCapabilities(
